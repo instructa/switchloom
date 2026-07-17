@@ -59,7 +59,9 @@ replace() {
 
 replace Cargo.toml "s/^version = \".*\"/version = \"$version\"/"
 replace package.json "s/\"version\": \".*\"/\"version\": \"$version\"/"
-cargo check --locked --quiet
+# Refresh only the root package version in Cargo.lock before all subsequent
+# locked builds and package checks.
+cargo check --quiet
 
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
