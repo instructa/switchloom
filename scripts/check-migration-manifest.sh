@@ -5,6 +5,7 @@ manifest="${1:-docs/migration-manifest.tsv}"
 planr_root="${PLANR_ROOT:-/Users/kregenrek/projects/planr}"
 baseline_tag="${PLANR_BASELINE_TAG:-v1.5.0}"
 baseline_commit="${PLANR_BASELINE_COMMIT:-7a01ad54cb41fd755f368a79339a96a997f693d0}"
+baseline_source_hash="${PLANR_BASELINE_SOURCE_HASH:-d32166f38448fcc2cb5632b24214625b45ae6326}"
 
 tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/model-routing-manifest.XXXXXX")"
 trap 'rm -rf "$tmpdir"' EXIT
@@ -14,30 +15,38 @@ manifest_sources="$tmpdir/manifest-sources.txt"
 missing_sources="$tmpdir/missing-sources.txt"
 unexpected_sources="$tmpdir/unexpected-sources.txt"
 
-resolved_commit="$(git -C "$planr_root" rev-parse "$baseline_tag")"
-if [ "$resolved_commit" != "$baseline_commit" ]; then
-  echo "baseline tag $baseline_tag resolved to $resolved_commit, expected $baseline_commit" >&2
-  exit 1
-fi
-
-git -C "$planr_root" ls-tree -r --name-only "$baseline_commit" -- planr-routing \
-  | sort > "$actual_sources"
-
 awk -F '\t' 'NR > 1 && $1 == "source-file" { print $3 }' "$manifest" \
   | sort > "$manifest_sources"
 
-comm -23 "$actual_sources" "$manifest_sources" > "$missing_sources"
-if [ -s "$missing_sources" ]; then
-  echo "migration manifest omits frozen tracked planr-routing files:" >&2
-  cat "$missing_sources" >&2
+source_hash="$(git hash-object "$manifest_sources")"
+if [ "$source_hash" != "$baseline_source_hash" ]; then
+  echo "migration manifest source inventory hash is $source_hash, expected $baseline_source_hash" >&2
   exit 1
 fi
 
-comm -13 "$actual_sources" "$manifest_sources" > "$unexpected_sources"
-if [ -s "$unexpected_sources" ]; then
-  echo "migration manifest has unexpected source-file rows absent from frozen tracked tree:" >&2
-  cat "$unexpected_sources" >&2
-  exit 1
+if [ -d "$planr_root/.git" ]; then
+  resolved_commit="$(git -C "$planr_root" rev-parse "$baseline_tag")"
+  if [ "$resolved_commit" != "$baseline_commit" ]; then
+    echo "baseline tag $baseline_tag resolved to $resolved_commit, expected $baseline_commit" >&2
+    exit 1
+  fi
+
+  git -C "$planr_root" ls-tree -r --name-only "$baseline_commit" -- planr-routing \
+    | sort > "$actual_sources"
+
+  comm -23 "$actual_sources" "$manifest_sources" > "$missing_sources"
+  if [ -s "$missing_sources" ]; then
+    echo "migration manifest omits frozen tracked planr-routing files:" >&2
+    cat "$missing_sources" >&2
+    exit 1
+  fi
+
+  comm -13 "$actual_sources" "$manifest_sources" > "$unexpected_sources"
+  if [ -s "$unexpected_sources" ]; then
+    echo "migration manifest has unexpected source-file rows absent from frozen tracked tree:" >&2
+    cat "$unexpected_sources" >&2
+    exit 1
+  fi
 fi
 
 if awk -F '\t' 'NR > 1 && $3 ~ /[*?]/ { print $0; found = 1 } END { exit found ? 0 : 1 }' "$manifest" > "$tmpdir/wildcards.txt"; then
@@ -75,4 +84,4 @@ check_entry generated-artifact ".claude/agents/planr-reviewer.md"
 check_entry generated-artifact ".cursor/agents/planr-worker.md"
 check_entry generated-artifact ".cursor/agents/planr-reviewer.md"
 
-echo "migration manifest covers $(wc -l < "$actual_sources" | tr -d ' ') frozen planr-routing files plus required commands and generated artifacts"
+echo "migration manifest covers $(wc -l < "$manifest_sources" | tr -d ' ') frozen planr-routing files plus required commands and generated artifacts"
