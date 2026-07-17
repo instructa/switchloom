@@ -13,9 +13,13 @@
 .env.*
 !.env.example
 .envrc
+.dev.vars
+.dev.vars.*
 .npmrc
 .netrc
 .git-credentials
+.aws/credentials
+.docker/config.json
 credentials.json
 secrets.json
 tokens.json
@@ -34,12 +38,14 @@ id_dsa
 
 # Node and deployment tooling
 /node_modules/
+/.astro/
 /.npm-package/
 /npm/native/
 /.pnpm-store/
 /.alchemy/
 /.wrangler/
 pnpm-debug.log*
+*.log
 
 # Infrastructure state
 *.tfstate

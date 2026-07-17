@@ -34,13 +34,36 @@
     "hooks:install": "git config core.hooksPath .githooks",
     "pack:check": "bash scripts/npm-pack-check.sh",
     "security:check": "bash scripts/secleak-check.sh",
-    "site:build": "node scripts/build-site.mjs",
-    "site:check": "pnpm site:test && pnpm site:build",
-    "site:test": "node --test website/*.test.mjs",
-    "site:serve": "node website/serve.mjs"
+    "site:build": "astro build && node scripts/build-site.mjs",
+    "site:check": "pnpm site:test && astro check && pnpm site:build",
+    "site:dev": "astro dev",
+    "site:test": "vitest run && node --test website/alchemy-runtime.test.mjs website/cloudflare-launcher.test.mjs",
+    "site:serve": "astro dev --host 127.0.0.1 --port 4173"
   },
   "devDependencies": {
-    "alchemy": "0.93.7"
+    "@astrojs/react": "^6.0.1",
+    "@astrojs/check": "^0.9.6",
+    "@base-ui/react": "^1.1.0",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@phosphor-icons/react": "^2.1.10",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/node": "^25.0.10",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "^4.0.18",
+    "alchemy": "0.93.7",
+    "astro": "^7.1.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "jszip": "^3.10.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "shadcn": "^4.13.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^4.1.18",
+    "tw-animate-css": "^1.4.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=18"

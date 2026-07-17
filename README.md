@@ -36,7 +36,7 @@ verify it against `SHA256SUMS`, and place `model-routing` on your `PATH`.
 
 ## Current Status
 
-The v0.1.0 standalone baseline compiles independently and records the frozen Planr v1.5.0 routing inventory in [docs/migration-baseline.md](docs/migration-baseline.md).
+The v0.1.1 standalone baseline compiles independently and records the frozen Planr v1.5.0 routing inventory in [docs/migration-baseline.md](docs/migration-baseline.md).
 
 ## Baseline Commands
 
@@ -48,22 +48,25 @@ cargo run -- --version
 cargo run -- baseline
 ```
 
-## Public Catalog
+## Website Generator
 
-The static website is generated from the same canonical compiler output used by the CLI. Standalone Switchloom is the default; Planr is an optional integration mode shown as an explicit website control.
+The static Astro website is an above-the-fold team generator built with React and shadcn. Users choose Codex, Cursor, or Claude Code, select up to four explicit roles, start from a Light, Balanced, or High team preset, and optionally override each role's model and reasoning effort before downloading project-native agent files as a ZIP. The host remains authoritative for model availability, execution, and billing.
+
+Claude Code model and effort options are derived at build time from the canonical catalog produced by the Rust compiler. Codex mirrors its current desktop picker: `low`, `medium`, `high`, and `xhigh`, while Terra and Sol additionally expose `ultra` as a manual-only mode. Pure `max` is intentionally omitted because the desktop picker does not expose it separately; Ultra sends Max reasoning plus automatic multi-agent delegation. Cursor uses a deliberately small, researched frontier allowlist because its full picker changes frequently; the website presents those models in a searchable selector. Generated custom setups are local and unverified until the user reviews them.
 
 ```sh
 cargo run -- catalog build --output website/data/catalog.json
 cargo run -- catalog verify website/data/catalog.json
-node --test website/*.test.mjs
-node scripts/build-site.mjs
+pnpm site:check
+pnpm site:dev
 ```
 
-The Cloudflare/Alchemy publication stack is repo-owned. Test deployments are pinned to the `test` stage:
+The Cloudflare/Alchemy publication stack is repo-owned and requires Node.js 22 or newer. Test deployments are pinned to the `test` stage; production publishes the custom `switchloom.ai` domain only from the explicit `prod` stage:
 
 ```sh
 node scripts/cloudflare-test.mjs deploy
 node scripts/cloudflare-test.mjs destroy
+pnpm exec alchemy deploy --stage prod
 ```
 
 ## Repository Policy

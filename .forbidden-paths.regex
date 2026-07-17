@@ -11,9 +11,13 @@
 (^|/)\.env$
 (^|/)\.env\.
 (^|/)\.envrc$
+(^|/)\.dev\.vars$
+(^|/)\.dev\.vars\.
 (^|/)\.npmrc$
 (^|/)\.netrc$
 (^|/)\.git-credentials$
+(^|/)\.aws/credentials$
+(^|/)\.docker/config\.json$
 (^|/)credentials\.json$
 (^|/)secrets\.json$
 (^|/)tokens\.json$
