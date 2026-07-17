@@ -62,6 +62,12 @@ replace package.json "s/\"version\": \".*\"/\"version\": \"$version\"/"
 # Refresh only the root package version in Cargo.lock before all subsequent
 # locked builds and package checks.
 cargo check --quiet
+cargo run --quiet -- compile balanced --host codex-openai --integration planr \
+  --output fixtures/routing-bundle-v1/valid-balanced-codex.json
+cargo run --quiet -- compile balanced --host mixed-host --integration planr \
+  --output fixtures/routing-bundle-v1/valid-balanced-mixed.json
+cargo build --release --locked
+node scripts/regenerate-preset-catalog.mjs
 
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
@@ -79,7 +85,10 @@ if [ "${RELEASE_DRY_RUN:-0}" = "1" ]; then
   exit 0
 fi
 
-git add -- Cargo.toml Cargo.lock package.json
+git add -- Cargo.toml Cargo.lock package.json \
+  fixtures/routing-bundle-v1/valid-balanced-codex.json \
+  fixtures/routing-bundle-v1/valid-balanced-mixed.json \
+  website/data/catalog.json website/data/bundles
 if ! git diff --cached --quiet; then
   git commit -m "release $version: $summary"
 fi
