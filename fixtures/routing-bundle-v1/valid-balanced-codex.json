@@ -6,7 +6,7 @@
   "generated_at": "2026-07-16T00:00:00Z",
   "source": {
     "package": "model-routing",
-    "package_version": "0.1.0",
+    "package_version": "0.1.1",
     "integration": "planr"
   },
   "policy": {
