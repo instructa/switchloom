@@ -49,3 +49,18 @@ secret, vulnerability, and misconfiguration scan before publishing:
 pnpm hooks:install
 pnpm security:check
 ```
+
+## Releases
+
+Releases are created only through the repository-owned script. Prepare and
+commit a bracketed changelog section such as `## [0.1.0]`, then run:
+
+```sh
+RELEASE_DRY_RUN=1 scripts/release.sh 0.1.0 "Initial standalone release"
+scripts/release.sh 0.1.0 "Initial standalone release"
+```
+
+The script requires a clean, synchronized `main`, runs the complete local
+quality and security gates, creates an annotated tag, and pushes it. The tag
+workflow builds macOS and Linux archives, publishes aggregate SHA-256
+checksums, and makes the GitHub release public only after every build succeeds.

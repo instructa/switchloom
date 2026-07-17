@@ -1,39 +1,126 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Release tag, for example v0.1.0
-        required: true
+  push:
+    tags:
+      - "v*"
 
-permissions:
-  contents: write
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build release artifacts
-    runs-on: ubuntu-latest
+  create-release:
+    name: Create draft release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           persist-credentials: false
-      - name: Install Rust
-        run: rustup toolchain install 1.85.0 --profile minimal
-      - name: Test
-        run: cargo +1.85.0 test --workspace --all-targets --all-features
-      - name: Build
-        run: cargo +1.85.0 build --release --locked
-      - name: Checksums
-        run: shasum -a 256 target/release/model-routing > SHA256SUMS
-      - name: Upload draft release
+      - name: Verify release contract
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          crate_version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
+          package_version="$(jq -r .version package.json)"
+          test "v$crate_version" = "$TAG"
+          test "$package_version" = "$crate_version"
+          grep -q "^## \[$crate_version\]" CHANGELOG.md
+      - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.tag }}
+          TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$RELEASE_TAG" \
+          prerelease_flag=""
+          case "$TAG" in *-*) prerelease_flag="--prerelease" ;; esac
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
             --draft \
-            --title "$RELEASE_TAG" \
-            target/release/model-routing \
-            SHA256SUMS
+            $prerelease_flag \
+            --title "Switchloom $TAG" \
+            --generate-notes
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            rust_target: aarch64-apple-darwin
+            runner: macos-14
+          - target: darwin-x86_64
+            rust_target: x86_64-apple-darwin
+            runner: macos-14
+          - target: linux-x86_64
+            rust_target: x86_64-unknown-linux-gnu
+            runner: ubuntu-24.04
+          - target: linux-arm64
+            rust_target: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.rust_target }}
+      - name: Build release archive
+        env:
+          SWITCHLOOM_TARGET: ${{ matrix.target }}
+          SWITCHLOOM_CARGO_TARGET: ${{ matrix.rust_target }}
+        run: scripts/build-release.sh
+      - name: Smoke-test native binary
+        if: matrix.target != 'darwin-x86_64'
+        run: ./target/${{ matrix.rust_target }}/release/model-routing --version
+      - name: Upload release archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            "dist/switchloom-${{ matrix.target }}.tar.gz"
+
+  finalize:
+    name: Publish checksums and release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download release archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          mkdir assets
+          gh release download "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'switchloom-*.tar.gz' \
+            --dir assets
+      - name: Generate aggregate checksums
+        run: |
+          cd assets
+          sha256sum switchloom-*.tar.gz > SHA256SUMS
+          cat SHA256SUMS
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            assets/SHA256SUMS
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
