@@ -1,0 +1,11 @@
+title = "Switchloom BetterLeaks configuration"
+
+# Generated dependency and build trees are never shipped and are scanned from
+# their lockfiles instead. Keep fixture/source paths visible to the scanner.
+prefilter = '''
+matchesAny(attributes[?"path"].orValue(""), [
+  r"""(?:^|/)node_modules(?:/.*)?$""",
+  r"""(?:^|/)target(?:/.*)?$""",
+  r"""(?:^|/)dist(?:/.*)?$"""
+])
+'''

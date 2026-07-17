@@ -1,0 +1,3847 @@
+{
+  "compositions": [
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "exploration"
+            },
+            "profile": "codex-terra-medium"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "research"
+            },
+            "profile": "codex-terra-medium"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "codex-terra-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "mechanical"
+            },
+            "profile": "codex-luna-xhigh"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "review"
+            },
+            "profile": "codex-sol-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "moonshot"
+            },
+            "profile": "codex-sol-ultra"
+          }
+        ],
+        "host": "codex",
+        "id": "codex-openai",
+        "profiles": {
+          "codex-luna-xhigh": {
+            "agent_type": "model_routing_luna_xhigh",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "xhigh",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-luna"
+          },
+          "codex-sol-high": {
+            "agent_type": "model_routing_sol_high",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "codex-sol-medium": {
+            "agent_type": "model_routing_sol_medium",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "model": "gpt-5.6-sol"
+          },
+          "codex-sol-ultra": {
+            "agent_type": "model_routing_sol_ultra",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "ultra",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "codex-terra-high": {
+            "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "codex-terra-medium": {
+            "agent_type": "model_routing_terra_medium",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          }
+        },
+        "selector": "codex-openai",
+        "version": "2.0.0"
+      },
+      "command": "model-routing compile balanced --host codex-openai --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "codex"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "balanced-codex-openai",
+      "entryVersion": "1.0.0+2.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "balanced-codex-openai@1.0.0+2.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 8,
+          "max_write_scope_entries": 4,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "balanced",
+        "materiality": {
+          "changed_files_threshold": 10,
+          "changed_lines_threshold": 500
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 1,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 1
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 3,
+          "max_attempts": 4,
+          "max_depth": 1,
+          "max_parallel_readers": 2,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 120,
+          "max_wall_time_seconds": 3600,
+          "metering": "estimated",
+          "review_reserve_percent": 20
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".codex/agents/model-routing-luna-xhigh.toml",
+            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-high.toml",
+            "sha256": "b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-medium.toml",
+            "sha256": "657975ea00e6363d52176969103234b2bfe119ee1fdc1d2a9c1332db7c3dbc35"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-ultra.toml",
+            "sha256": "92597594c9f31ab54fc7a6fe66bce9618bbe47d88a0a430532e6a402ede4602e"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-high.toml",
+            "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-medium.toml",
+            "sha256": "458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "ada98a8539eab9963c68559edf1741024b0ad86e43c3813fe6b7a62d0c11a7ba",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "cursor-openai-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "cursor-openai-worker"
+          }
+        ],
+        "host": "cursor",
+        "id": "cursor-openai",
+        "profiles": {
+          "cursor-openai-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "gpt-5.5"
+          },
+          "cursor-openai-worker": {
+            "client": "cursor",
+            "cost_tier": "standard",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.4-mini"
+          }
+        },
+        "selector": "cursor-openai",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile balanced --host cursor-openai --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "cursor"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "balanced-cursor-openai",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "balanced-cursor-openai@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 8,
+          "max_write_scope_entries": 4,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "balanced",
+        "materiality": {
+          "changed_files_threshold": 10,
+          "changed_lines_threshold": 500
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 1,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 1
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 3,
+          "max_attempts": 4,
+          "max_depth": 1,
+          "max_parallel_readers": 2,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 120,
+          "max_wall_time_seconds": 3600,
+          "metering": "estimated",
+          "review_reserve_percent": 20
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".cursor/agents/model-routing-preset-worker.md",
+            "sha256": "84be3de79825844c99786d1a589592a67a57d0065c288262f9ef49c7c911ae38"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "87ac27212d190d2d1145b33417cfe5052d0d5885f0c550f3fdd0bdb676db8a46",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "cursor-fable-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "cursor-grok-worker"
+          }
+        ],
+        "host": "cursor",
+        "id": "cursor-fable-grok",
+        "profiles": {
+          "cursor-fable-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "fable-5"
+          },
+          "cursor-grok-worker": {
+            "client": "cursor",
+            "cost_tier": "standard",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "grok-code-fast-1"
+          }
+        },
+        "selector": "cursor-fable-grok",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile balanced --host cursor-fable-grok --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "cursor"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "balanced-cursor-fable-grok",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "balanced-cursor-fable-grok@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 8,
+          "max_write_scope_entries": 4,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "balanced",
+        "materiality": {
+          "changed_files_threshold": 10,
+          "changed_lines_threshold": 500
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 1,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 1
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 3,
+          "max_attempts": 4,
+          "max_depth": 1,
+          "max_parallel_readers": 2,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 120,
+          "max_wall_time_seconds": 3600,
+          "metering": "estimated",
+          "review_reserve_percent": 20
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".cursor/agents/model-routing-preset-worker.md",
+            "sha256": "25ec24500ff6da9f24d08fde79bea93075c9bfaf0f3b83b983548ecf71adef93"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "9706fa7c5c85cc90bcef9ec059d5b2de809f9e0d6fed687e5161a7058cb59c99",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "claude-native-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "claude-native-worker"
+          }
+        ],
+        "host": "claude-code",
+        "id": "claude-native",
+        "profiles": {
+          "claude-native-driver": {
+            "client": "claude-code",
+            "cost_tier": "premium",
+            "effort": "high",
+            "model": "opus"
+          },
+          "claude-native-worker": {
+            "client": "claude-code",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "sonnet"
+          }
+        },
+        "selector": "claude-native",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile balanced --host claude-native --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "claude-code"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "balanced-claude-native",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "balanced-claude-native@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 8,
+          "max_write_scope_entries": 4,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "balanced",
+        "materiality": {
+          "changed_files_threshold": 10,
+          "changed_lines_threshold": 500
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 1,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 1
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 3,
+          "max_attempts": 4,
+          "max_depth": 1,
+          "max_parallel_readers": 2,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 120,
+          "max_wall_time_seconds": 3600,
+          "metering": "estimated",
+          "review_reserve_percent": 20
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".claude/agents/model-routing-preset-worker.md",
+            "sha256": "f96b62406029051430e8365d622d141593fe72f56e20ed4a52f4f7f37ae5de1e"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "30736d1b5a9ed22f156a1c418dd7b243235b03d7ce3d27220b4648048c96d239",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "mixed-codex-terra-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "mechanical"
+            },
+            "profile": "mixed-codex-luna-xhigh"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "review"
+            },
+            "profile": "mixed-codex-sol-high"
+          }
+        ],
+        "host": "mixed-host",
+        "id": "mixed-host",
+        "profiles": {
+          "mixed-codex-luna-xhigh": {
+            "agent_type": "model_routing_luna_xhigh",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "xhigh",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-luna"
+          },
+          "mixed-codex-sol-high": {
+            "agent_type": "model_routing_sol_high",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "mixed-codex-terra-high": {
+            "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "mixed-cursor-fable-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "fable-5"
+          }
+        },
+        "selector": "mixed-host",
+        "version": "2.0.0"
+      },
+      "command": "model-routing compile balanced --host mixed-host --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "mixed-host"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "balanced-mixed-host",
+      "entryVersion": "1.0.0+2.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "balanced-mixed-host@1.0.0+2.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 8,
+          "max_write_scope_entries": 4,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "balanced",
+        "materiality": {
+          "changed_files_threshold": 10,
+          "changed_lines_threshold": 500
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 1,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 1
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 3,
+          "max_attempts": 4,
+          "max_depth": 1,
+          "max_parallel_readers": 2,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 120,
+          "max_wall_time_seconds": 3600,
+          "metering": "estimated",
+          "review_reserve_percent": 20
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".codex/agents/model-routing-luna-xhigh.toml",
+            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-high.toml",
+            "sha256": "b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-high.toml",
+            "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
+          },
+          {
+            "path": ".cursor/agents/model-routing-fable-driver.md",
+            "sha256": "d529c409474677360c027813a8ef7762e576bd26d2fb5a3355ede72c8c96e6dc"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "c6b1b1bf520e504f2fdea64f244112b5514ea3c7bf3cd21527b94dd20e6bf3b6",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "exploration"
+            },
+            "profile": "codex-terra-medium"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "research"
+            },
+            "profile": "codex-terra-medium"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "codex-terra-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "mechanical"
+            },
+            "profile": "codex-luna-xhigh"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "review"
+            },
+            "profile": "codex-sol-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "moonshot"
+            },
+            "profile": "codex-sol-ultra"
+          }
+        ],
+        "host": "codex",
+        "id": "codex-openai",
+        "profiles": {
+          "codex-luna-xhigh": {
+            "agent_type": "model_routing_luna_xhigh",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "xhigh",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-luna"
+          },
+          "codex-sol-high": {
+            "agent_type": "model_routing_sol_high",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "codex-sol-medium": {
+            "agent_type": "model_routing_sol_medium",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "model": "gpt-5.6-sol"
+          },
+          "codex-sol-ultra": {
+            "agent_type": "model_routing_sol_ultra",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "ultra",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "codex-terra-high": {
+            "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "codex-terra-medium": {
+            "agent_type": "model_routing_terra_medium",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          }
+        },
+        "selector": "codex-openai",
+        "version": "2.0.0"
+      },
+      "command": "model-routing compile low-usage --host codex-openai --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "codex"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "low-usage-codex-openai",
+      "entryVersion": "1.0.0+2.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "low-usage-codex-openai@1.0.0+2.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 6,
+          "max_write_scope_entries": 3,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "low-usage",
+        "materiality": {
+          "changed_files_threshold": 6,
+          "changed_lines_threshold": 250
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 1,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": true,
+            "max_downgrades": 1,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 0
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "downgrade_noncritical",
+          "max_active_agents": 2,
+          "max_attempts": 3,
+          "max_depth": 1,
+          "max_parallel_readers": 1,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 60,
+          "max_wall_time_seconds": 1800,
+          "metering": "estimated",
+          "review_reserve_percent": 25
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".codex/agents/model-routing-luna-xhigh.toml",
+            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-high.toml",
+            "sha256": "b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-medium.toml",
+            "sha256": "657975ea00e6363d52176969103234b2bfe119ee1fdc1d2a9c1332db7c3dbc35"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-ultra.toml",
+            "sha256": "92597594c9f31ab54fc7a6fe66bce9618bbe47d88a0a430532e6a402ede4602e"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-high.toml",
+            "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-medium.toml",
+            "sha256": "458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "aa98bd17ffcb71ec660be1133450be4ea10d0f3334c5bfbca666a8bdb5479d1e",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "cursor-openai-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "cursor-openai-worker"
+          }
+        ],
+        "host": "cursor",
+        "id": "cursor-openai",
+        "profiles": {
+          "cursor-openai-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "gpt-5.5"
+          },
+          "cursor-openai-worker": {
+            "client": "cursor",
+            "cost_tier": "standard",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.4-mini"
+          }
+        },
+        "selector": "cursor-openai",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile low-usage --host cursor-openai --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "cursor"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "low-usage-cursor-openai",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "low-usage-cursor-openai@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 6,
+          "max_write_scope_entries": 3,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "low-usage",
+        "materiality": {
+          "changed_files_threshold": 6,
+          "changed_lines_threshold": 250
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 1,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": true,
+            "max_downgrades": 1,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 0
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "downgrade_noncritical",
+          "max_active_agents": 2,
+          "max_attempts": 3,
+          "max_depth": 1,
+          "max_parallel_readers": 1,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 60,
+          "max_wall_time_seconds": 1800,
+          "metering": "estimated",
+          "review_reserve_percent": 25
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".cursor/agents/model-routing-preset-worker.md",
+            "sha256": "84be3de79825844c99786d1a589592a67a57d0065c288262f9ef49c7c911ae38"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "3d46478dbe03d8987240fc4f0961a7ddf609df8cf78094ab324cce4ed8162973",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "cursor-fable-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "cursor-grok-worker"
+          }
+        ],
+        "host": "cursor",
+        "id": "cursor-fable-grok",
+        "profiles": {
+          "cursor-fable-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "fable-5"
+          },
+          "cursor-grok-worker": {
+            "client": "cursor",
+            "cost_tier": "standard",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "grok-code-fast-1"
+          }
+        },
+        "selector": "cursor-fable-grok",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile low-usage --host cursor-fable-grok --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "cursor"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "low-usage-cursor-fable-grok",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "low-usage-cursor-fable-grok@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 6,
+          "max_write_scope_entries": 3,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "low-usage",
+        "materiality": {
+          "changed_files_threshold": 6,
+          "changed_lines_threshold": 250
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 1,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": true,
+            "max_downgrades": 1,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 0
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "downgrade_noncritical",
+          "max_active_agents": 2,
+          "max_attempts": 3,
+          "max_depth": 1,
+          "max_parallel_readers": 1,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 60,
+          "max_wall_time_seconds": 1800,
+          "metering": "estimated",
+          "review_reserve_percent": 25
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".cursor/agents/model-routing-preset-worker.md",
+            "sha256": "25ec24500ff6da9f24d08fde79bea93075c9bfaf0f3b83b983548ecf71adef93"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "84f3bd76fca002ad24c341df98cf5096689dbc21606d90523ad44a3a49399262",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "claude-native-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "claude-native-worker"
+          }
+        ],
+        "host": "claude-code",
+        "id": "claude-native",
+        "profiles": {
+          "claude-native-driver": {
+            "client": "claude-code",
+            "cost_tier": "premium",
+            "effort": "high",
+            "model": "opus"
+          },
+          "claude-native-worker": {
+            "client": "claude-code",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "sonnet"
+          }
+        },
+        "selector": "claude-native",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile low-usage --host claude-native --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "claude-code"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "low-usage-claude-native",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "low-usage-claude-native@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 6,
+          "max_write_scope_entries": 3,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "low-usage",
+        "materiality": {
+          "changed_files_threshold": 6,
+          "changed_lines_threshold": 250
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 1,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": true,
+            "max_downgrades": 1,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 0
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "downgrade_noncritical",
+          "max_active_agents": 2,
+          "max_attempts": 3,
+          "max_depth": 1,
+          "max_parallel_readers": 1,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 60,
+          "max_wall_time_seconds": 1800,
+          "metering": "estimated",
+          "review_reserve_percent": 25
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".claude/agents/model-routing-preset-worker.md",
+            "sha256": "f96b62406029051430e8365d622d141593fe72f56e20ed4a52f4f7f37ae5de1e"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "f56cb2304d14b51e900f167a495a0c95178972aebb3d867f61a17f8970b7fcd7",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "mixed-codex-terra-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "mechanical"
+            },
+            "profile": "mixed-codex-luna-xhigh"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "review"
+            },
+            "profile": "mixed-codex-sol-high"
+          }
+        ],
+        "host": "mixed-host",
+        "id": "mixed-host",
+        "profiles": {
+          "mixed-codex-luna-xhigh": {
+            "agent_type": "model_routing_luna_xhigh",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "xhigh",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-luna"
+          },
+          "mixed-codex-sol-high": {
+            "agent_type": "model_routing_sol_high",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "mixed-codex-terra-high": {
+            "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "mixed-cursor-fable-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "fable-5"
+          }
+        },
+        "selector": "mixed-host",
+        "version": "2.0.0"
+      },
+      "command": "model-routing compile low-usage --host mixed-host --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "mixed-host"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "low-usage-mixed-host",
+      "entryVersion": "1.0.0+2.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "low-usage-mixed-host@1.0.0+2.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 6,
+          "max_write_scope_entries": 3,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "low-usage",
+        "materiality": {
+          "changed_files_threshold": 6,
+          "changed_lines_threshold": 250
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 1,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": true,
+            "max_downgrades": 1,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 0
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "downgrade_noncritical",
+          "max_active_agents": 2,
+          "max_attempts": 3,
+          "max_depth": 1,
+          "max_parallel_readers": 1,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 60,
+          "max_wall_time_seconds": 1800,
+          "metering": "estimated",
+          "review_reserve_percent": 25
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".codex/agents/model-routing-luna-xhigh.toml",
+            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-high.toml",
+            "sha256": "b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-high.toml",
+            "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
+          },
+          {
+            "path": ".cursor/agents/model-routing-fable-driver.md",
+            "sha256": "d529c409474677360c027813a8ef7762e576bd26d2fb5a3355ede72c8c96e6dc"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "275a9c422fe73f0e01bb554921c111e574b499d65f5783e2c9691ae4e6f1116c",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "exploration"
+            },
+            "profile": "codex-terra-medium"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "research"
+            },
+            "profile": "codex-terra-medium"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "codex-terra-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "mechanical"
+            },
+            "profile": "codex-luna-xhigh"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "review"
+            },
+            "profile": "codex-sol-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "moonshot"
+            },
+            "profile": "codex-sol-ultra"
+          }
+        ],
+        "host": "codex",
+        "id": "codex-openai",
+        "profiles": {
+          "codex-luna-xhigh": {
+            "agent_type": "model_routing_luna_xhigh",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "xhigh",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-luna"
+          },
+          "codex-sol-high": {
+            "agent_type": "model_routing_sol_high",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "codex-sol-medium": {
+            "agent_type": "model_routing_sol_medium",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "model": "gpt-5.6-sol"
+          },
+          "codex-sol-ultra": {
+            "agent_type": "model_routing_sol_ultra",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "ultra",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "codex-terra-high": {
+            "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "codex-terra-medium": {
+            "agent_type": "model_routing_terra_medium",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          }
+        },
+        "selector": "codex-openai",
+        "version": "2.0.0"
+      },
+      "command": "model-routing compile max-quality --host codex-openai --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "codex"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "max-quality-codex-openai",
+      "entryVersion": "1.0.0+2.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "max-quality-codex-openai@1.0.0+2.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 12,
+          "max_write_scope_entries": 6,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "max-quality",
+        "materiality": {
+          "changed_files_threshold": 5,
+          "changed_lines_threshold": 200
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 2,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 1
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 4,
+          "max_attempts": 5,
+          "max_depth": 1,
+          "max_parallel_readers": 3,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 240,
+          "max_wall_time_seconds": 7200,
+          "metering": "estimated",
+          "review_reserve_percent": 40
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".codex/agents/model-routing-luna-xhigh.toml",
+            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-high.toml",
+            "sha256": "b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-medium.toml",
+            "sha256": "657975ea00e6363d52176969103234b2bfe119ee1fdc1d2a9c1332db7c3dbc35"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-ultra.toml",
+            "sha256": "92597594c9f31ab54fc7a6fe66bce9618bbe47d88a0a430532e6a402ede4602e"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-high.toml",
+            "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-medium.toml",
+            "sha256": "458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "7d654e89905275a543b38ca0e59b1a9e4a66a81537f7e8442008457fcc84d78e",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "cursor-openai-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "cursor-openai-worker"
+          }
+        ],
+        "host": "cursor",
+        "id": "cursor-openai",
+        "profiles": {
+          "cursor-openai-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "gpt-5.5"
+          },
+          "cursor-openai-worker": {
+            "client": "cursor",
+            "cost_tier": "standard",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.4-mini"
+          }
+        },
+        "selector": "cursor-openai",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile max-quality --host cursor-openai --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "cursor"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "max-quality-cursor-openai",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "max-quality-cursor-openai@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 12,
+          "max_write_scope_entries": 6,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "max-quality",
+        "materiality": {
+          "changed_files_threshold": 5,
+          "changed_lines_threshold": 200
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 2,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 1
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 4,
+          "max_attempts": 5,
+          "max_depth": 1,
+          "max_parallel_readers": 3,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 240,
+          "max_wall_time_seconds": 7200,
+          "metering": "estimated",
+          "review_reserve_percent": 40
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".cursor/agents/model-routing-preset-worker.md",
+            "sha256": "84be3de79825844c99786d1a589592a67a57d0065c288262f9ef49c7c911ae38"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "d8872136d05ea3a81f5dfc0313baf63d655a53d54d4d0d2ccdd626ac4a56ef08",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "cursor-fable-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "cursor-grok-worker"
+          }
+        ],
+        "host": "cursor",
+        "id": "cursor-fable-grok",
+        "profiles": {
+          "cursor-fable-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "fable-5"
+          },
+          "cursor-grok-worker": {
+            "client": "cursor",
+            "cost_tier": "standard",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "grok-code-fast-1"
+          }
+        },
+        "selector": "cursor-fable-grok",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile max-quality --host cursor-fable-grok --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "cursor"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "max-quality-cursor-fable-grok",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "max-quality-cursor-fable-grok@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 12,
+          "max_write_scope_entries": 6,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "max-quality",
+        "materiality": {
+          "changed_files_threshold": 5,
+          "changed_lines_threshold": 200
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 2,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 1
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 4,
+          "max_attempts": 5,
+          "max_depth": 1,
+          "max_parallel_readers": 3,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 240,
+          "max_wall_time_seconds": 7200,
+          "metering": "estimated",
+          "review_reserve_percent": 40
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".cursor/agents/model-routing-preset-worker.md",
+            "sha256": "25ec24500ff6da9f24d08fde79bea93075c9bfaf0f3b83b983548ecf71adef93"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "f5adf8e888962d9c00734b2d9276f3609c1db5f1b5b3c6ab69e62840dd03943f",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "claude-native-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "claude-native-worker"
+          }
+        ],
+        "host": "claude-code",
+        "id": "claude-native",
+        "profiles": {
+          "claude-native-driver": {
+            "client": "claude-code",
+            "cost_tier": "premium",
+            "effort": "high",
+            "model": "opus"
+          },
+          "claude-native-worker": {
+            "client": "claude-code",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "sonnet"
+          }
+        },
+        "selector": "claude-native",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile max-quality --host claude-native --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "claude-code"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "max-quality-claude-native",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "max-quality-claude-native@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 12,
+          "max_write_scope_entries": 6,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "max-quality",
+        "materiality": {
+          "changed_files_threshold": 5,
+          "changed_lines_threshold": 200
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 2,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 1
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 4,
+          "max_attempts": 5,
+          "max_depth": 1,
+          "max_parallel_readers": 3,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 240,
+          "max_wall_time_seconds": 7200,
+          "metering": "estimated",
+          "review_reserve_percent": 40
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".claude/agents/model-routing-preset-worker.md",
+            "sha256": "f96b62406029051430e8365d622d141593fe72f56e20ed4a52f4f7f37ae5de1e"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "cb3ac497651fdf986935eb64ddc6aa8c14b9ac9e5a3680f1d140e8ddae43f52e",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "mixed-codex-terra-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "mechanical"
+            },
+            "profile": "mixed-codex-luna-xhigh"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "review"
+            },
+            "profile": "mixed-codex-sol-high"
+          }
+        ],
+        "host": "mixed-host",
+        "id": "mixed-host",
+        "profiles": {
+          "mixed-codex-luna-xhigh": {
+            "agent_type": "model_routing_luna_xhigh",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "xhigh",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-luna"
+          },
+          "mixed-codex-sol-high": {
+            "agent_type": "model_routing_sol_high",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "mixed-codex-terra-high": {
+            "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "mixed-cursor-fable-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "fable-5"
+          }
+        },
+        "selector": "mixed-host",
+        "version": "2.0.0"
+      },
+      "command": "model-routing compile max-quality --host mixed-host --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "mixed-host"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "max-quality-mixed-host",
+      "entryVersion": "1.0.0+2.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "max-quality-mixed-host@1.0.0+2.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 12,
+          "max_write_scope_entries": 6,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ]
+              },
+              "tools": [
+                "cargo",
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "max-quality",
+        "materiality": {
+          "changed_files_threshold": 5,
+          "changed_lines_threshold": 200
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 2,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 1
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 4,
+          "max_attempts": 5,
+          "max_depth": 1,
+          "max_parallel_readers": 3,
+          "max_parallel_writers": 1,
+          "max_tool_calls": 240,
+          "max_wall_time_seconds": 7200,
+          "metering": "estimated",
+          "review_reserve_percent": 40
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".codex/agents/model-routing-luna-xhigh.toml",
+            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-high.toml",
+            "sha256": "b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-high.toml",
+            "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
+          },
+          {
+            "path": ".cursor/agents/model-routing-fable-driver.md",
+            "sha256": "d529c409474677360c027813a8ef7762e576bd26d2fb5a3355ede72c8c96e6dc"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "27df5fc82a2a3fc1a7d42b957b8075742a20fd30cc3510965a1ea27de9305e3d",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "exploration"
+            },
+            "profile": "codex-terra-medium"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "research"
+            },
+            "profile": "codex-terra-medium"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "codex-terra-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "mechanical"
+            },
+            "profile": "codex-luna-xhigh"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "review"
+            },
+            "profile": "codex-sol-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "moonshot"
+            },
+            "profile": "codex-sol-ultra"
+          }
+        ],
+        "host": "codex",
+        "id": "codex-openai",
+        "profiles": {
+          "codex-luna-xhigh": {
+            "agent_type": "model_routing_luna_xhigh",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "xhigh",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-luna"
+          },
+          "codex-sol-high": {
+            "agent_type": "model_routing_sol_high",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "codex-sol-medium": {
+            "agent_type": "model_routing_sol_medium",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "model": "gpt-5.6-sol"
+          },
+          "codex-sol-ultra": {
+            "agent_type": "model_routing_sol_ultra",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "ultra",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "codex-terra-high": {
+            "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "codex-terra-medium": {
+            "agent_type": "model_routing_terra_medium",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          }
+        },
+        "selector": "codex-openai",
+        "version": "2.0.0"
+      },
+      "command": "model-routing compile read-only-audit --host codex-openai --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "codex"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "read-only-audit-codex-openai",
+      "entryVersion": "1.0.0+2.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "read-only-audit-codex-openai@1.0.0+2.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 12,
+          "max_write_scope_entries": 1,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": []
+              },
+              "tools": [
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "read-only-audit",
+        "materiality": {
+          "changed_files_threshold": 1,
+          "changed_lines_threshold": 1
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 0,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 0
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 3,
+          "max_attempts": 2,
+          "max_depth": 1,
+          "max_parallel_readers": 3,
+          "max_parallel_writers": 0,
+          "max_tool_calls": 80,
+          "max_wall_time_seconds": 1800,
+          "metering": "estimated",
+          "review_reserve_percent": 20
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".codex/agents/model-routing-luna-xhigh.toml",
+            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-high.toml",
+            "sha256": "b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-medium.toml",
+            "sha256": "657975ea00e6363d52176969103234b2bfe119ee1fdc1d2a9c1332db7c3dbc35"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-ultra.toml",
+            "sha256": "92597594c9f31ab54fc7a6fe66bce9618bbe47d88a0a430532e6a402ede4602e"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-high.toml",
+            "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-medium.toml",
+            "sha256": "458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "4afd3260d1a4fac3b4b40238385c4277f89a51892d48944d1dd3f65b3b094e38",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "cursor-openai-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "cursor-openai-worker"
+          }
+        ],
+        "host": "cursor",
+        "id": "cursor-openai",
+        "profiles": {
+          "cursor-openai-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "gpt-5.5"
+          },
+          "cursor-openai-worker": {
+            "client": "cursor",
+            "cost_tier": "standard",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.4-mini"
+          }
+        },
+        "selector": "cursor-openai",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile read-only-audit --host cursor-openai --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "cursor"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "read-only-audit-cursor-openai",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "read-only-audit-cursor-openai@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 12,
+          "max_write_scope_entries": 1,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": []
+              },
+              "tools": [
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "read-only-audit",
+        "materiality": {
+          "changed_files_threshold": 1,
+          "changed_lines_threshold": 1
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 0,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 0
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 3,
+          "max_attempts": 2,
+          "max_depth": 1,
+          "max_parallel_readers": 3,
+          "max_parallel_writers": 0,
+          "max_tool_calls": 80,
+          "max_wall_time_seconds": 1800,
+          "metering": "estimated",
+          "review_reserve_percent": 20
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".cursor/agents/model-routing-preset-worker.md",
+            "sha256": "84be3de79825844c99786d1a589592a67a57d0065c288262f9ef49c7c911ae38"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "da5c2f93510b82ccda903620b3db64a998856605708f5543365ca5a793eba925",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "cursor-fable-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "cursor-grok-worker"
+          }
+        ],
+        "host": "cursor",
+        "id": "cursor-fable-grok",
+        "profiles": {
+          "cursor-fable-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "fable-5"
+          },
+          "cursor-grok-worker": {
+            "client": "cursor",
+            "cost_tier": "standard",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "grok-code-fast-1"
+          }
+        },
+        "selector": "cursor-fable-grok",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile read-only-audit --host cursor-fable-grok --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "cursor"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "read-only-audit-cursor-fable-grok",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "read-only-audit-cursor-fable-grok@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 12,
+          "max_write_scope_entries": 1,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": []
+              },
+              "tools": [
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "read-only-audit",
+        "materiality": {
+          "changed_files_threshold": 1,
+          "changed_lines_threshold": 1
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 0,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 0
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 3,
+          "max_attempts": 2,
+          "max_depth": 1,
+          "max_parallel_readers": 3,
+          "max_parallel_writers": 0,
+          "max_tool_calls": 80,
+          "max_wall_time_seconds": 1800,
+          "metering": "estimated",
+          "review_reserve_percent": 20
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".cursor/agents/model-routing-preset-worker.md",
+            "sha256": "25ec24500ff6da9f24d08fde79bea93075c9bfaf0f3b83b983548ecf71adef93"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "45b42be1cf367e2e78fcc10afc92d3f5a93754a5d22cbabbead18ce0904f6f29",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [
+              "claude-native-driver"
+            ],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "claude-native-worker"
+          }
+        ],
+        "host": "claude-code",
+        "id": "claude-native",
+        "profiles": {
+          "claude-native-driver": {
+            "client": "claude-code",
+            "cost_tier": "premium",
+            "effort": "high",
+            "model": "opus"
+          },
+          "claude-native-worker": {
+            "client": "claude-code",
+            "cost_tier": "standard",
+            "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "sonnet"
+          }
+        },
+        "selector": "claude-native",
+        "version": "1.0.0"
+      },
+      "command": "model-routing compile read-only-audit --host claude-native --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "claude-code"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "read-only-audit-claude-native",
+      "entryVersion": "1.0.0+1.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "read-only-audit-claude-native@1.0.0+1.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 12,
+          "max_write_scope_entries": 1,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": []
+              },
+              "tools": [
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "read-only-audit",
+        "materiality": {
+          "changed_files_threshold": 1,
+          "changed_lines_threshold": 1
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 0,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 0
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 3,
+          "max_attempts": 2,
+          "max_depth": 1,
+          "max_parallel_readers": 3,
+          "max_parallel_writers": 0,
+          "max_tool_calls": 80,
+          "max_wall_time_seconds": 1800,
+          "metering": "estimated",
+          "review_reserve_percent": 20
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".claude/agents/model-routing-preset-worker.md",
+            "sha256": "f96b62406029051430e8365d622d141593fe72f56e20ed4a52f4f7f37ae5de1e"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "89f857458cffb3006c82a9d6e574167cbfbc3729dad15734e281d6eae93a5669",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    },
+    {
+      "binding": {
+        "dispatch": [
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "code"
+            },
+            "profile": "mixed-codex-terra-high"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "mechanical"
+            },
+            "profile": "mixed-codex-luna-xhigh"
+          },
+          {
+            "fallbacks": [],
+            "match": {
+              "work_type": "review"
+            },
+            "profile": "mixed-codex-sol-high"
+          }
+        ],
+        "host": "mixed-host",
+        "id": "mixed-host",
+        "profiles": {
+          "mixed-codex-luna-xhigh": {
+            "agent_type": "model_routing_luna_xhigh",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "xhigh",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-luna"
+          },
+          "mixed-codex-sol-high": {
+            "agent_type": "model_routing_sol_high",
+            "client": "codex",
+            "cost_tier": "premium",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-sol"
+          },
+          "mixed-codex-terra-high": {
+            "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "mixed-cursor-fable-driver": {
+            "client": "cursor",
+            "cost_tier": "premium",
+            "model": "fable-5"
+          }
+        },
+        "selector": "mixed-host",
+        "version": "2.0.0"
+      },
+      "command": "model-routing compile read-only-audit --host mixed-host --output routing-bundle.json",
+      "compatibility": {
+        "hosts": [
+          "mixed-host"
+        ],
+        "maxModelRoutingVersion": null,
+        "minModelRoutingVersion": "0.1.0"
+      },
+      "enforcement": [
+        {
+          "detail": "Core previews and applies only allowlisted repository-local bundle artifacts.",
+          "dimension": "Repository writes",
+          "state": "verified"
+        },
+        {
+          "detail": "The package generates exact host roles; the host remains execution authority.",
+          "dimension": "Model and effort",
+          "state": "host_enforced"
+        },
+        {
+          "detail": "No authenticated live-host evidence is published for this generated catalog entry.",
+          "dimension": "Effective route evidence",
+          "state": "unavailable"
+        }
+      ],
+      "entryId": "read-only-audit-mixed-host",
+      "entryVersion": "1.0.0+2.0.0",
+      "evaluation": {
+        "evaluatedAtUnix": 1784160000,
+        "fixtureSha256": "295e73252b519924e8eeab0a04a20c58bf863026a41fcdb49d899833b2a303ae",
+        "metrics": {
+          "average_quality_score_bps": null,
+          "oracle_passes": 0,
+          "runs": 0
+        },
+        "resultHashes": [],
+        "reviewAtUnix": null,
+        "status": "experimental",
+        "suiteId": "model-routing-preset-suite",
+        "suiteVersion": "1.8.0",
+        "thresholds": {}
+      },
+      "freshness": "current",
+      "id": "read-only-audit-mixed-host@1.0.0+2.0.0",
+      "lifecycle": "published",
+      "policy": {
+        "execution": {
+          "max_read_scope_entries": 12,
+          "max_write_scope_entries": 1,
+          "roles": {
+            "worker": {
+              "filesystem": {
+                "allow_overwrite": false,
+                "read_roots": [
+                  "src",
+                  "tests",
+                  "docs"
+                ],
+                "write_roots": []
+              },
+              "tools": [
+                "git",
+                "rg"
+              ]
+            }
+          }
+        },
+        "id": "read-only-audit",
+        "materiality": {
+          "changed_files_threshold": 1,
+          "changed_lines_threshold": 1
+        },
+        "transitions": {
+          "availability_fallback": {
+            "max_fallbacks": 1,
+            "require_same_capability_class": true
+          },
+          "quality_escalation": {
+            "max_escalations": 0,
+            "require_verification_evidence": true
+          },
+          "quota_downgrade": {
+            "enabled": false,
+            "max_downgrades": 0,
+            "noncritical_only": true
+          },
+          "retry": {
+            "max_same_route_retries": 0
+          },
+          "safety_stop": {
+            "enabled": true
+          }
+        },
+        "usage": {
+          "budget_exhaustion": "stop",
+          "max_active_agents": 3,
+          "max_attempts": 2,
+          "max_depth": 1,
+          "max_parallel_readers": 3,
+          "max_parallel_writers": 0,
+          "max_tool_calls": 80,
+          "max_wall_time_seconds": 1800,
+          "metering": "estimated",
+          "review_reserve_percent": 20
+        },
+        "version": "1.0.0"
+      },
+      "recommended": false,
+      "registry": {
+        "artifacts": [
+          {
+            "path": ".codex/agents/model-routing-luna-xhigh.toml",
+            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+          },
+          {
+            "path": ".codex/agents/model-routing-sol-high.toml",
+            "sha256": "b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752"
+          },
+          {
+            "path": ".codex/agents/model-routing-terra-high.toml",
+            "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
+          },
+          {
+            "path": ".cursor/agents/model-routing-fable-driver.md",
+            "sha256": "d529c409474677360c027813a8ef7762e576bd26d2fb5a3355ede72c8c96e6dc"
+          }
+        ],
+        "id": "model-routing-official",
+        "manifestSha256": "3ff69f362757aa08817751184ab87de0a72e888eac7cccba2c66dab9fb99c3bb",
+        "signatureVerified": false,
+        "signer": null,
+        "trustedMaintainer": false,
+        "version": "0.1.0"
+      },
+      "replacement": null,
+      "status": "experimental",
+      "statusLabel": "Experimental"
+    }
+  ],
+  "generatedAtUnix": 1784160000,
+  "schemaVersion": 1,
+  "source": {
+    "entryCount": 20,
+    "message": "Entries stay experimental until authenticated live evidence and an offline maintainer signature pass.",
+    "state": "package_generated",
+    "trust": "model_routing_unsigned_catalog_v1"
+  }
+}

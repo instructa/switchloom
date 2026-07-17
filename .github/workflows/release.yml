@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v0.1.0
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: rustup toolchain install 1.85.0 --profile minimal
+      - name: Test
+        run: cargo +1.85.0 test --workspace --all-targets --all-features
+      - name: Build
+        run: cargo +1.85.0 build --release --locked
+      - name: Checksums
+        run: shasum -a 256 target/release/model-routing > SHA256SUMS
+      - name: Upload draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            --draft \
+            --title "$RELEASE_TAG" \
+            target/release/model-routing \
+            SHA256SUMS

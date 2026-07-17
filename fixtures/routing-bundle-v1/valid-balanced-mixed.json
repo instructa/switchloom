@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "bundle_id": "balanced-mixed-host@1.0.0+2.0.0",
+  "policy_id": "balanced",
+  "policy_version": "1.0.0",
+  "generated_at": "2026-07-16T00:00:00Z",
+  "source": {
+    "package": "model-routing",
+    "package_version": "0.1.0",
+    "integration": "planr"
+  },
+  "policy": {
+    "schema_version": 1,
+    "id": "balanced",
+    "version": "1.0.0",
+    "usage": {
+      "max_active_agents": 3,
+      "max_parallel_readers": 2,
+      "max_parallel_writers": 1,
+      "max_depth": 1,
+      "max_attempts": 4,
+      "max_wall_time_seconds": 3600,
+      "max_tool_calls": 120,
+      "review_reserve_percent": 20,
+      "budget_exhaustion": "stop",
+      "metering": "estimated"
+    },
+    "transitions": {
+      "retry": {
+        "max_same_route_retries": 1
+      },
+      "availability_fallback": {
+        "max_fallbacks": 1,
+        "require_same_capability_class": true
+      },
+      "quality_escalation": {
+        "max_escalations": 1,
+        "require_verification_evidence": true
+      },
+      "quota_downgrade": {
+        "enabled": false,
+        "max_downgrades": 0,
+        "noncritical_only": true
+      },
+      "safety_stop": {
+        "enabled": true
+      }
+    },
+    "materiality": {
+      "changed_files_threshold": 10,
+      "changed_lines_threshold": 500
+    },
+    "execution": {
+      "max_read_scope_entries": 8,
+      "max_write_scope_entries": 4,
+      "roles": {
+        "worker": {
+          "tools": [
+            "cargo",
+            "git",
+            "rg"
+          ],
+          "filesystem": {
+            "read_roots": [
+              "src",
+              "tests",
+              "docs"
+            ],
+            "write_roots": [
+              "src",
+              "tests",
+              "docs"
+            ],
+            "allow_overwrite": false
+          }
+        }
+      }
+    }
+  },
+  "requirements": [
+    {
+      "host": "mixed-host",
+      "capabilities": [
+        "model_override",
+        "reasoning_effort",
+        "fork_none",
+        "bounded_context_fork"
+      ]
+    }
+  ],
+  "profiles": {
+    "mixed-codex-luna-xhigh": {
+      "client": "codex",
+      "model": "gpt-5.6-luna",
+      "agent_type": "model_routing_luna_xhigh",
+      "effort": "xhigh",
+      "cost_tier": "premium",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "mixed-codex-sol-high": {
+      "client": "codex",
+      "model": "gpt-5.6-sol",
+      "agent_type": "model_routing_sol_high",
+      "effort": "high",
+      "cost_tier": "premium",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "mixed-codex-terra-high": {
+      "client": "codex",
+      "model": "gpt-5.6-terra",
+      "agent_type": "model_routing_terra_high",
+      "effort": "high",
+      "cost_tier": "standard",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "mixed-cursor-fable-driver": {
+      "client": "cursor",
+      "model": "fable-5",
+      "cost_tier": "premium"
+    }
+  },
+  "routes": [
+    {
+      "match": {
+        "work_type": "code"
+      },
+      "profile": "mixed-codex-terra-high",
+      "fallbacks": []
+    },
+    {
+      "match": {
+        "work_type": "mechanical"
+      },
+      "profile": "mixed-codex-luna-xhigh",
+      "fallbacks": []
+    },
+    {
+      "match": {
+        "work_type": "review"
+      },
+      "profile": "mixed-codex-sol-high",
+      "fallbacks": []
+    }
+  ],
+  "route_default": {
+    "profile": "mixed-cursor-fable-driver",
+    "fallbacks": []
+  },
+  "artifacts": [
+    {
+      "path": ".codex/agents/model-routing-luna-xhigh.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_luna_xhigh\"\ndescription = \"Bounded checklist-driven and mechanical implementation.\"\nmodel = \"gpt-5.6-luna\"\nmodel_reasoning_effort = \"xhigh\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nUse the existing Planr internal worker protocol for exactly one picked Planr item. Read the pick packet, implement only that item, log changed files and real verification commands, request review through Planr, and stop. Do not create or invoke any routing-specific, goal, or loop workflow skill. Planr users enter only through $planr-goal and $planr-loop.\n\nProtocol preload: $planr-work\n\"\"\"\n",
+      "sha256": "15302a8a8284a36902ac4c45f3ddfbb7f63ffd7360df2c1f992ff1bc5aa62643"
+    },
+    {
+      "path": ".codex/agents/model-routing-sol-high.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_sol_high\"\ndescription = \"Independent final review.\"\nmodel = \"gpt-5.6-sol\"\nmodel_reasoning_effort = \"high\"\nsandbox_mode = \"read-only\"\n\ndeveloper_instructions = \"\"\"\nUse the existing Planr internal review protocol for exactly one Planr review item. Read the pick packet, audit the target item and evidence, report findings first, and return the review verdict through Planr. Do not create or invoke any routing-specific, goal, or loop workflow skill. Planr users enter only through $planr-goal and $planr-loop.\n\nProtocol preload: $planr-review\n\"\"\"\n",
+      "sha256": "6a43d0847f8a4b55bcde6da8c5aca30ca8839b0d4d7abfb5f654453c744e1bcb"
+    },
+    {
+      "path": ".codex/agents/model-routing-terra-high.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_terra_high\"\ndescription = \"Normal implementation and testing.\"\nmodel = \"gpt-5.6-terra\"\nmodel_reasoning_effort = \"high\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nUse the existing Planr internal worker protocol for exactly one picked Planr item. Read the pick packet, implement only that item, log changed files and real verification commands, request review through Planr, and stop. Do not create or invoke any routing-specific, goal, or loop workflow skill. Planr users enter only through $planr-goal and $planr-loop.\n\nProtocol preload: $planr-work\n\"\"\"\n",
+      "sha256": "d19e92ab08073ebcab81f3ebbc75e4af61fae610bf6bf5002cb1d9ad21dfca26"
+    },
+    {
+      "path": ".cursor/agents/model-routing-fable-driver.md",
+      "media_type": "text/markdown",
+      "mode": "create",
+      "content": "---\nname: model-routing-fable-driver\nmodel: fable-5\n---\nOrchestrate the Model Routing workflow and dispatch bounded Codex worker roles.\n",
+      "sha256": "d529c409474677360c027813a8ef7762e576bd26d2fb5a3355ede72c8c96e6dc"
+    },
+    {
+      "path": ".planr/agents.toml",
+      "media_type": "application/toml",
+      "mode": "replace",
+      "content": "[profiles.mixed-cursor-fable-driver]\nclient = \"cursor\"\nmodel = \"fable-5\"\ncost_tier = \"premium\"\n\n[profiles.model_routing_luna_xhigh]\nclient = \"codex\"\nmodel = \"gpt-5.6-luna\"\neffort = \"xhigh\"\ncost_tier = \"premium\"\nnotes = \"native_agent_type=model_routing_luna_xhigh\"\n\n[profiles.model_routing_sol_high]\nclient = \"codex\"\nmodel = \"gpt-5.6-sol\"\neffort = \"high\"\ncost_tier = \"premium\"\nnotes = \"native_agent_type=model_routing_sol_high\"\n\n[profiles.model_routing_terra_high]\nclient = \"codex\"\nmodel = \"gpt-5.6-terra\"\neffort = \"high\"\ncost_tier = \"standard\"\nnotes = \"native_agent_type=model_routing_terra_high\"\n\n[[routes]]\nprofile = \"model_routing_terra_high\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"code\"\n\n[[routes]]\nprofile = \"model_routing_luna_xhigh\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"mechanical\"\n\n[[routes]]\nprofile = \"model_routing_sol_high\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"review\"\n\n[route_default]\nprofile = \"mixed-cursor-fable-driver\"\nfallbacks = []\n",
+      "sha256": "455aaa6587085ce368187e2f67ff71575ff65fd2eafc64bb8403e1c1365ecb1b"
+    },
+    {
+      "path": ".planr/policy.toml",
+      "media_type": "application/toml",
+      "mode": "replace",
+      "content": "schema_version = 1\nid = \"balanced\"\nversion = \"1.0.0\"\n\n[usage]\nmax_active_agents = 3\nmax_parallel_readers = 2\nmax_parallel_writers = 1\nmax_depth = 1\nmax_attempts = 4\nmax_wall_time_seconds = 3600\nmax_tool_calls = 120\nreview_reserve_percent = 20\nbudget_exhaustion = \"stop\"\nmetering = \"estimated\"\n\n[transitions.retry]\nmax_same_route_retries = 1\n\n[transitions.availability_fallback]\nmax_fallbacks = 1\nrequire_same_capability_class = true\n\n[transitions.quality_escalation]\nmax_escalations = 1\nrequire_verification_evidence = true\n\n[transitions.quota_downgrade]\nenabled = false\nmax_downgrades = 0\nnoncritical_only = true\n\n[transitions.safety_stop]\nenabled = true\n\n[materiality]\nchanged_files_threshold = 10\nchanged_lines_threshold = 500\n\n[execution]\nmax_read_scope_entries = 8\nmax_write_scope_entries = 4\n\n[execution.roles.worker]\ntools = [\"cargo\", \"git\", \"rg\"]\n\n[execution.roles.worker.filesystem]\nread_roots = [\"src\", \"tests\", \"docs\"]\nwrite_roots = [\"src\", \"tests\", \"docs\"]\nallow_overwrite = false\n",
+      "sha256": "827667b678224f6b09f7c3faab188ede4c7bad49cd2fc9fa8e46f01d61147080"
+    }
+  ],
+  "evidence": {
+    "evaluation_ids": [
+      "builtin-mixed-host-native-v2"
+    ],
+    "status": "experimental"
+  }
+}

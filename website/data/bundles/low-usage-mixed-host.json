@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "bundle_id": "low-usage-mixed-host@1.0.0+2.0.0",
+  "policy_id": "low-usage",
+  "policy_version": "1.0.0",
+  "generated_at": "2026-07-16T00:00:00Z",
+  "source": {
+    "package": "model-routing",
+    "package_version": "0.1.0",
+    "integration": "standalone"
+  },
+  "policy": {
+    "schema_version": 1,
+    "id": "low-usage",
+    "version": "1.0.0",
+    "usage": {
+      "max_active_agents": 2,
+      "max_parallel_readers": 1,
+      "max_parallel_writers": 1,
+      "max_depth": 1,
+      "max_attempts": 3,
+      "max_wall_time_seconds": 1800,
+      "max_tool_calls": 60,
+      "review_reserve_percent": 25,
+      "budget_exhaustion": "downgrade_noncritical",
+      "metering": "estimated"
+    },
+    "transitions": {
+      "retry": {
+        "max_same_route_retries": 0
+      },
+      "availability_fallback": {
+        "max_fallbacks": 1,
+        "require_same_capability_class": true
+      },
+      "quality_escalation": {
+        "max_escalations": 1,
+        "require_verification_evidence": true
+      },
+      "quota_downgrade": {
+        "enabled": true,
+        "max_downgrades": 1,
+        "noncritical_only": true
+      },
+      "safety_stop": {
+        "enabled": true
+      }
+    },
+    "materiality": {
+      "changed_files_threshold": 6,
+      "changed_lines_threshold": 250
+    },
+    "execution": {
+      "max_read_scope_entries": 6,
+      "max_write_scope_entries": 3,
+      "roles": {
+        "worker": {
+          "tools": [
+            "cargo",
+            "git",
+            "rg"
+          ],
+          "filesystem": {
+            "read_roots": [
+              "src",
+              "tests",
+              "docs"
+            ],
+            "write_roots": [
+              "src",
+              "tests",
+              "docs"
+            ],
+            "allow_overwrite": false
+          }
+        }
+      }
+    }
+  },
+  "requirements": [
+    {
+      "host": "mixed-host",
+      "capabilities": [
+        "model_override",
+        "reasoning_effort",
+        "fork_none",
+        "bounded_context_fork"
+      ]
+    }
+  ],
+  "profiles": {
+    "mixed-codex-luna-xhigh": {
+      "client": "codex",
+      "model": "gpt-5.6-luna",
+      "agent_type": "model_routing_luna_xhigh",
+      "effort": "xhigh",
+      "cost_tier": "premium",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "mixed-codex-sol-high": {
+      "client": "codex",
+      "model": "gpt-5.6-sol",
+      "agent_type": "model_routing_sol_high",
+      "effort": "high",
+      "cost_tier": "premium",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "mixed-codex-terra-high": {
+      "client": "codex",
+      "model": "gpt-5.6-terra",
+      "agent_type": "model_routing_terra_high",
+      "effort": "high",
+      "cost_tier": "standard",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "mixed-cursor-fable-driver": {
+      "client": "cursor",
+      "model": "fable-5",
+      "cost_tier": "premium"
+    }
+  },
+  "routes": [
+    {
+      "match": {
+        "work_type": "code"
+      },
+      "profile": "mixed-codex-terra-high",
+      "fallbacks": []
+    },
+    {
+      "match": {
+        "work_type": "mechanical"
+      },
+      "profile": "mixed-codex-luna-xhigh",
+      "fallbacks": []
+    },
+    {
+      "match": {
+        "work_type": "review"
+      },
+      "profile": "mixed-codex-sol-high",
+      "fallbacks": []
+    }
+  ],
+  "route_default": {
+    "profile": "mixed-cursor-fable-driver",
+    "fallbacks": []
+  },
+  "artifacts": [
+    {
+      "path": ".codex/agents/model-routing-luna-xhigh.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_luna_xhigh\"\ndescription = \"Bounded checklist-driven and mechanical implementation.\"\nmodel = \"gpt-5.6-luna\"\nmodel_reasoning_effort = \"xhigh\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nFollow one tightly bounded item, verify the result, and stop.\n\"\"\"\n",
+      "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+    },
+    {
+      "path": ".codex/agents/model-routing-sol-high.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_sol_high\"\ndescription = \"Independent final review.\"\nmodel = \"gpt-5.6-sol\"\nmodel_reasoning_effort = \"high\"\nsandbox_mode = \"read-only\"\n\ndeveloper_instructions = \"\"\"\nIndependently verify acceptance criteria and evidence, and report findings before the verdict.\n\"\"\"\n",
+      "sha256": "b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752"
+    },
+    {
+      "path": ".codex/agents/model-routing-terra-high.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_terra_high\"\ndescription = \"Normal implementation and testing.\"\nmodel = \"gpt-5.6-terra\"\nmodel_reasoning_effort = \"high\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nImplement one picked item, keep the slice small, and record real verification evidence.\n\"\"\"\n",
+      "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
+    },
+    {
+      "path": ".cursor/agents/model-routing-fable-driver.md",
+      "media_type": "text/markdown",
+      "mode": "create",
+      "content": "---\nname: model-routing-fable-driver\nmodel: fable-5\n---\nOrchestrate the Model Routing workflow and dispatch bounded Codex worker roles.\n",
+      "sha256": "d529c409474677360c027813a8ef7762e576bd26d2fb5a3355ede72c8c96e6dc"
+    }
+  ],
+  "evidence": {
+    "evaluation_ids": [
+      "builtin-mixed-host-native-v2"
+    ],
+    "status": "experimental"
+  }
+}

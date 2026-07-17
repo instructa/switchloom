@@ -1,0 +1,43 @@
+# Local runtime and coordination state
+(^|/)\.model-routing/
+(^|/)\.planr/
+(^|/)\.alchemy/
+(^|/)\.wrangler/
+(^|/)\.codex/
+(^|/)\.claude/
+(^|/)\.cursor/
+
+# Environment and credential files
+(^|/)\.env$
+(^|/)\.env\.
+(^|/)\.envrc$
+(^|/)\.npmrc$
+(^|/)\.netrc$
+(^|/)\.git-credentials$
+(^|/)credentials\.json$
+(^|/)secrets\.json$
+(^|/)tokens\.json$
+(^|/)service-account.*\.json$
+
+# Private keys
+\.pem$
+\.key$
+\.p12$
+\.pfx$
+\.jks$
+\.keystore$
+\.agekey$
+(^|/)id_rsa$
+(^|/)id_ed25519$
+(^|/)id_ecdsa$
+(^|/)id_dsa$
+
+# Infrastructure state
+\.tfstate($|\.)
+\.tfplan$
+\.tfvars$
+
+# Local editor settings
+(^|/)\.idea/
+(^|/)\.vscode/settings\.json$
+(^|/)\.vscode/launch\.json$

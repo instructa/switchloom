@@ -1,0 +1,63 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+.envrc
+.npmrc
+.netrc
+.git-credentials
+credentials.json
+secrets.json
+tokens.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.agekey
+id_rsa
+id_ed25519
+id_ecdsa
+id_dsa
+
+# Node and deployment tooling
+/node_modules/
+/.pnpm-store/
+/.alchemy/
+/.wrangler/
+pnpm-debug.log*
+
+# Infrastructure state
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+
+# Local agent and Planr coordination state must never ship with this product.
+.claude/
+.codex/
+.cursor/
+.planr/
+.model-routing/
+
+# Generated artifacts
+/dist/
+/coverage/
+/tmp/
+/reports/
+*.crate
+*.sqlite
+*.sqlite-*
+*receipt*

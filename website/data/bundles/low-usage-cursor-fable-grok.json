@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "bundle_id": "low-usage-cursor-fable-grok@1.0.0+1.0.0",
+  "policy_id": "low-usage",
+  "policy_version": "1.0.0",
+  "generated_at": "2026-07-16T00:00:00Z",
+  "source": {
+    "package": "model-routing",
+    "package_version": "0.1.0",
+    "integration": "standalone"
+  },
+  "policy": {
+    "schema_version": 1,
+    "id": "low-usage",
+    "version": "1.0.0",
+    "usage": {
+      "max_active_agents": 2,
+      "max_parallel_readers": 1,
+      "max_parallel_writers": 1,
+      "max_depth": 1,
+      "max_attempts": 3,
+      "max_wall_time_seconds": 1800,
+      "max_tool_calls": 60,
+      "review_reserve_percent": 25,
+      "budget_exhaustion": "downgrade_noncritical",
+      "metering": "estimated"
+    },
+    "transitions": {
+      "retry": {
+        "max_same_route_retries": 0
+      },
+      "availability_fallback": {
+        "max_fallbacks": 1,
+        "require_same_capability_class": true
+      },
+      "quality_escalation": {
+        "max_escalations": 1,
+        "require_verification_evidence": true
+      },
+      "quota_downgrade": {
+        "enabled": true,
+        "max_downgrades": 1,
+        "noncritical_only": true
+      },
+      "safety_stop": {
+        "enabled": true
+      }
+    },
+    "materiality": {
+      "changed_files_threshold": 6,
+      "changed_lines_threshold": 250
+    },
+    "execution": {
+      "max_read_scope_entries": 6,
+      "max_write_scope_entries": 3,
+      "roles": {
+        "worker": {
+          "tools": [
+            "cargo",
+            "git",
+            "rg"
+          ],
+          "filesystem": {
+            "read_roots": [
+              "src",
+              "tests",
+              "docs"
+            ],
+            "write_roots": [
+              "src",
+              "tests",
+              "docs"
+            ],
+            "allow_overwrite": false
+          }
+        }
+      }
+    }
+  },
+  "requirements": [
+    {
+      "host": "cursor",
+      "capabilities": [
+        "model_override",
+        "fork_none"
+      ]
+    }
+  ],
+  "profiles": {
+    "cursor-fable-driver": {
+      "client": "cursor",
+      "model": "fable-5",
+      "cost_tier": "premium"
+    },
+    "cursor-grok-worker": {
+      "client": "cursor",
+      "model": "grok-code-fast-1",
+      "cost_tier": "standard",
+      "fork_turns": {
+        "mode": "none"
+      }
+    }
+  },
+  "routes": [
+    {
+      "match": {
+        "work_type": "code"
+      },
+      "profile": "cursor-grok-worker",
+      "fallbacks": [
+        "cursor-fable-driver"
+      ]
+    }
+  ],
+  "route_default": {
+    "profile": "cursor-fable-driver",
+    "fallbacks": []
+  },
+  "artifacts": [
+    {
+      "path": ".cursor/agents/model-routing-preset-worker.md",
+      "media_type": "text/markdown",
+      "mode": "create",
+      "content": "---\nname: model-routing-preset-worker\nmodel: grok-code-fast-1\n---\nFollow the generated role instructions and preserve routing evidence.\n",
+      "sha256": "25ec24500ff6da9f24d08fde79bea93075c9bfaf0f3b83b983548ecf71adef93"
+    }
+  ],
+  "evidence": {
+    "evaluation_ids": [
+      "builtin-cursor-fable-grok-v1"
+    ],
+    "status": "experimental"
+  }
+}

@@ -1,0 +1,83 @@
+type	id	source	disposition	target	notes
+source-file	src-001	planr-routing/.env.example	replace	.env.example	Standalone deployment example after Cloudflare ownership transfer.
+source-file	src-002	planr-routing/Cargo.toml	move-generalize	Cargo.toml	Rename package to model-routing and remove Planr repository assumptions.
+source-file	src-003	planr-routing/alchemy.run.ts	move-generalize	alchemy.run.ts	Transfer Cloudflare stack after resource and secret renaming.
+generated-current	gen-001	planr-routing/dist/website/_headers	delete	regenerated	Current generated website output absent from frozen v1.5.0 Git tree; regenerate from standalone source.
+generated-current	gen-002	planr-routing/dist/website/app.mjs	delete	regenerated	Current generated website output absent from frozen v1.5.0 Git tree; regenerate from standalone source.
+generated-current	gen-003	planr-routing/dist/website/catalog-model.mjs	delete	regenerated	Current generated website output absent from frozen v1.5.0 Git tree; regenerate from standalone source.
+generated-current	gen-004	planr-routing/dist/website/index.html	delete	regenerated	Current generated website output absent from frozen v1.5.0 Git tree; regenerate from standalone source.
+generated-current	gen-005	planr-routing/dist/website/styles.css	delete	regenerated	Current generated website output absent from frozen v1.5.0 Git tree; regenerate from standalone source.
+source-file	src-009	planr-routing/docs/MODEL_ROUTING_POLICY.md	move-generalize	docs/model-routing-policy.md	Standalone policy documentation.
+source-file	src-010	planr-routing/docs/PRESET_COMPOSITION.md	move-generalize	docs/preset-composition.md	Standalone preset composition documentation.
+source-file	src-011	planr-routing/docs/PRESET_EVALUATION.md	move-generalize	docs/preset-evaluation.md	Evidence and recommendation gates.
+source-file	src-012	planr-routing/docs/PRESET_REGISTRY.md	move-generalize	docs/preset-registry.md	Registry and signature documentation.
+source-file	src-013	planr-routing/evaluations/preset-suite-v1.toml	move-generalize	evaluations/preset-suite-v1.toml	Official evaluation metadata.
+source-file	src-014	planr-routing/evaluations/sol-terra-luna-codex-v2.toml	move-generalize	evaluations/sol-terra-luna-codex-v2.toml	Model evaluation metadata with Planr assumptions removed.
+source-file	src-015	planr-routing/fixtures/routing-bundle-v1/invalid-artifact-hash.json	move-generalize	fixtures/routing-bundle-v1/invalid-artifact-hash.json	Schema/adversarial fixture with standalone package fields.
+source-file	src-016	planr-routing/fixtures/routing-bundle-v1/invalid-dual-artifact-payload.json	move-generalize	fixtures/routing-bundle-v1/invalid-dual-artifact-payload.json	Schema/adversarial fixture with standalone package fields.
+source-file	src-017	planr-routing/fixtures/routing-bundle-v1/invalid-unsupported-version.json	move-generalize	fixtures/routing-bundle-v1/invalid-unsupported-version.json	Schema/adversarial fixture with standalone package fields.
+source-file	src-018	planr-routing/fixtures/routing-bundle-v1/valid-balanced-codex.json	move-generalize	fixtures/routing-bundle-v1/valid-balanced-codex.json	Valid Codex bundle fixture with standalone package fields.
+source-file	src-019	planr-routing/fixtures/routing-bundle-v1/valid-balanced-mixed.json	move-generalize	fixtures/routing-bundle-v1/valid-balanced-mixed.json	Valid mixed-host bundle fixture with standalone package fields.
+source-file	src-020	planr-routing/host-bindings/claude-native.toml	move-generalize	host-bindings/claude-native.toml	Claude Code host binding; live label remains unverified until proven.
+source-file	src-021	planr-routing/host-bindings/codex-openai.toml	move-generalize	host-bindings/codex-openai.toml	Codex host binding; enforce non-all fork evidence for selected child models.
+source-file	src-022	planr-routing/host-bindings/cursor-fable-grok.toml	move-generalize	host-bindings/cursor-fable-grok.toml	Cursor/Fable/Grok binding; live label remains unverified until proven.
+source-file	src-023	planr-routing/host-bindings/cursor-openai.toml	move-generalize	host-bindings/cursor-openai.toml	Cursor/OpenAI binding; live label remains unverified until proven.
+source-file	src-024	planr-routing/host-bindings/mixed-host.toml	move-generalize	host-bindings/mixed-host.toml	Mixed-host deterministic output fixture.
+generated-current	gen-006	planr-routing/node_modules/.bin/alchemy	delete	none	Current dependency install artifact absent from frozen v1.5.0 Git tree; never move or publish.
+source-file	src-026	planr-routing/package.json	move-generalize	package.json	Website/tooling metadata after rebranding.
+source-file	src-027	planr-routing/scripts/build-site.mjs	move-generalize	scripts/build-site.mjs	Standalone website build script fed by canonical compiler output.
+source-file	src-028	planr-routing/scripts/check-alchemy-runtime.mjs	move-generalize	scripts/check-alchemy-runtime.mjs	Standalone Alchemy runtime check.
+source-file	src-029	planr-routing/scripts/cloudflare-test.mjs	move-generalize	scripts/cloudflare-test.mjs	Test-domain Cloudflare deployment helper.
+source-file	src-030	planr-routing/scripts/regenerate-preset-catalog.mjs	replace	scripts/regenerate-preset-catalog.mjs	Replace with compiler-owned catalog generation.
+source-file	src-031	planr-routing/src/lib.rs	move-generalize	src/lib.rs	Routing domain, schema, catalog, validation, hashing, signing, and host probing.
+source-file	src-032	planr-routing/src/main.rs	move-generalize	src/main.rs	CLI commands under model-routing with explicit integration modes.
+source-file	src-033	planr-routing/usage-policies/balanced.toml	move-generalize	usage-policies/balanced.toml	Official preset data after rebranding.
+source-file	src-034	planr-routing/usage-policies/low-usage.toml	move-generalize	usage-policies/low-usage.toml	Official preset data after rebranding.
+source-file	src-035	planr-routing/usage-policies/max-quality.toml	move-generalize	usage-policies/max-quality.toml	Official preset data after rebranding.
+source-file	src-036	planr-routing/usage-policies/read-only-audit.toml	move-generalize	usage-policies/read-only-audit.toml	Official preset data after rebranding.
+source-file	src-037	planr-routing/website/README.md	move-generalize	website/README.md	Standalone website documentation.
+source-file	src-038	planr-routing/website/_headers	move-generalize	website/_headers	Cloudflare static headers.
+source-file	src-039	planr-routing/website/alchemy-runtime.test.mjs	move-generalize	website/alchemy-runtime.test.mjs	Website Alchemy runtime test.
+source-file	src-040	planr-routing/website/app.mjs	move-generalize	website/app.mjs	Rebranded interactive website application.
+source-file	src-041	planr-routing/website/build-catalog.mjs	replace	website/build-catalog.mjs	Replace with canonical compiler parity path.
+source-file	src-042	planr-routing/website/build-site.test.mjs	move-generalize	website/build-site.test.mjs	Website build test.
+source-file	src-043	planr-routing/website/catalog-model.mjs	move-generalize	website/catalog-model.mjs	Public catalog model.
+source-file	src-044	planr-routing/website/catalog-model.test.mjs	move-generalize	website/catalog-model.test.mjs	Catalog model tests.
+source-file	src-045	planr-routing/website/cloudflare-launcher.test.mjs	move-generalize	website/cloudflare-launcher.test.mjs	Cloudflare launcher tests.
+source-file	src-046	planr-routing/website/data/catalog.json	replace	website/data/catalog.json	Regenerate from standalone compiler.
+source-file	src-047	planr-routing/website/index.html	move-generalize	website/index.html	Rebranded website shell.
+source-file	src-048	planr-routing/website/serve.mjs	move-generalize	website/serve.mjs	Local website server.
+source-file	src-049	planr-routing/website/styles.css	move-generalize	website/styles.css	Rebranded website styles.
+planr-consumer	planr-001	src/routing_bundle.rs	keep-then-delete	Planr Goal B	Planr-side consumer remains until standalone release, then hard-cut to neutral integration.
+planr-consumer	planr-002	src/routing_bundle/tests.rs	split	Planr Goal B	Portable bundle validation fixtures move here; Planr consumer tests become deletion oracle.
+planr-consumer	planr-003	src/cli/policy.rs	replace	Planr Goal B	Policy CLI ownership moves here; Planr keeps only integration-facing surfaces.
+planr-consumer	planr-004	src/app/routing.rs	replace	Planr Goal B	Planr keeps opaque route resolution, not compiler/catalog logic.
+planr-consumer	planr-005	src/app/agents.rs	keep	Planr Goal B	Planr graph/agent profile integration remains Planr-owned.
+planr-consumer	planr-006	src/app/agents_init.rs	keep	Planr Goal B	Planr initialization remains Planr-owned.
+planr-consumer	planr-007	src/app/policy.rs	keep	Planr Goal B	Planr execution policy stays Planr-owned.
+planr-consumer	planr-008	src/execution_policy.rs	keep	Planr Goal B	Planr execution constraints stay Planr-owned.
+planr-consumer	planr-009	src/usage_policy.rs	keep	Planr Goal B	Planr usage constraints stay Planr-owned.
+planr-consumer	planr-010	src/agents.rs	keep	Planr Goal B	Planr agent registry behavior stays Planr-owned.
+planr-consumer	planr-011	src/agents/tests.rs	keep	Planr Goal B	Planr agent registry tests stay Planr-owned.
+planr-consumer	planr-012	tests/routing_ownership.rs	replace	Planr Goal B	Replace with hard-cut deletion oracle after standalone release.
+planr-consumer	planr-013	plugins/planr/agents/planr-reviewer.md	keep	Planr plugin	Planr plugin reviewer role stays Planr-owned.
+planr-consumer	planr-014	plugins/planr/agents/planr-worker.md	keep	Planr plugin	Planr plugin worker role stays Planr-owned.
+planr-consumer	planr-015	plugins/planr/skills/planr-loop/agents/planr-reviewer.md	keep	Planr plugin	Planr loop reviewer role stays Planr-owned.
+planr-consumer	planr-016	plugins/planr/skills/planr-loop/agents/planr-worker.md	keep	Planr plugin	Planr loop worker role stays Planr-owned.
+cli-command	cmd-001	planr-routing policy list	move-generalize	model-routing policy list	List official policies.
+cli-command	cmd-002	planr-routing policy show <policy> --host <host>	move-generalize	model-routing policy show <policy> --host <host>	Show one policy.
+cli-command	cmd-003	planr-routing compile <policy> --host <host>	move-generalize	model-routing compile <policy> --host <host>	Compile bundle JSON.
+cli-command	cmd-004	planr-routing probe <host>	move-generalize	model-routing probe <host>	Probe host capabilities.
+cli-command	cmd-005	planr-routing evaluate <policy> --host <host>	move-generalize	model-routing evaluate <policy> --host <host>	Evaluate recommendation evidence.
+cli-command	cmd-006	planr-routing catalog build	move-generalize	model-routing catalog build	Build catalog JSON.
+cli-command	cmd-007	planr-routing catalog verify <file>	move-generalize	model-routing catalog verify <file>	Verify catalog JSON.
+cli-command	cmd-008	planr-routing registry sign <file> --signer <id> --private-key-file <path> --output <path>	move-generalize	model-routing registry sign <file> --signer <id> --private-key-file <path> --output <path>	Sign registry metadata.
+cli-command	cmd-009	planr-routing registry verify <file> --signature <path> --trusted-signer <id> --trusted-public-key-file <path>	move-generalize	model-routing registry verify <file> --signature <path> --trusted-signer <id> --trusted-public-key-file <path>	Verify registry signature.
+generated-artifact	art-001	.planr/agents.toml	move-generalize	.planr/agents.toml	Optional Planr integration declaration only.
+generated-artifact	art-002	.planr/policy.toml	move-generalize	.planr/policy.toml	Optional Planr integration policy only.
+generated-artifact	art-003	.codex/agents/planr-worker.toml	move-generalize	.codex/agents/model-routing-worker.toml	Host-native Codex worker role artifact.
+generated-artifact	art-004	.codex/agents/planr-reviewer.toml	move-generalize	.codex/agents/model-routing-reviewer.toml	Host-native Codex reviewer role artifact.
+generated-artifact	art-005	.claude/agents/planr-worker.md	move-generalize	.claude/agents/model-routing-worker.md	Host-native Claude worker role artifact.
+generated-artifact	art-006	.claude/agents/planr-reviewer.md	move-generalize	.claude/agents/model-routing-reviewer.md	Host-native Claude reviewer role artifact.
+generated-artifact	art-007	.cursor/agents/planr-worker.md	move-generalize	.cursor/agents/model-routing-worker.md	Host-native Cursor worker role artifact.
+generated-artifact	art-008	.cursor/agents/planr-reviewer.md	move-generalize	.cursor/agents/model-routing-reviewer.md	Host-native Cursor reviewer role artifact.
