@@ -34,6 +34,8 @@ id_dsa
 
 # Node and deployment tooling
 /node_modules/
+/.npm-package/
+/npm/native/
 /.pnpm-store/
 /.alchemy/
 /.wrangler/

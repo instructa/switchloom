@@ -66,9 +66,11 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-targets --all-features
 pnpm install --frozen-lockfile
 pnpm site:check
+pnpm pack:check
 cargo package --locked --allow-dirty --no-verify
 scripts/secleak-check.sh
 scripts/build-release.sh
+SWITCHLOOM_NATIVE_BIN="$(pwd)/target/release/model-routing" node npm/bin/model-routing.js --version
 
 if [ "${RELEASE_DRY_RUN:-0}" = "1" ]; then
   echo "release dry run passed for v$version"

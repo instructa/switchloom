@@ -19,6 +19,7 @@ exclude = [
   "dist/**",
   "reports/**",
   "tmp/**",
+  "npm/native/**",
   "**/*.sqlite",
   "**/*.sqlite-*",
   "**/*receipt*",

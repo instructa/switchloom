@@ -6,6 +6,34 @@ Switchloom is a standalone policy compiler and repository-safe host artifact man
 
 Planr integration is optional. The package graph must build without Planr dependencies, and standalone operation is the default.
 
+## Install
+
+### Homebrew
+
+```sh
+brew install instructa/tap/switchloom
+```
+
+### npm
+
+```sh
+npm install --global switchloom
+```
+
+Both channels install the branded `switchloom` command and the compatibility
+alias `model-routing`:
+
+```sh
+switchloom --version
+model-routing --version
+```
+
+### Release archive
+
+Download the archive for your platform from the
+[latest GitHub release](https://github.com/instructa/switchloom/releases/latest),
+verify it against `SHA256SUMS`, and place `model-routing` on your `PATH`.
+
 ## Current Status
 
 The v0.1.0 standalone baseline compiles independently and records the frozen Planr v1.5.0 routing inventory in [docs/migration-baseline.md](docs/migration-baseline.md).

@@ -1,16 +1,38 @@
 {
-  "name": "@instructa/switchloom-catalog",
+  "name": "switchloom",
   "version": "0.1.0",
-  "private": true,
-  "description": "Switchloom catalog and Cloudflare publication stack.",
+  "description": "Deterministic model routing for coding agents.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/instructa/switchloom.git"
+  },
+  "homepage": "https://github.com/instructa/switchloom#readme",
+  "bugs": "https://github.com/instructa/switchloom/issues",
   "type": "module",
+  "bin": {
+    "switchloom": "npm/bin/model-routing.js",
+    "model-routing": "npm/bin/model-routing.js"
+  },
+  "files": [
+    "npm/bin/model-routing.js",
+    "npm/native",
+    "README.md",
+    "LICENSE",
+    "docs"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "alchemy:check-runtime": "node scripts/check-alchemy-runtime.mjs",
     "catalog:regenerate": "node scripts/regenerate-preset-catalog.mjs",
     "deploy:test": "node scripts/cloudflare-test.mjs deploy",
+    "distribution:test": "node --test npm/*.test.mjs && bash scripts/npm-pack-check.sh",
     "destroy:test": "node scripts/cloudflare-test.mjs destroy",
     "hooks:install": "git config core.hooksPath .githooks",
+    "pack:check": "bash scripts/npm-pack-check.sh",
     "security:check": "bash scripts/secleak-check.sh",
     "site:build": "node scripts/build-site.mjs",
     "site:check": "pnpm site:test && pnpm site:build",
@@ -21,7 +43,7 @@
     "alchemy": "0.93.7"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=18"
   },
   "packageManager": "pnpm@11.5.3+sha512.7ac1c919341c213a34dc0d02afb7143c5c26ac26ee8c4782deea821b8ac64d2134a081fd8941dae6e29bbb48f58dfc2b7fbceeccc07cb2f09d219d342a4969ed"
 }
