@@ -21,6 +21,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 const GENERATED_AT: &str = "2026-07-16T00:00:00Z";
 const GENERATED_AT_UNIX: i64 = 1_784_160_000;
+pub const SETUP_CONFIG_PATH: &str = ".switchloom/config.toml";
+pub const SETUP_RECIPE_PREFIX: &str = "sw1_";
+const MAX_SETUP_RECIPE_BYTES: usize = 65_536;
+const MAX_SETUP_RECIPE_ENCODED_BYTES: usize = encoded_base64url_len(MAX_SETUP_RECIPE_BYTES);
 const EVALUATION_SUITE: &str = include_str!("../evaluations/preset-suite-v1.toml");
 const MANIFEST_PATH: &str = ".model-routing/manifest.json";
 const TRANSACTION_JOURNAL: &str = "journal.json";
@@ -342,6 +346,11 @@ pub struct LifecycleArtifactReport {
     pub repair: Option<String>,
 }
 
+pub struct PreparedSetupLifecycle {
+    bundle: RoutingBundleV1,
+    bundle_input: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct ManagedManifest {
@@ -441,6 +450,350 @@ struct BindingArtifact {
 pub enum Integration {
     Standalone,
     Planr,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct SetupSpecV1 {
+    pub schema_version: u32,
+    pub host: String,
+    pub integration: Integration,
+    pub usage_policy: String,
+    pub selected_roles: BTreeMap<String, SetupRoleSelection>,
+    pub routes: Vec<SetupRouteMapping>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub route_default: Option<SetupDefaultRoute>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct SetupRoleSelection {
+    pub model: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effort: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spawn: Option<SetupSpawnPolicy>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct SetupSpawnPolicy {
+    pub agent_type: String,
+    pub task_name: String,
+    pub fork_turns: ForkPolicy,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct SetupRouteMapping {
+    pub work_type: String,
+    pub role: String,
+    #[serde(default)]
+    pub fallbacks: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct SetupDefaultRoute {
+    pub role: String,
+    #[serde(default)]
+    pub fallbacks: Vec<String>,
+}
+
+pub fn setup_spec_for_policy(
+    policy: &str,
+    host: &str,
+    integration: Integration,
+) -> Result<SetupSpecV1> {
+    let binding = binding_for_selector(host)?;
+    let selected_roles = binding
+        .profiles
+        .iter()
+        .map(|(role, profile)| {
+            (
+                role.clone(),
+                SetupRoleSelection {
+                    model: profile.model.clone(),
+                    effort: profile.effort.clone(),
+                    spawn: setup_spawn_policy_for_binding_role(
+                        setup_runtime_host(&binding),
+                        role,
+                        profile,
+                    ),
+                },
+            )
+        })
+        .collect::<BTreeMap<_, _>>();
+    let routes = binding
+        .routes
+        .iter()
+        .map(|route| SetupRouteMapping {
+            work_type: route.work_type.clone(),
+            role: route.role.clone(),
+            fallbacks: route.fallback_roles.clone(),
+        })
+        .collect();
+    let route_default = binding.default_role.clone().map(|role| SetupDefaultRoute {
+        role,
+        fallbacks: Vec::new(),
+    });
+    let spec = SetupSpecV1 {
+        schema_version: 1,
+        host: binding.id.clone(),
+        integration,
+        usage_policy: policy.to_string(),
+        selected_roles,
+        routes,
+        route_default,
+    };
+    validate_setup_spec(&spec)?;
+    Ok(spec)
+}
+
+pub fn validate_setup_spec(spec: &SetupSpecV1) -> Result<()> {
+    if spec.schema_version != 1 {
+        bail!("unsupported setup schema_version {}", spec.schema_version);
+    }
+    if spec.usage_policy.trim().is_empty() {
+        bail!("setup usage_policy must not be blank");
+    }
+    if spec.selected_roles.is_empty() {
+        bail!("setup selected_roles must not be empty");
+    }
+    let binding = binding_for_selector(&spec.host)?;
+    let canonical_host = setup_runtime_host(&binding);
+    let model_catalog = setup_model_catalog(canonical_host);
+    for (role, selection) in &spec.selected_roles {
+        validate_setup_identifier("role", role)?;
+        if selection.model.trim().is_empty() {
+            bail!("setup role `{role}` model must not be blank");
+        }
+        let matches_binding = selection_matches_binding_profile(role, selection, &binding);
+        if !matches_binding {
+            validate_model_effort(canonical_host, role, selection, &model_catalog)?;
+        }
+        validate_setup_spawn_policy(canonical_host, role, selection, matches_binding)?;
+        reject_setup_secret_like("role", role)?;
+        reject_setup_secret_like("model", &selection.model)?;
+        if let Some(effort) = &selection.effort {
+            reject_setup_secret_like("effort", effort)?;
+        }
+        if let Some(spawn) = &selection.spawn {
+            reject_setup_secret_like("agent_type", &spawn.agent_type)?;
+            reject_setup_secret_like("task_name", &spawn.task_name)?;
+        }
+    }
+    validate_setup_identity_collisions(spec, canonical_host, &binding)?;
+    if spec.routes.is_empty() && spec.route_default.is_none() {
+        bail!("setup must declare routes or route_default");
+    }
+    for route in &spec.routes {
+        validate_setup_identifier("work_type", &route.work_type)?;
+        validate_setup_route_role(&spec.selected_roles, &route.role)?;
+        for fallback in &route.fallbacks {
+            validate_setup_route_role(&spec.selected_roles, fallback)?;
+        }
+    }
+    if let Some(default) = &spec.route_default {
+        validate_setup_route_role(&spec.selected_roles, &default.role)?;
+        for fallback in &default.fallbacks {
+            validate_setup_route_role(&spec.selected_roles, fallback)?;
+        }
+    }
+    let _ = show_policy(&spec.usage_policy, &binding.id)?;
+    Ok(())
+}
+
+pub fn setup_spec_from_json(input: &str) -> Result<SetupSpecV1> {
+    let spec: SetupSpecV1 =
+        serde_json::from_str(input).context("setup spec is not valid SetupSpecV1 JSON")?;
+    validate_setup_spec(&spec)?;
+    Ok(spec)
+}
+
+pub fn setup_spec_from_toml(input: &str) -> Result<SetupSpecV1> {
+    let spec: SetupSpecV1 =
+        toml::from_str(input).context("setup spec is not valid SetupSpecV1 TOML")?;
+    validate_setup_spec(&spec)?;
+    Ok(spec)
+}
+
+pub fn setup_spec_to_canonical_json(spec: &SetupSpecV1) -> Result<String> {
+    validate_setup_spec(spec)?;
+    let mut json = serde_json::to_string_pretty(spec)?;
+    json.push('\n');
+    Ok(json)
+}
+
+pub fn setup_spec_to_canonical_toml(spec: &SetupSpecV1) -> Result<String> {
+    validate_setup_spec(spec)?;
+    let mut toml = toml::to_string_pretty(spec)?;
+    if !toml.ends_with('\n') {
+        toml.push('\n');
+    }
+    Ok(toml)
+}
+
+pub fn setup_spec_to_recipe(spec: &SetupSpecV1) -> Result<String> {
+    let json = setup_spec_to_canonical_json(spec)?;
+    if json.len() > MAX_SETUP_RECIPE_BYTES {
+        bail!("setup recipe exceeds {MAX_SETUP_RECIPE_BYTES} bytes");
+    }
+    Ok(format!(
+        "{SETUP_RECIPE_PREFIX}{}",
+        encode_base64url(json.as_bytes())
+    ))
+}
+
+pub fn setup_spec_from_recipe(recipe: &str) -> Result<SetupSpecV1> {
+    let payload = recipe
+        .strip_prefix(SETUP_RECIPE_PREFIX)
+        .ok_or_else(|| anyhow::anyhow!("setup recipe must start with `{SETUP_RECIPE_PREFIX}`"))?;
+    if payload.is_empty() {
+        bail!("setup recipe payload must not be empty");
+    }
+    validate_base64url_payload_len(payload)?;
+    let decoded = decode_base64url(payload)?;
+    if decoded.len() > MAX_SETUP_RECIPE_BYTES {
+        bail!("setup recipe exceeds {MAX_SETUP_RECIPE_BYTES} bytes");
+    }
+    let json = String::from_utf8(decoded).context("setup recipe payload is not UTF-8")?;
+    setup_spec_from_json(&json)
+}
+
+pub fn compile_setup_spec(spec: &SetupSpecV1) -> Result<RoutingBundleV1> {
+    let source = source_from_setup_spec(spec)?;
+    let bundle = compile_source(source, spec.integration)?;
+    validate_bundle(&bundle)?;
+    Ok(bundle)
+}
+
+pub fn compile_setup_json(input: &str) -> Result<String> {
+    let spec = setup_spec_from_json(input)?;
+    let mut json = serde_json::to_string_pretty(&compile_setup_spec(&spec)?)?;
+    json.push('\n');
+    Ok(json)
+}
+
+pub fn preview_setup_config_file(repository: &Path, config_file: &Path) -> Result<LifecycleReport> {
+    let spec = read_setup_config_file(config_file)?;
+    preview_setup(repository, &spec)
+}
+
+pub fn preview_setup_recipe(repository: &Path, recipe: &str) -> Result<LifecycleReport> {
+    let spec = setup_spec_from_recipe(recipe)?;
+    preview_setup(repository, &spec)
+}
+
+pub fn preview_saved_setup(repository: &Path) -> Result<LifecycleReport> {
+    let spec = read_saved_setup_config(repository)?;
+    preview_setup(repository, &spec)
+}
+
+pub fn apply_setup_config_file(repository: &Path, config_file: &Path) -> Result<LifecycleReport> {
+    let spec = read_setup_config_file(config_file)?;
+    apply_setup(repository, &spec)
+}
+
+pub fn apply_setup_recipe(repository: &Path, recipe: &str) -> Result<LifecycleReport> {
+    let spec = setup_spec_from_recipe(recipe)?;
+    apply_setup(repository, &spec)
+}
+
+pub fn apply_saved_setup(repository: &Path) -> Result<LifecycleReport> {
+    let spec = read_saved_setup_config(repository)?;
+    apply_setup(repository, &spec)
+}
+
+pub fn update_setup_config_file(repository: &Path, config_file: &Path) -> Result<LifecycleReport> {
+    let spec = read_setup_config_file(config_file)?;
+    update_setup(repository, &spec)
+}
+
+pub fn update_setup_recipe(repository: &Path, recipe: &str) -> Result<LifecycleReport> {
+    let spec = setup_spec_from_recipe(recipe)?;
+    update_setup(repository, &spec)
+}
+
+pub fn update_saved_setup(repository: &Path) -> Result<LifecycleReport> {
+    let spec = read_saved_setup_config(repository)?;
+    update_setup(repository, &spec)
+}
+
+pub fn prepare_setup_config_file(config_file: &Path) -> Result<PreparedSetupLifecycle> {
+    prepare_setup_lifecycle(&read_setup_config_file(config_file)?)
+}
+
+pub fn prepare_setup_recipe(recipe: &str) -> Result<PreparedSetupLifecycle> {
+    prepare_setup_lifecycle(&setup_spec_from_recipe(recipe)?)
+}
+
+pub fn prepare_saved_setup(repository: &Path) -> Result<PreparedSetupLifecycle> {
+    prepare_setup_lifecycle(&read_saved_setup_config(repository)?)
+}
+
+pub fn preview_prepared_setup(
+    repository: &Path,
+    prepared: &PreparedSetupLifecycle,
+) -> Result<LifecycleReport> {
+    preview_bundle(repository, &prepared.bundle)
+}
+
+pub fn apply_prepared_setup(
+    repository: &Path,
+    prepared: &PreparedSetupLifecycle,
+    confirmed_preview: &LifecycleReport,
+) -> Result<LifecycleReport> {
+    let current_preview = preview_prepared_setup(repository, prepared)?;
+    if !same_lifecycle_plan(&current_preview, confirmed_preview) {
+        bail!("repository state changed after preview; rerun preview/apply and confirm again");
+    }
+    apply_bundle_json(
+        Path::new(&confirmed_preview.repository),
+        &prepared.bundle,
+        &prepared.bundle_input,
+    )
+}
+
+pub fn setup_contract_catalog_value() -> Result<Value> {
+    let hosts = ["codex", "claude-code", "cursor", "mixed-host"]
+        .into_iter()
+        .map(|host| {
+            let binding = binding_for_selector(host)?;
+            let runtime_host = setup_runtime_host(&binding);
+            Ok(json!({
+                "id": host,
+                "binding": binding.id,
+                "runtimeHost": runtime_host,
+                "supportsPlanrIntegration": true,
+                "models": setup_model_catalog(runtime_host).into_iter().map(|option| json!({
+                    "id": option.id,
+                    "efforts": option.efforts,
+                    "tier": option.tier,
+                })).collect::<Vec<_>>(),
+                "defaultSpec": setup_spec_for_policy("balanced", &binding.id, Integration::Standalone)?,
+            }))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(json!({
+        "schemaVersion": 1,
+        "setupSpecVersion": 1,
+        "configPath": SETUP_CONFIG_PATH,
+        "recipePrefix": SETUP_RECIPE_PREFIX,
+        "transport": {
+            "encoding": "base64url-no-padding",
+            "maxDecodedBytes": MAX_SETUP_RECIPE_BYTES,
+            "mayContainCredentials": false,
+            "mayContainScripts": false,
+        },
+        "hosts": hosts,
+    }))
+}
+
+pub fn setup_contract_catalog_json() -> Result<String> {
+    let mut output = serde_json::to_string_pretty(&setup_contract_catalog_value()?)?;
+    output.push('\n');
+    Ok(output)
 }
 
 pub fn list_policies() -> Result<Vec<PolicySummary>> {
@@ -578,7 +931,19 @@ pub fn compile_policy(
     host: &str,
     integration: Integration,
 ) -> Result<RoutingBundleV1> {
-    let source = show_policy(policy, host)?;
+    compile_setup_spec(&setup_spec_for_policy(policy, host, integration)?)
+}
+
+#[cfg(test)]
+fn compile_builtin_policy_direct(
+    policy: &str,
+    host: &str,
+    integration: Integration,
+) -> Result<RoutingBundleV1> {
+    compile_source(show_policy(policy, host)?, integration)
+}
+
+fn compile_source(source: PolicySource, integration: Integration) -> Result<RoutingBundleV1> {
     validate_source(&source)?;
     let mut artifacts = Vec::new();
     if integration == Integration::Planr {
@@ -809,6 +1174,7 @@ pub fn catalog_value() -> Result<Value> {
     Ok(json!({
         "schemaVersion": 1,
         "generatedAtUnix": GENERATED_AT_UNIX,
+        "setupContract": setup_contract_catalog_value()?,
         "source": {
             "state": "package_generated",
             "entryCount": compositions.len(),
@@ -971,11 +1337,19 @@ pub fn apply_bundle_file(repository: &Path, bundle_file: &Path) -> Result<Lifecy
     let bundle_input = fs::read_to_string(bundle_file)
         .with_context(|| format!("failed to read bundle `{}`", bundle_file.display()))?;
     let bundle = validate_bundle_json(&bundle_input)?;
+    apply_bundle_json(repository, &bundle, &bundle_input)
+}
+
+fn apply_bundle_json(
+    repository: &Path,
+    bundle: &RoutingBundleV1,
+    bundle_input: &str,
+) -> Result<LifecycleReport> {
     let repository = canonicalize_existing_repository(repository)?;
     recover_pending_transactions(&repository)?;
-    let planned = plan_artifacts(&repository, &bundle, None)?;
+    let planned = plan_artifacts(&repository, bundle, None)?;
     ensure_apply_is_safe(&planned)?;
-    let manifest = manifest_from_bundle(&bundle, sha256(bundle_input.as_bytes()), None);
+    let manifest = manifest_from_bundle(bundle, sha256(bundle_input.as_bytes()), None);
     commit_transaction(&repository, &planned, &manifest)?;
     Ok(report_from_plan(
         "apply",
@@ -989,11 +1363,19 @@ pub fn update_bundle_file(repository: &Path, bundle_file: &Path) -> Result<Lifec
     let bundle_input = fs::read_to_string(bundle_file)
         .with_context(|| format!("failed to read bundle `{}`", bundle_file.display()))?;
     let bundle = validate_bundle_json(&bundle_input)?;
+    update_bundle_json(repository, &bundle, &bundle_input)
+}
+
+fn update_bundle_json(
+    repository: &Path,
+    bundle: &RoutingBundleV1,
+    bundle_input: &str,
+) -> Result<LifecycleReport> {
     let repository = canonicalize_existing_repository(repository)?;
     recover_pending_transactions(&repository)?;
     let current = read_manifest(&repository)?
         .ok_or_else(|| anyhow::anyhow!("no model-routing manifest found"))?;
-    let planned = plan_artifacts(&repository, &bundle, Some(&current))?;
+    let planned = plan_artifacts(&repository, bundle, Some(&current))?;
     ensure_update_is_safe(&planned)?;
     let manifest = manifest_from_plan(
         &bundle.bundle_id,
@@ -1141,6 +1523,61 @@ fn read_bundle_file(bundle_file: &Path) -> Result<RoutingBundleV1> {
     let input = fs::read_to_string(bundle_file)
         .with_context(|| format!("failed to read bundle `{}`", bundle_file.display()))?;
     validate_bundle_json(&input)
+}
+
+fn read_setup_config_file(config_file: &Path) -> Result<SetupSpecV1> {
+    let input = fs::read_to_string(config_file)
+        .with_context(|| format!("failed to read setup config `{}`", config_file.display()))?;
+    setup_spec_from_toml(&input)
+}
+
+fn read_saved_setup_config(repository: &Path) -> Result<SetupSpecV1> {
+    let repository = canonicalize_existing_repository(repository)?;
+    let config_path = repository.join(SETUP_CONFIG_PATH);
+    read_setup_config_file(&config_path)
+}
+
+fn preview_setup(repository: &Path, spec: &SetupSpecV1) -> Result<LifecycleReport> {
+    let prepared = prepare_setup_lifecycle(spec)?;
+    preview_bundle(repository, &prepared.bundle)
+}
+
+fn apply_setup(repository: &Path, spec: &SetupSpecV1) -> Result<LifecycleReport> {
+    let prepared = prepare_setup_lifecycle(spec)?;
+    apply_bundle_json(repository, &prepared.bundle, &prepared.bundle_input)
+}
+
+fn update_setup(repository: &Path, spec: &SetupSpecV1) -> Result<LifecycleReport> {
+    let prepared = prepare_setup_lifecycle(spec)?;
+    update_bundle_json(repository, &prepared.bundle, &prepared.bundle_input)
+}
+
+fn prepare_setup_lifecycle(spec: &SetupSpecV1) -> Result<PreparedSetupLifecycle> {
+    let normalized_config = setup_spec_to_canonical_toml(spec)?;
+    let mut bundle = compile_setup_spec(spec)?;
+    bundle.artifacts.push(bundle_artifact(SourceArtifact {
+        path: SETUP_CONFIG_PATH.to_string(),
+        media_type: "application/toml".to_string(),
+        mode: "replace".to_string(),
+        content: normalized_config,
+    }));
+    bundle
+        .artifacts
+        .sort_by(|left, right| left.path.cmp(&right.path));
+    validate_bundle(&bundle)?;
+    let mut bundle_input = serde_json::to_string_pretty(&bundle)?;
+    bundle_input.push('\n');
+    Ok(PreparedSetupLifecycle {
+        bundle,
+        bundle_input,
+    })
+}
+
+fn same_lifecycle_plan(left: &LifecycleReport, right: &LifecycleReport) -> bool {
+    left.action == right.action
+        && left.bundle_id == right.bundle_id
+        && left.repository == right.repository
+        && left.artifacts == right.artifacts
 }
 
 #[derive(Debug)]
@@ -1795,6 +2232,9 @@ fn resolve_repository_target(repository: &Path, artifact_path: &str) -> Result<P
     if normalized_text == ".codex/config.toml" || normalized_text.starts_with(".model-routing/") {
         bail!("artifact path `{artifact_path}` targets a reserved path");
     }
+    if normalized_text == SETUP_CONFIG_PATH {
+        return Ok(repository.join(normalized));
+    }
     if !allowed_repository_target(normalized_text) {
         bail!("artifact path `{artifact_path}` is not an allowed host artifact path");
     }
@@ -2079,6 +2519,291 @@ fn validate_source(source: &PolicySource) -> Result<()> {
     Ok(())
 }
 
+fn source_from_setup_spec(spec: &SetupSpecV1) -> Result<PolicySource> {
+    validate_setup_spec(spec)?;
+    let binding = binding_for_selector(&spec.host)?;
+    let mut source = show_policy(&spec.usage_policy, &binding.id)?;
+    if setup_matches_binding(spec, &binding)? {
+        return Ok(source);
+    }
+    let runtime_host = setup_runtime_host(&binding);
+    let model_catalog = setup_model_catalog(runtime_host);
+    let profiles = spec
+        .selected_roles
+        .iter()
+        .map(|(role, selection)| {
+            let option = model_catalog
+                .iter()
+                .find(|option| option.id == selection.model)
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "setup role `{role}` model `{}` is not supported by host `{}`",
+                        selection.model,
+                        spec.host
+                    )
+                })?;
+            if runtime_host == "codex"
+                && selection.spawn.is_none()
+                && selection_matches_binding_profile(role, selection, &binding)
+            {
+                return Ok((
+                    role.clone(),
+                    profile_from_binding_profile(binding.profiles.get(role).ok_or_else(|| {
+                        anyhow::anyhow!("setup role `{role}` is missing from binding")
+                    })?),
+                ));
+            }
+            let agent_type = if runtime_host == "codex" {
+                Some(
+                    selection
+                        .spawn
+                        .as_ref()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("setup role `{role}` must declare Codex spawn policy")
+                        })?
+                        .agent_type
+                        .clone(),
+                )
+            } else {
+                None
+            };
+            Ok((
+                role.clone(),
+                Profile {
+                    client: runtime_host.to_string(),
+                    model: selection.model.clone(),
+                    agent_type,
+                    effort: selection.effort.clone(),
+                    cost_tier: Some(option.tier.to_string()),
+                    capabilities: Vec::new(),
+                    skill: None,
+                    notes: Some("custom SetupSpecV1 role".to_string()),
+                    fork_turns: selection
+                        .spawn
+                        .as_ref()
+                        .map(|spawn| spawn.fork_turns.clone()),
+                },
+            ))
+        })
+        .collect::<Result<BTreeMap<_, _>>>()?;
+    let routes = spec
+        .routes
+        .iter()
+        .map(|route| Route {
+            selector: RouteSelector {
+                work_type: Some(route.work_type.clone()),
+                plan: None,
+            },
+            profile: route.role.clone(),
+            fallbacks: route.fallbacks.clone(),
+        })
+        .collect();
+    let route_default = spec.route_default.as_ref().map(|default| DefaultRoute {
+        profile: default.role.clone(),
+        fallbacks: default.fallbacks.clone(),
+    });
+    source.profiles = profiles;
+    source.routes = routes;
+    source.route_default = route_default;
+    source.artifacts = render_setup_artifacts(
+        runtime_host,
+        &spec.selected_roles,
+        &binding,
+        &source.artifacts,
+    )?;
+    source.evidence = EvaluationEvidence {
+        evaluation_ids: Vec::new(),
+        status: "custom-unverified".to_string(),
+    };
+    Ok(source)
+}
+
+fn setup_matches_binding(spec: &SetupSpecV1, binding: &HostBinding) -> Result<bool> {
+    if canonical_binding_id(&spec.host) != binding.id {
+        return Ok(false);
+    }
+    if spec.selected_roles.len() != binding.profiles.len() {
+        return Ok(false);
+    }
+    for (role, binding_profile) in &binding.profiles {
+        let Some(selection) = spec.selected_roles.get(role) else {
+            return Ok(false);
+        };
+        if selection.model != binding_profile.model
+            || selection.effort != binding_profile.effort
+            || !selection_spawn_matches_binding(
+                setup_runtime_host(binding),
+                role,
+                selection,
+                binding_profile,
+            )
+        {
+            return Ok(false);
+        }
+    }
+    if spec.routes.len() != binding.routes.len() {
+        return Ok(false);
+    }
+    for (setup_route, binding_route) in spec.routes.iter().zip(binding.routes.iter()) {
+        if setup_route.work_type != binding_route.work_type
+            || setup_route.role != binding_route.role
+            || setup_route.fallbacks != binding_route.fallback_roles
+        {
+            return Ok(false);
+        }
+    }
+    Ok(match (&spec.route_default, &binding.default_role) {
+        (None, None) => true,
+        (Some(setup), Some(binding_role)) => {
+            setup.role == *binding_role && setup.fallbacks.is_empty()
+        }
+        _ => false,
+    })
+}
+
+fn render_setup_artifacts(
+    runtime_host: &str,
+    roles: &BTreeMap<String, SetupRoleSelection>,
+    binding: &HostBinding,
+    binding_artifacts: &[SourceArtifact],
+) -> Result<Vec<SourceArtifact>> {
+    roles
+        .iter()
+        .map(|(role, selection)| {
+            if runtime_host == "codex"
+                && selection.spawn.is_none()
+                && selection_matches_binding_profile(role, selection, binding)
+            {
+                return binding_artifact_for_role(binding, binding_artifacts, role);
+            }
+            let file_role = identifier_token(role);
+            let path = setup_artifact_path(runtime_host, role, selection)?;
+            let (kind, content) = match runtime_host {
+                "codex" => {
+                    let spawn = selection.spawn.as_ref().ok_or_else(|| {
+                        anyhow::anyhow!("setup role `{role}` must declare Codex spawn policy")
+                    })?;
+                    let agent_type = spawn.agent_type.clone();
+                    let effort = selection
+                        .effort
+                        .clone()
+                        .unwrap_or_else(|| "medium".to_string());
+                    (
+                        "codex_agent",
+                        format!(
+                            "name = \"{agent_type}\"\ndescription = \"Switchloom custom {role} role.\"\nmodel = \"{}\"\nmodel_reasoning_effort = \"{effort}\"\n\ndeveloper_instructions = \"\"\"\nSpawn with agent_type `{agent_type}`, task_name `{}`, and fork_turns `{}`. The live parent permission profile remains authoritative; this role declares routing intent and expected ownership evidence, not filesystem permission enforcement.\n\"\"\"\n",
+                            selection.model, spawn.task_name, spawn.fork_turns.mode
+                        ),
+                    )
+                }
+                "claude-code" => {
+                    let effort = selection
+                        .effort
+                        .clone()
+                        .unwrap_or_else(|| "medium".to_string());
+                    (
+                        "claude_agent",
+                        format!(
+                            "---\nname: switchloom-{file_role}\nmodel: {}\neffort: {effort}\n---\nFollow the repository-local Switchloom setup role `{role}` and preserve routing evidence.\n",
+                            selection.model
+                        ),
+                    )
+                }
+                "cursor" => {
+                    (
+                        "cursor_agent",
+                        format!(
+                            "---\nname: switchloom-{file_role}\nmodel: {}\n---\nFollow the repository-local Switchloom setup role `{role}` and preserve routing evidence.\n",
+                            selection.model
+                        ),
+                    )
+                }
+                "mixed-host" => {
+                    (
+                        "routing_role",
+                        format!(
+                            "role = \"{role}\"\nmodel = \"{}\"\n{}\n",
+                            selection.model,
+                            selection
+                                .effort
+                                .as_ref()
+                                .map(|effort| format!("effort = \"{effort}\""))
+                                .unwrap_or_default()
+                        ),
+                    )
+                }
+                other => bail!("unsupported setup runtime host `{other}`"),
+            };
+            let media_type = media_type_for(&path, kind);
+            Ok(SourceArtifact {
+                path,
+                media_type,
+                mode: "replace".to_string(),
+                content,
+            })
+        })
+        .collect()
+}
+
+fn profile_from_binding_profile(profile: &BindingProfile) -> Profile {
+    Profile {
+        client: profile.client.clone(),
+        model: profile.model.clone(),
+        agent_type: profile.agent_type.clone(),
+        effort: profile.effort.clone(),
+        cost_tier: profile.cost_tier.clone(),
+        capabilities: Vec::new(),
+        skill: None,
+        notes: None,
+        fork_turns: profile.fork_turns.clone(),
+    }
+}
+
+fn binding_artifact_for_role(
+    binding: &HostBinding,
+    artifacts: &[SourceArtifact],
+    role: &str,
+) -> Result<SourceArtifact> {
+    let profile = binding
+        .profiles
+        .get(role)
+        .ok_or_else(|| anyhow::anyhow!("setup role `{role}` is missing from binding"))?;
+    let agent_type = profile
+        .agent_type
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("setup role `{role}` has no binding agent_type"))?;
+    artifacts
+        .iter()
+        .find(|artifact| {
+            artifact
+                .content
+                .contains(&format!("name = \"{agent_type}\""))
+        })
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("binding role `{role}` has no generated host artifact"))
+}
+
+fn binding_artifact_path_for_role(binding: &HostBinding, role: &str) -> Result<String> {
+    let profile = binding
+        .profiles
+        .get(role)
+        .ok_or_else(|| anyhow::anyhow!("setup role `{role}` is missing from binding"))?;
+    let agent_type = profile
+        .agent_type
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("setup role `{role}` has no binding agent_type"))?;
+    binding
+        .artifacts
+        .iter()
+        .find(|artifact| {
+            artifact
+                .content
+                .contains(&format!("name = \"{agent_type}\""))
+        })
+        .map(|artifact| artifact.path.clone())
+        .ok_or_else(|| anyhow::anyhow!("binding role `{role}` has no generated host artifact"))
+}
+
 fn validate_profile_fork_policy(profile: &Profile) -> Result<()> {
     let requires_explicit_fork = profile.client == "codex"
         && profile.agent_type.is_some()
@@ -2118,6 +2843,428 @@ fn binding_profile_id<'a>(binding: &'a HostBinding, role: &str) -> Result<&'a st
         .get(role)
         .map(|profile| profile.profile.as_str())
         .ok_or_else(|| anyhow::anyhow!("binding route references unknown role `{role}`"))
+}
+
+fn binding_for_selector(selector: &str) -> Result<HostBinding> {
+    let binding_id = canonical_binding_id(selector);
+    let raw = BINDINGS
+        .iter()
+        .find(|(id, _)| *id == binding_id)
+        .map(|(_, raw)| *raw)
+        .ok_or_else(|| anyhow::anyhow!("unknown setup host `{selector}`"))?;
+    Ok(toml::from_str(raw)?)
+}
+
+fn canonical_binding_id(selector: &str) -> &str {
+    match selector {
+        "codex" => "codex-openai",
+        "claude-code" => "claude-native",
+        "cursor" => "cursor-openai",
+        other => other,
+    }
+}
+
+fn setup_runtime_host(binding: &HostBinding) -> &str {
+    binding.host.as_str()
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SetupModelOption {
+    id: &'static str,
+    efforts: &'static [&'static str],
+    tier: &'static str,
+}
+
+fn setup_model_catalog(host: &str) -> Vec<SetupModelOption> {
+    match host {
+        "codex" => vec![
+            SetupModelOption {
+                id: "gpt-5.6-sol",
+                efforts: &["low", "medium", "high", "xhigh", "ultra"],
+                tier: "premium",
+            },
+            SetupModelOption {
+                id: "gpt-5.6-terra",
+                efforts: &["low", "medium", "high", "xhigh", "ultra"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "gpt-5.6-luna",
+                efforts: &["low", "medium", "high", "xhigh"],
+                tier: "standard",
+            },
+        ],
+        "cursor" => vec![
+            SetupModelOption {
+                id: "gpt-5.6-sol",
+                efforts: &["low", "medium", "high", "xhigh", "max"],
+                tier: "premium",
+            },
+            SetupModelOption {
+                id: "gpt-5.6-terra",
+                efforts: &["low", "medium", "high", "xhigh", "max"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "gpt-5.6-luna",
+                efforts: &["low", "medium", "high", "xhigh", "max"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "fable-5",
+                efforts: &["low", "medium", "high", "xhigh", "max"],
+                tier: "premium",
+            },
+            SetupModelOption {
+                id: "claude-opus-4-8",
+                efforts: &["low", "medium", "high", "xhigh", "max"],
+                tier: "premium",
+            },
+            SetupModelOption {
+                id: "claude-sonnet-5",
+                efforts: &["low", "medium", "high", "xhigh", "max"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "grok-4.5",
+                efforts: &["low", "medium", "high"],
+                tier: "premium",
+            },
+            SetupModelOption {
+                id: "composer-2.5",
+                efforts: &[],
+                tier: "standard",
+            },
+        ],
+        "claude-code" => vec![
+            SetupModelOption {
+                id: "opus",
+                efforts: &["medium", "high"],
+                tier: "premium",
+            },
+            SetupModelOption {
+                id: "sonnet",
+                efforts: &["medium", "high"],
+                tier: "standard",
+            },
+        ],
+        "mixed-host" => vec![
+            SetupModelOption {
+                id: "gpt-5.6-sol",
+                efforts: &["medium", "high", "xhigh"],
+                tier: "premium",
+            },
+            SetupModelOption {
+                id: "gpt-5.6-terra",
+                efforts: &["low", "medium", "high"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "opus",
+                efforts: &["high"],
+                tier: "premium",
+            },
+            SetupModelOption {
+                id: "sonnet",
+                efforts: &["medium"],
+                tier: "standard",
+            },
+        ],
+        _ => Vec::new(),
+    }
+}
+
+fn validate_model_effort(
+    host: &str,
+    role: &str,
+    selection: &SetupRoleSelection,
+    catalog: &[SetupModelOption],
+) -> Result<()> {
+    let option = catalog
+        .iter()
+        .find(|option| option.id == selection.model)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "setup role `{role}` model `{}` is not supported by host `{host}`",
+                selection.model
+            )
+        })?;
+    match (&selection.effort, option.efforts.is_empty()) {
+        (None, true) => Ok(()),
+        (Some(_), true) => bail!(
+            "setup role `{role}` model `{}` does not accept effort",
+            selection.model
+        ),
+        (None, false) => bail!(
+            "setup role `{role}` model `{}` requires effort",
+            selection.model
+        ),
+        (Some(effort), false) if option.efforts.contains(&effort.as_str()) => Ok(()),
+        (Some(effort), false) => bail!(
+            "setup role `{role}` effort `{effort}` is not supported for model `{}` on host `{host}`",
+            selection.model
+        ),
+    }
+}
+
+fn selection_matches_binding_profile(
+    role: &str,
+    selection: &SetupRoleSelection,
+    binding: &HostBinding,
+) -> bool {
+    binding.profiles.get(role).is_some_and(|profile| {
+        selection.model == profile.model
+            && selection.effort == profile.effort
+            && selection_spawn_matches_binding(
+                setup_runtime_host(binding),
+                role,
+                selection,
+                profile,
+            )
+    })
+}
+
+fn setup_spawn_policy_for_binding_role(
+    runtime_host: &str,
+    role: &str,
+    profile: &BindingProfile,
+) -> Option<SetupSpawnPolicy> {
+    if runtime_host != "codex" {
+        return None;
+    }
+    Some(SetupSpawnPolicy {
+        agent_type: profile.agent_type.clone()?,
+        task_name: identifier_token(role),
+        fork_turns: profile.fork_turns.clone()?,
+    })
+}
+
+fn selection_spawn_matches_binding(
+    runtime_host: &str,
+    role: &str,
+    selection: &SetupRoleSelection,
+    profile: &BindingProfile,
+) -> bool {
+    if runtime_host != "codex" {
+        return selection.spawn.is_none();
+    }
+    match (&selection.spawn, &profile.agent_type, &profile.fork_turns) {
+        (None, None, None) => true,
+        (None, Some(_), None) => true,
+        (Some(spawn), Some(agent_type), Some(fork_turns)) => {
+            spawn.agent_type == *agent_type
+                && spawn.task_name == identifier_token(role)
+                && spawn.fork_turns == *fork_turns
+        }
+        _ => false,
+    }
+}
+
+fn validate_setup_spawn_policy(
+    runtime_host: &str,
+    role: &str,
+    selection: &SetupRoleSelection,
+    matches_binding: bool,
+) -> Result<()> {
+    if runtime_host != "codex" {
+        if selection.spawn.is_some() {
+            bail!("setup role `{role}` spawn policy is only supported for Codex hosts");
+        }
+        return Ok(());
+    }
+    if matches_binding && selection.spawn.is_none() {
+        return Ok(());
+    }
+    let Some(spawn) = &selection.spawn else {
+        bail!(
+            "setup role `{role}` must declare Codex spawn policy with exact agent_type, task_name, and fork_turns"
+        );
+    };
+    if spawn.task_name.contains('/') || spawn.task_name.starts_with('.') {
+        bail!(
+            "setup role `{role}` task_name must be a local lowercase identifier, not a canonical task path"
+        );
+    }
+    validate_setup_snake_identifier("agent_type", &spawn.agent_type)?;
+    validate_setup_snake_identifier("task_name", &spawn.task_name)?;
+    let expected_task_name = identifier_token(role);
+    if spawn.task_name != expected_task_name {
+        bail!(
+            "setup role `{role}` task_name `{}` must match `{expected_task_name}`",
+            spawn.task_name
+        );
+    }
+    if spawn.agent_type.trim().is_empty() {
+        bail!("setup role `{role}` agent_type must not be blank");
+    }
+    let fork_turns = &spawn.fork_turns;
+    {
+        match fork_turns.mode.as_str() {
+            "none" => {
+                if fork_turns.turns.is_some() {
+                    bail!("setup role `{role}` fork_turns none must not declare turns");
+                }
+            }
+            "bounded" => match fork_turns.turns {
+                Some(turns) if turns > 0 => {}
+                _ => bail!("setup role `{role}` bounded fork_turns must use positive turns"),
+            },
+            "all" => {
+                bail!("setup role `{role}` must not use fork_turns all for Codex role overrides")
+            }
+            other => bail!("setup role `{role}` has unsupported fork_turns mode `{other}`"),
+        }
+    }
+    Ok(())
+}
+
+fn validate_setup_snake_identifier(kind: &str, value: &str) -> Result<()> {
+    let valid = !value.is_empty()
+        && value.len() <= 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_');
+    if !valid {
+        bail!("setup {kind} `{value}` must use lowercase ASCII letters, digits, or `_`");
+    }
+    reject_setup_secret_like(kind, value)
+}
+
+fn validate_setup_identifier(kind: &str, value: &str) -> Result<()> {
+    let valid = !value.is_empty()
+        && value.len() <= 64
+        && value.bytes().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-' || byte == b'_'
+        });
+    if !valid {
+        bail!("setup {kind} `{value}` must use lowercase ASCII letters, digits, `_`, or `-`");
+    }
+    reject_setup_secret_like(kind, value)
+}
+
+fn validate_setup_identity_collisions(
+    spec: &SetupSpecV1,
+    runtime_host: &str,
+    binding: &HostBinding,
+) -> Result<()> {
+    let mut normalized_roles = BTreeMap::<String, String>::new();
+    let mut artifact_paths = BTreeMap::<String, String>::new();
+    let mut codex_agent_types = BTreeMap::<String, String>::new();
+    let mut codex_task_names = BTreeMap::<String, String>::new();
+    for (role, selection) in &spec.selected_roles {
+        let normalized = identifier_token(role);
+        if let Some(existing) = normalized_roles.insert(normalized.clone(), role.clone()) {
+            bail!("setup roles `{existing}` and `{role}` both normalize to `{normalized}`");
+        }
+        if runtime_host == "codex" {
+            let agent_type = if let Some(spawn) = &selection.spawn {
+                spawn.agent_type.clone()
+            } else if selection_matches_binding_profile(role, selection, binding) {
+                binding
+                    .profiles
+                    .get(role)
+                    .and_then(|profile| profile.agent_type.clone())
+                    .unwrap_or_default()
+            } else {
+                String::new()
+            };
+            if !agent_type.is_empty() {
+                if let Some(existing) = codex_agent_types.insert(agent_type.clone(), role.clone()) {
+                    bail!(
+                        "setup roles `{existing}` and `{role}` both declare Codex agent_type `{agent_type}`"
+                    );
+                }
+            }
+            if let Some(spawn) = &selection.spawn {
+                if let Some(existing) =
+                    codex_task_names.insert(spawn.task_name.clone(), role.clone())
+                {
+                    bail!(
+                        "setup roles `{existing}` and `{role}` both declare Codex task_name `{}`",
+                        spawn.task_name
+                    );
+                }
+            }
+        }
+        let artifact_path = if runtime_host == "codex"
+            && selection.spawn.is_none()
+            && selection_matches_binding_profile(role, selection, binding)
+        {
+            Some(binding_artifact_path_for_role(binding, role)?)
+        } else if runtime_host != "codex" || selection.spawn.is_some() {
+            Some(setup_artifact_path(runtime_host, role, selection)?)
+        } else {
+            None
+        };
+        if let Some(artifact_path) = artifact_path {
+            if let Some(existing) = artifact_paths.insert(artifact_path.clone(), role.clone()) {
+                bail!(
+                    "setup roles `{existing}` and `{role}` both generate artifact path `{artifact_path}`"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+fn setup_artifact_path(
+    runtime_host: &str,
+    role: &str,
+    selection: &SetupRoleSelection,
+) -> Result<String> {
+    let file_role = identifier_token(role);
+    Ok(match runtime_host {
+        "codex" => {
+            let spawn = selection.spawn.as_ref().ok_or_else(|| {
+                anyhow::anyhow!("setup role `{role}` must declare Codex spawn policy")
+            })?;
+            format!(".codex/agents/{}.toml", spawn.agent_type)
+        }
+        "claude-code" => format!(".claude/agents/switchloom-{file_role}.md"),
+        "cursor" => format!(".cursor/agents/switchloom-{file_role}.md"),
+        "mixed-host" => format!(".model-routing/roles/{file_role}.toml"),
+        other => bail!("unsupported setup runtime host `{other}`"),
+    })
+}
+
+fn validate_setup_route_role(
+    roles: &BTreeMap<String, SetupRoleSelection>,
+    role: &str,
+) -> Result<()> {
+    if !roles.contains_key(role) {
+        bail!("setup route references unknown role `{role}`");
+    }
+    Ok(())
+}
+
+fn reject_setup_secret_like(kind: &str, value: &str) -> Result<()> {
+    let lower = value.to_ascii_lowercase();
+    for token in [
+        "api_key",
+        "apikey",
+        "token",
+        "secret",
+        "credential",
+        "password",
+    ] {
+        if lower.contains(token) {
+            bail!("setup {kind} must not contain credential-like token `{token}`");
+        }
+    }
+    Ok(())
+}
+
+fn identifier_token(value: &str) -> String {
+    value
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() {
+                ch.to_ascii_lowercase()
+            } else {
+                '_'
+            }
+        })
+        .collect()
 }
 
 fn media_type_for(path: &str, kind: &str) -> String {
@@ -2182,12 +3329,19 @@ fn is_worker_role(artifact: &SourceArtifact) -> bool {
     artifact.path.contains("terra-high")
         || artifact.path.contains("luna-xhigh")
         || artifact.path.contains("preset-worker")
+        || artifact.path.contains("implementer")
         || artifact.content.contains("Normal implementation")
         || artifact.content.contains("Bounded checklist")
+        || artifact.content.contains("custom implementer role")
 }
 
 fn is_reviewer_role(artifact: &SourceArtifact) -> bool {
-    artifact.path.contains("sol-high") || artifact.content.contains("Independent final review")
+    artifact.path.contains("sol-high")
+        || artifact.path.contains("reviewer")
+        || artifact.path.contains("verifier")
+        || artifact.content.contains("Independent final review")
+        || artifact.content.contains("custom reviewer role")
+        || artifact.content.contains("custom verifier role")
 }
 
 fn rewrite_codex_developer_instructions(
@@ -2339,6 +3493,82 @@ fn decode_hex<const N: usize>(value: &str) -> Option<[u8; N]> {
     Some(decoded)
 }
 
+fn encode_base64url(bytes: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let mut output = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let first = chunk[0];
+        let second = *chunk.get(1).unwrap_or(&0);
+        let third = *chunk.get(2).unwrap_or(&0);
+        output.push(TABLE[(first >> 2) as usize] as char);
+        output.push(TABLE[(((first & 0b0000_0011) << 4) | (second >> 4)) as usize] as char);
+        if chunk.len() > 1 {
+            output.push(TABLE[(((second & 0b0000_1111) << 2) | (third >> 6)) as usize] as char);
+        }
+        if chunk.len() > 2 {
+            output.push(TABLE[(third & 0b0011_1111) as usize] as char);
+        }
+    }
+    output
+}
+
+const fn encoded_base64url_len(decoded_len: usize) -> usize {
+    let full_chunks = decoded_len / 3;
+    match decoded_len % 3 {
+        0 => full_chunks * 4,
+        1 => full_chunks * 4 + 2,
+        _ => full_chunks * 4 + 3,
+    }
+}
+
+fn validate_base64url_payload_len(input: &str) -> Result<()> {
+    if input.len() > MAX_SETUP_RECIPE_ENCODED_BYTES {
+        bail!(
+            "setup recipe payload exceeds {MAX_SETUP_RECIPE_ENCODED_BYTES} base64url characters for {MAX_SETUP_RECIPE_BYTES} decoded bytes"
+        );
+    }
+    Ok(())
+}
+
+fn decode_base64url(input: &str) -> Result<Vec<u8>> {
+    validate_base64url_payload_len(input)?;
+    if input
+        .bytes()
+        .any(|byte| !(byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_'))
+    {
+        bail!("setup recipe payload must be unpadded base64url");
+    }
+    let mut sextets = Vec::with_capacity(input.len());
+    for byte in input.bytes() {
+        sextets.push(match byte {
+            b'A'..=b'Z' => byte - b'A',
+            b'a'..=b'z' => byte - b'a' + 26,
+            b'0'..=b'9' => byte - b'0' + 52,
+            b'-' => 62,
+            b'_' => 63,
+            _ => unreachable!(),
+        });
+    }
+    if sextets.len() % 4 == 1 {
+        bail!("setup recipe payload has invalid base64url length");
+    }
+    let mut output = Vec::with_capacity(sextets.len() / 4 * 3);
+    for chunk in sextets.chunks(4) {
+        let a = chunk[0];
+        let b = *chunk
+            .get(1)
+            .ok_or_else(|| anyhow::anyhow!("invalid base64url payload"))?;
+        output.push((a << 2) | (b >> 4));
+        if let Some(c) = chunk.get(2) {
+            output.push(((b & 0b0000_1111) << 4) | (c >> 2));
+            if let Some(d) = chunk.get(3) {
+                output.push(((c & 0b0000_0011) << 6) | d);
+            }
+        }
+    }
+    Ok(output)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2376,6 +3606,765 @@ mod tests {
         assert!(!standalone.contains(".planr/agents.toml"));
         assert!(planr.contains(".planr/agents.toml"));
         assert!(planr.contains(".planr/policy.toml"));
+    }
+
+    #[test]
+    fn setup_spec_roundtrips_through_canonical_toml_json_and_recipe() {
+        let spec =
+            setup_spec_for_policy("balanced", "codex-openai", Integration::Standalone).unwrap();
+        let json = setup_spec_to_canonical_json(&spec).unwrap();
+        let toml = setup_spec_to_canonical_toml(&spec).unwrap();
+        let recipe = setup_spec_to_recipe(&spec).unwrap();
+        assert!(json.contains("\"schema_version\": 1"));
+        assert!(toml.contains("schema_version = 1"));
+        assert!(recipe.starts_with(SETUP_RECIPE_PREFIX));
+        assert_eq!(setup_spec_from_json(&json).unwrap(), spec);
+        assert_eq!(setup_spec_from_toml(&toml).unwrap(), spec);
+        assert_eq!(setup_spec_from_recipe(&recipe).unwrap(), spec);
+    }
+
+    #[test]
+    fn setup_recipe_enforces_exact_pre_decode_size_boundaries() {
+        assert_eq!(MAX_SETUP_RECIPE_BYTES % 3, 1);
+        assert_eq!(
+            MAX_SETUP_RECIPE_ENCODED_BYTES,
+            (MAX_SETUP_RECIPE_BYTES / 3) * 4 + 2
+        );
+
+        let boundary_payload = encode_base64url(&vec![0_u8; MAX_SETUP_RECIPE_BYTES]);
+        assert_eq!(boundary_payload.len(), MAX_SETUP_RECIPE_ENCODED_BYTES);
+        assert_eq!(
+            decode_base64url(&boundary_payload).unwrap().len(),
+            MAX_SETUP_RECIPE_BYTES
+        );
+        let boundary_error =
+            setup_spec_from_recipe(&format!("{SETUP_RECIPE_PREFIX}{boundary_payload}"))
+                .unwrap_err()
+                .to_string();
+        assert!(!boundary_error.contains("exceeds"));
+
+        let first_oversized_payload = encode_base64url(&vec![0_u8; MAX_SETUP_RECIPE_BYTES + 1]);
+        assert_eq!(
+            first_oversized_payload.len(),
+            MAX_SETUP_RECIPE_ENCODED_BYTES + 1
+        );
+        assert!(
+            setup_spec_from_recipe(&format!("{SETUP_RECIPE_PREFIX}{first_oversized_payload}"))
+                .unwrap_err()
+                .to_string()
+                .contains("exceeds")
+        );
+
+        let very_large_payload = "A".repeat(MAX_SETUP_RECIPE_ENCODED_BYTES * 4);
+        assert!(
+            setup_spec_from_recipe(&format!("{SETUP_RECIPE_PREFIX}{very_large_payload}"))
+                .unwrap_err()
+                .to_string()
+                .contains("base64url characters")
+        );
+    }
+
+    #[test]
+    fn built_in_presets_compile_through_setup_spec_without_output_drift() {
+        let spec = setup_spec_for_policy("balanced", "codex-openai", Integration::Planr).unwrap();
+        assert_eq!(
+            compile_setup_spec(&spec).unwrap(),
+            compile_builtin_policy_direct("balanced", "codex-openai", Integration::Planr).unwrap()
+        );
+    }
+
+    #[test]
+    fn public_host_aliases_preserve_built_in_preset_output() {
+        for (alias, binding) in [
+            ("codex", "codex-openai"),
+            ("cursor", "cursor-openai"),
+            ("claude-code", "claude-native"),
+        ] {
+            let spec = setup_spec_for_policy("balanced", alias, Integration::Standalone).unwrap();
+            assert_eq!(spec.host, binding);
+            assert_eq!(
+                compile_setup_spec(&spec).unwrap(),
+                compile_builtin_policy_direct("balanced", binding, Integration::Standalone)
+                    .unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn codex_default_spec_can_be_partially_tuned_into_custom_standalone_bundle() {
+        let mut spec = setup_spec_for_policy("balanced", "codex", Integration::Standalone).unwrap();
+        let worker = spec.selected_roles.get_mut("worker").unwrap();
+        worker.model = "gpt-5.6-sol".to_string();
+        worker.effort = Some("medium".to_string());
+        worker.spawn = Some(SetupSpawnPolicy {
+            agent_type: "switchloom_worker".to_string(),
+            task_name: "worker".to_string(),
+            fork_turns: ForkPolicy {
+                mode: "none".to_string(),
+                turns: None,
+            },
+        });
+
+        let bundle = compile_setup_spec(&spec).unwrap();
+        validate_bundle(&bundle).unwrap();
+        assert_eq!(bundle.source.integration, Integration::Standalone);
+        assert_eq!(bundle.evidence.status, "custom-unverified");
+        assert_eq!(
+            bundle.profiles.get("driver").unwrap().agent_type.as_deref(),
+            Some("model_routing_sol_medium")
+        );
+        assert!(bundle.artifacts.iter().any(|artifact| {
+            artifact.path == ".codex/agents/model-routing-sol-medium.toml"
+                && artifact
+                    .content
+                    .contains("name = \"model_routing_sol_medium\"")
+        }));
+        assert!(bundle.artifacts.iter().any(|artifact| {
+            artifact.path == ".codex/agents/switchloom_worker.toml"
+                && artifact.content.contains("name = \"switchloom_worker\"")
+        }));
+        assert!(
+            bundle
+                .artifacts
+                .iter()
+                .all(|artifact| !artifact.path.starts_with(".planr/"))
+        );
+    }
+
+    #[test]
+    fn codex_default_spec_can_be_partially_tuned_into_custom_planr_bundle() {
+        let mut spec = setup_spec_for_policy("balanced", "codex", Integration::Planr).unwrap();
+        let reviewer = spec.selected_roles.get_mut("reviewer").unwrap();
+        reviewer.model = "gpt-5.6-terra".to_string();
+        reviewer.effort = Some("high".to_string());
+        reviewer.spawn = Some(SetupSpawnPolicy {
+            agent_type: "switchloom_reviewer".to_string(),
+            task_name: "reviewer".to_string(),
+            fork_turns: ForkPolicy {
+                mode: "none".to_string(),
+                turns: None,
+            },
+        });
+
+        let bundle = compile_setup_spec(&spec).unwrap();
+        validate_bundle(&bundle).unwrap();
+        assert_eq!(bundle.source.integration, Integration::Planr);
+        assert_eq!(bundle.evidence.status, "custom-unverified");
+        assert_eq!(
+            bundle.profiles.get("driver").unwrap().agent_type.as_deref(),
+            Some("model_routing_sol_medium")
+        );
+        assert!(bundle.artifacts.iter().any(|artifact| {
+            artifact.path == ".codex/agents/model-routing-sol-medium.toml"
+                && artifact
+                    .content
+                    .contains("name = \"model_routing_sol_medium\"")
+        }));
+        assert!(bundle.artifacts.iter().any(|artifact| {
+            artifact.path == ".codex/agents/switchloom_reviewer.toml"
+                && artifact.content.contains("name = \"switchloom_reviewer\"")
+        }));
+        assert!(
+            bundle
+                .artifacts
+                .iter()
+                .any(|artifact| artifact.path == ".planr/agents.toml")
+        );
+    }
+
+    #[test]
+    fn fully_custom_setup_compiles_as_unverified_host_native_bundle() {
+        let spec = SetupSpecV1 {
+            schema_version: 1,
+            host: "codex".to_string(),
+            integration: Integration::Standalone,
+            usage_policy: "balanced".to_string(),
+            selected_roles: BTreeMap::from([
+                (
+                    "orchestrator".to_string(),
+                    SetupRoleSelection {
+                        model: "gpt-5.6-sol".to_string(),
+                        effort: Some("medium".to_string()),
+                        spawn: Some(SetupSpawnPolicy {
+                            agent_type: "switchloom_orchestrator".to_string(),
+                            task_name: "orchestrator".to_string(),
+                            fork_turns: ForkPolicy {
+                                mode: "none".to_string(),
+                                turns: None,
+                            },
+                        }),
+                    },
+                ),
+                (
+                    "implementer".to_string(),
+                    SetupRoleSelection {
+                        model: "gpt-5.6-terra".to_string(),
+                        effort: Some("high".to_string()),
+                        spawn: Some(SetupSpawnPolicy {
+                            agent_type: "switchloom_implementer".to_string(),
+                            task_name: "implementer".to_string(),
+                            fork_turns: ForkPolicy {
+                                mode: "none".to_string(),
+                                turns: None,
+                            },
+                        }),
+                    },
+                ),
+            ]),
+            routes: vec![SetupRouteMapping {
+                work_type: "code".to_string(),
+                role: "implementer".to_string(),
+                fallbacks: vec!["orchestrator".to_string()],
+            }],
+            route_default: Some(SetupDefaultRoute {
+                role: "orchestrator".to_string(),
+                fallbacks: Vec::new(),
+            }),
+        };
+        let bundle = compile_setup_spec(&spec).unwrap();
+        assert_eq!(bundle.source.integration, Integration::Standalone);
+        assert_eq!(bundle.evidence.status, "custom-unverified");
+        assert!(bundle.profiles.contains_key("implementer"));
+        assert!(bundle.artifacts.iter().any(|artifact| artifact.path
+            == ".codex/agents/switchloom_implementer.toml"
+            && artifact.content.contains("model = \"gpt-5.6-terra\"")));
+        assert!(bundle.artifacts.iter().any(|artifact| {
+            artifact.content.contains("task_name `implementer`")
+                && !artifact.content.contains("sandbox_mode")
+        }));
+        assert!(
+            bundle
+                .artifacts
+                .iter()
+                .all(|artifact| !artifact.path.starts_with(".planr/"))
+        );
+        validate_bundle(&bundle).unwrap();
+    }
+
+    #[test]
+    fn custom_setup_rejects_duplicate_codex_spawn_identities() {
+        let duplicate_agent_type = SetupSpecV1 {
+            schema_version: 1,
+            host: "codex".to_string(),
+            integration: Integration::Standalone,
+            usage_policy: "balanced".to_string(),
+            selected_roles: BTreeMap::from([
+                (
+                    "implementer".to_string(),
+                    SetupRoleSelection {
+                        model: "gpt-5.6-terra".to_string(),
+                        effort: Some("high".to_string()),
+                        spawn: Some(SetupSpawnPolicy {
+                            agent_type: "switchloom_shared".to_string(),
+                            task_name: "implementer".to_string(),
+                            fork_turns: ForkPolicy {
+                                mode: "none".to_string(),
+                                turns: None,
+                            },
+                        }),
+                    },
+                ),
+                (
+                    "reviewer".to_string(),
+                    SetupRoleSelection {
+                        model: "gpt-5.6-sol".to_string(),
+                        effort: Some("high".to_string()),
+                        spawn: Some(SetupSpawnPolicy {
+                            agent_type: "switchloom_shared".to_string(),
+                            task_name: "reviewer".to_string(),
+                            fork_turns: ForkPolicy {
+                                mode: "none".to_string(),
+                                turns: None,
+                            },
+                        }),
+                    },
+                ),
+            ]),
+            routes: vec![SetupRouteMapping {
+                work_type: "code".to_string(),
+                role: "implementer".to_string(),
+                fallbacks: vec!["reviewer".to_string()],
+            }],
+            route_default: Some(SetupDefaultRoute {
+                role: "implementer".to_string(),
+                fallbacks: Vec::new(),
+            }),
+        };
+        assert!(
+            compile_setup_spec(&duplicate_agent_type)
+                .unwrap_err()
+                .to_string()
+                .contains("both declare Codex agent_type `switchloom_shared`")
+        );
+
+        let duplicate_task_name = SetupSpecV1 {
+            schema_version: 1,
+            host: "codex".to_string(),
+            integration: Integration::Standalone,
+            usage_policy: "balanced".to_string(),
+            selected_roles: BTreeMap::from([
+                (
+                    "foo-bar".to_string(),
+                    SetupRoleSelection {
+                        model: "gpt-5.6-terra".to_string(),
+                        effort: Some("high".to_string()),
+                        spawn: Some(SetupSpawnPolicy {
+                            agent_type: "switchloom_foo_bar".to_string(),
+                            task_name: "foo_bar".to_string(),
+                            fork_turns: ForkPolicy {
+                                mode: "none".to_string(),
+                                turns: None,
+                            },
+                        }),
+                    },
+                ),
+                (
+                    "foo_bar".to_string(),
+                    SetupRoleSelection {
+                        model: "gpt-5.6-sol".to_string(),
+                        effort: Some("high".to_string()),
+                        spawn: Some(SetupSpawnPolicy {
+                            agent_type: "switchloom_foo_bar_alt".to_string(),
+                            task_name: "foo_bar".to_string(),
+                            fork_turns: ForkPolicy {
+                                mode: "none".to_string(),
+                                turns: None,
+                            },
+                        }),
+                    },
+                ),
+            ]),
+            routes: vec![SetupRouteMapping {
+                work_type: "code".to_string(),
+                role: "foo-bar".to_string(),
+                fallbacks: vec!["foo_bar".to_string()],
+            }],
+            route_default: None,
+        };
+        assert!(
+            compile_setup_spec(&duplicate_task_name)
+                .unwrap_err()
+                .to_string()
+                .contains("both normalize to `foo_bar`")
+        );
+    }
+
+    #[test]
+    fn custom_setup_rejects_normalized_artifact_path_collisions() {
+        for (host, model, effort, expected_path) in [
+            (
+                "claude-code",
+                "sonnet",
+                Some("medium"),
+                ".claude/agents/switchloom-foo_bar.md",
+            ),
+            (
+                "cursor",
+                "composer-2.5",
+                None,
+                ".cursor/agents/switchloom-foo_bar.md",
+            ),
+            (
+                "mixed-host",
+                "sonnet",
+                Some("medium"),
+                ".model-routing/roles/foo_bar.toml",
+            ),
+        ] {
+            let spec = SetupSpecV1 {
+                schema_version: 1,
+                host: host.to_string(),
+                integration: Integration::Standalone,
+                usage_policy: "balanced".to_string(),
+                selected_roles: BTreeMap::from([
+                    (
+                        "foo-bar".to_string(),
+                        SetupRoleSelection {
+                            model: model.to_string(),
+                            effort: effort.map(ToOwned::to_owned),
+                            spawn: None,
+                        },
+                    ),
+                    (
+                        "foo_bar".to_string(),
+                        SetupRoleSelection {
+                            model: model.to_string(),
+                            effort: effort.map(ToOwned::to_owned),
+                            spawn: None,
+                        },
+                    ),
+                ]),
+                routes: vec![SetupRouteMapping {
+                    work_type: "code".to_string(),
+                    role: "foo-bar".to_string(),
+                    fallbacks: vec!["foo_bar".to_string()],
+                }],
+                route_default: None,
+            };
+            let error = compile_setup_spec(&spec).unwrap_err().to_string();
+            assert!(
+                error.contains("both normalize to `foo_bar`") || error.contains(expected_path),
+                "expected normalized collision for {host}, got {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn successful_custom_setups_validate_final_bundles_for_each_host_family() {
+        for (host, role, model, effort) in [
+            ("claude-code", "implementer", "sonnet", Some("medium")),
+            ("cursor", "implementer", "composer-2.5", None),
+            ("mixed-host", "implementer", "sonnet", Some("medium")),
+        ] {
+            let spec = SetupSpecV1 {
+                schema_version: 1,
+                host: host.to_string(),
+                integration: Integration::Standalone,
+                usage_policy: "balanced".to_string(),
+                selected_roles: BTreeMap::from([(
+                    role.to_string(),
+                    SetupRoleSelection {
+                        model: model.to_string(),
+                        effort: effort.map(ToOwned::to_owned),
+                        spawn: None,
+                    },
+                )]),
+                routes: vec![SetupRouteMapping {
+                    work_type: "code".to_string(),
+                    role: role.to_string(),
+                    fallbacks: Vec::new(),
+                }],
+                route_default: None,
+            };
+            let bundle = compile_setup_spec(&spec).unwrap();
+            validate_bundle(&bundle).unwrap();
+            assert_eq!(bundle.evidence.status, "custom-unverified");
+        }
+    }
+
+    #[test]
+    fn setup_config_lifecycle_persists_normalized_config_and_reuses_manifest_flow() {
+        let repository = temp_repo("setup-config-lifecycle");
+        let config_file = repository.join("input.setup.toml");
+        let original = setup_spec_for_policy("balanced", "codex", Integration::Standalone).unwrap();
+        let original_toml = setup_spec_to_canonical_toml(&original).unwrap();
+        fs::write(&config_file, &original_toml).unwrap();
+
+        let preview = preview_setup_config_file(&repository, &config_file).unwrap();
+        assert_eq!(preview.action, "preview");
+        assert!(
+            preview.artifacts.iter().any(|artifact| {
+                artifact.path == SETUP_CONFIG_PATH && artifact.status == "create"
+            })
+        );
+
+        let applied = apply_setup_config_file(&repository, &config_file).unwrap();
+        assert_eq!(applied.action, "apply");
+        assert_eq!(
+            fs::read_to_string(repository.join(SETUP_CONFIG_PATH)).unwrap(),
+            original_toml
+        );
+        assert!(
+            !repository.join(".planr").exists(),
+            "standalone setup must not create .planr"
+        );
+        let status = status_repository(&repository).unwrap();
+        assert!(status.artifacts.iter().any(|artifact| {
+            artifact.path == SETUP_CONFIG_PATH && artifact.status == "managed"
+        }));
+        let saved_preview = preview_saved_setup(&repository).unwrap();
+        assert!(saved_preview.artifacts.iter().any(|artifact| {
+            artifact.path == SETUP_CONFIG_PATH && artifact.status == "unchanged"
+        }));
+
+        let mut updated =
+            setup_spec_for_policy("balanced", "codex", Integration::Standalone).unwrap();
+        let worker = updated.selected_roles.get_mut("worker").unwrap();
+        worker.model = "gpt-5.6-sol".to_string();
+        worker.effort = Some("medium".to_string());
+        worker.spawn = Some(SetupSpawnPolicy {
+            agent_type: "switchloom_worker".to_string(),
+            task_name: "worker".to_string(),
+            fork_turns: ForkPolicy {
+                mode: "none".to_string(),
+                turns: None,
+            },
+        });
+        let updated_file = repository.join("updated.setup.toml");
+        let updated_toml = setup_spec_to_canonical_toml(&updated).unwrap();
+        fs::write(&updated_file, &updated_toml).unwrap();
+        let update = update_setup_config_file(&repository, &updated_file).unwrap();
+        assert_eq!(update.action, "update");
+        assert_eq!(
+            fs::read_to_string(repository.join(SETUP_CONFIG_PATH)).unwrap(),
+            updated_toml
+        );
+        assert!(
+            repository
+                .join(".codex/agents/switchloom_worker.toml")
+                .exists()
+        );
+
+        let rollback = rollback_repository(&repository).unwrap();
+        assert_eq!(rollback.action, "rollback");
+        assert_eq!(
+            fs::read_to_string(repository.join(SETUP_CONFIG_PATH)).unwrap(),
+            original_toml
+        );
+        assert!(
+            !repository
+                .join(".codex/agents/switchloom_worker.toml")
+                .exists()
+        );
+
+        let uninstall = uninstall_repository(&repository).unwrap();
+        assert_eq!(uninstall.action, "uninstall");
+        assert!(!repository.join(SETUP_CONFIG_PATH).exists());
+        assert!(!repository.join(".model-routing/manifest.json").exists());
+    }
+
+    #[test]
+    fn setup_recipe_apply_persists_config_and_rejects_existing_conflicts() {
+        let repository = temp_repo("setup-recipe-lifecycle");
+        let spec = setup_spec_for_policy("balanced", "codex", Integration::Planr).unwrap();
+        let recipe = setup_spec_to_recipe(&spec).unwrap();
+
+        let preview = preview_setup_recipe(&repository, &recipe).unwrap();
+        assert_eq!(preview.action, "preview");
+        assert!(preview.artifacts.iter().any(|artifact| {
+            artifact.path == ".planr/agents.toml" && artifact.status == "create"
+        }));
+        apply_setup_recipe(&repository, &recipe).unwrap();
+        assert_eq!(
+            fs::read_to_string(repository.join(SETUP_CONFIG_PATH)).unwrap(),
+            setup_spec_to_canonical_toml(&spec).unwrap()
+        );
+        assert!(repository.join(".planr/agents.toml").exists());
+
+        let conflict_repo = temp_repo("setup-recipe-conflict");
+        fs::create_dir_all(conflict_repo.join(".switchloom")).unwrap();
+        fs::write(conflict_repo.join(SETUP_CONFIG_PATH), "not managed\n").unwrap();
+        let error = apply_setup_recipe(&conflict_repo, &recipe)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains(SETUP_CONFIG_PATH));
+    }
+
+    #[test]
+    fn prepared_setup_apply_aborts_when_repository_plan_changes_after_preview() {
+        let repository = temp_repo("prepared-setup-toctou");
+        let spec = setup_spec_for_policy("balanced", "codex", Integration::Standalone).unwrap();
+        let prepared = prepare_setup_lifecycle(&spec).unwrap();
+        let preview = preview_prepared_setup(&repository, &prepared).unwrap();
+        fs::create_dir_all(repository.join(".switchloom")).unwrap();
+        fs::write(repository.join(SETUP_CONFIG_PATH), "external change\n").unwrap();
+        let error = apply_prepared_setup(&repository, &prepared, &preview)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("repository state changed after preview"));
+        assert_eq!(
+            fs::read_to_string(repository.join(SETUP_CONFIG_PATH)).unwrap(),
+            "external change\n"
+        );
+        assert!(!repository.join(".model-routing/manifest.json").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn prepared_setup_apply_aborts_when_repository_symlink_retargets_after_preview() {
+        use std::os::unix::fs::symlink;
+
+        let root = temp_repo("prepared-setup-symlink");
+        let repo_a = root.join("repo-a");
+        let repo_b = root.join("repo-b");
+        let link = root.join("repo-link");
+        fs::create_dir_all(&repo_a).unwrap();
+        fs::create_dir_all(&repo_b).unwrap();
+        symlink(&repo_a, &link).unwrap();
+
+        let spec = setup_spec_for_policy("balanced", "codex", Integration::Standalone).unwrap();
+        let prepared = prepare_setup_lifecycle(&spec).unwrap();
+        let preview = preview_prepared_setup(&link, &prepared).unwrap();
+        assert_eq!(
+            preview.repository,
+            repo_a.canonicalize().unwrap().display().to_string()
+        );
+
+        fs::remove_file(&link).unwrap();
+        symlink(&repo_b, &link).unwrap();
+        let error = apply_prepared_setup(&link, &prepared, &preview)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("repository state changed after preview"));
+        assert!(!repo_a.join(SETUP_CONFIG_PATH).exists());
+        assert!(!repo_b.join(SETUP_CONFIG_PATH).exists());
+        assert!(!repo_a.join(".model-routing/manifest.json").exists());
+        assert!(!repo_b.join(".model-routing/manifest.json").exists());
+    }
+
+    #[test]
+    fn setup_spec_rejects_unknown_fields_and_invalid_combinations() {
+        let unknown = r#"{
+  "schema_version": 1,
+  "host": "codex",
+  "integration": "standalone",
+  "usage_policy": "balanced",
+  "selected_roles": {},
+  "routes": [],
+  "unexpected": true
+}"#;
+        assert!(
+            format!("{:#}", setup_spec_from_json(unknown).unwrap_err()).contains("unknown field")
+        );
+
+        let invalid_effort = SetupSpecV1 {
+            schema_version: 1,
+            host: "codex".to_string(),
+            integration: Integration::Standalone,
+            usage_policy: "balanced".to_string(),
+            selected_roles: BTreeMap::from([(
+                "implementer".to_string(),
+                SetupRoleSelection {
+                    model: "gpt-5.6-luna".to_string(),
+                    effort: Some("ultra".to_string()),
+                    spawn: Some(SetupSpawnPolicy {
+                        agent_type: "switchloom_implementer".to_string(),
+                        task_name: "implementer".to_string(),
+                        fork_turns: ForkPolicy {
+                            mode: "none".to_string(),
+                            turns: None,
+                        },
+                    }),
+                },
+            )]),
+            routes: vec![SetupRouteMapping {
+                work_type: "code".to_string(),
+                role: "implementer".to_string(),
+                fallbacks: Vec::new(),
+            }],
+            route_default: None,
+        };
+        assert!(
+            validate_setup_spec(&invalid_effort)
+                .unwrap_err()
+                .to_string()
+                .contains("is not supported")
+        );
+
+        let mut invalid_fork = invalid_effort;
+        invalid_fork
+            .selected_roles
+            .get_mut("implementer")
+            .unwrap()
+            .model = "gpt-5.6-terra".to_string();
+        invalid_fork
+            .selected_roles
+            .get_mut("implementer")
+            .unwrap()
+            .effort = Some("high".to_string());
+        invalid_fork
+            .selected_roles
+            .get_mut("implementer")
+            .unwrap()
+            .spawn
+            .as_mut()
+            .unwrap()
+            .fork_turns = ForkPolicy {
+            mode: "all".to_string(),
+            turns: None,
+        };
+        assert!(
+            validate_setup_spec(&invalid_fork)
+                .unwrap_err()
+                .to_string()
+                .contains("must not use fork_turns all")
+        );
+
+        let mut missing_spawn = invalid_fork.clone();
+        missing_spawn
+            .selected_roles
+            .get_mut("implementer")
+            .unwrap()
+            .spawn = None;
+        assert!(
+            validate_setup_spec(&missing_spawn)
+                .unwrap_err()
+                .to_string()
+                .contains("must declare Codex spawn policy")
+        );
+
+        let mut name_mismatch = invalid_fork.clone();
+        let spawn = name_mismatch
+            .selected_roles
+            .get_mut("implementer")
+            .unwrap()
+            .spawn
+            .as_mut()
+            .unwrap();
+        spawn.fork_turns = ForkPolicy {
+            mode: "none".to_string(),
+            turns: None,
+        };
+        spawn.task_name = "wrong_name".to_string();
+        assert!(
+            validate_setup_spec(&name_mismatch)
+                .unwrap_err()
+                .to_string()
+                .contains("must match `implementer`")
+        );
+
+        let mut task_path = name_mismatch;
+        task_path
+            .selected_roles
+            .get_mut("implementer")
+            .unwrap()
+            .spawn
+            .as_mut()
+            .unwrap()
+            .task_name = "/root/task".to_string();
+        assert!(
+            validate_setup_spec(&task_path)
+                .unwrap_err()
+                .to_string()
+                .contains("not a canonical task path")
+        );
+
+        let legacy_fork_context = r#"{
+  "schema_version": 1,
+  "host": "codex",
+  "integration": "standalone",
+  "usage_policy": "balanced",
+  "selected_roles": {
+    "implementer": {
+      "model": "gpt-5.6-terra",
+      "effort": "high",
+      "fork_context": "none"
+    }
+  },
+  "routes": [{"work_type": "code", "role": "implementer"}]
+}"#;
+        assert!(
+            format!(
+                "{:#}",
+                setup_spec_from_json(legacy_fork_context).unwrap_err()
+            )
+            .contains("fork_context")
+        );
+    }
+
+    #[test]
+    fn setup_contract_catalog_exposes_transport_and_host_options() {
+        let catalog = setup_contract_catalog_value().unwrap();
+        assert_eq!(catalog["configPath"], SETUP_CONFIG_PATH);
+        assert_eq!(catalog["recipePrefix"], SETUP_RECIPE_PREFIX);
+        assert!(catalog["hosts"].as_array().unwrap().iter().any(|host| {
+            host["id"] == "codex"
+                && host["models"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|model| model["id"] == "gpt-5.6-sol")
+        }));
     }
 
     #[test]

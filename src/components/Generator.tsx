@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import JSZip from "jszip";
 import {
   CheckIcon,
   CopyIcon,
@@ -31,11 +30,12 @@ import {
   applyPreset,
   changeHost,
   createConfig,
-  generateFiles,
   HOST_IDS,
   HOSTS,
+  lifecycleCommands,
   PRESET_IDS,
   PRESETS,
+  recipeApplyCommand,
   type HostCatalog,
   type HostId,
   type PresetId,
@@ -43,9 +43,11 @@ import {
   ROLES,
   type RoleId,
   setEffort,
+  setIntegration,
   setModel,
   setRoles,
-  setupSummary,
+  setupConfigToml,
+  setupSpec,
 } from "@/lib/generator";
 
 function HostIcon({ host }: { host: HostId }) {
@@ -59,33 +61,28 @@ function HostIcon({ host }: { host: HostId }) {
   );
 }
 
-export default function Generator({ hostCatalog }: { hostCatalog: HostCatalog }) {
+export default function Generator({ hostCatalog, setupTransport }: { hostCatalog: HostCatalog; setupTransport: { recipePrefix: string; configPath: string } }) {
   const [config, setConfig] = useState(createConfig());
   const [preset, setPreset] = useState<PresetId | "custom">("balanced");
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
-  const [downloading, setDownloading] = useState(false);
-  const files = useMemo(() => generateFiles(config), [config]);
+  const setup = useMemo(() => setupSpec(config, hostCatalog), [config, hostCatalog]);
+  const configToml = useMemo(() => setupConfigToml(config, hostCatalog), [config, hostCatalog]);
+  const copyCommand = useMemo(() => recipeApplyCommand(config, hostCatalog, setupTransport.recipePrefix), [config, hostCatalog, setupTransport.recipePrefix]);
+  const commands = useMemo(() => lifecycleCommands(config, hostCatalog, setupTransport.recipePrefix), [config, hostCatalog, setupTransport.recipePrefix]);
   const host = HOSTS[config.host];
 
-  async function download() {
-    setDownloading(true);
-    try {
-      const zip = new JSZip();
-      for (const [path, content] of Object.entries(files)) zip.file(path, content);
-      const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `switchloom-${config.host}-team.zip`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } finally {
-      setDownloading(false);
-    }
+  function downloadConfig() {
+    const blob = new Blob([configToml], { type: "application/toml" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "config.toml";
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   async function copy() {
-    await navigator.clipboard.writeText(setupSummary(config));
+    await navigator.clipboard.writeText(copyCommand);
     setCopyState("copied");
     window.setTimeout(() => setCopyState("idle"), 1400);
   }
@@ -130,7 +127,7 @@ export default function Generator({ hostCatalog }: { hostCatalog: HostCatalog })
               Build your coding-agent team.
             </h1>
             <p className="max-w-2xl text-pretty text-sm leading-6 text-muted-foreground sm:text-base">
-              Pick your agent, choose up to four clear roles, and download project-native files. No preset maze.
+              Pick your agent, choose up to four clear roles, then copy a CLI recipe or download the setup config. No preset maze.
             </p>
           </section>
 
@@ -138,7 +135,7 @@ export default function Generator({ hostCatalog }: { hostCatalog: HostCatalog })
             <Card className="min-w-0">
               <CardHeader>
                 <CardTitle>Configure your team</CardTitle>
-                <CardDescription>Two decisions first. Fine-tune models only if you want to.</CardDescription>
+                <CardDescription>Choose the host, setup mode, and roles. Fine-tune models only if you want to.</CardDescription>
                 <CardAction><Badge variant="secondary">1–4 roles</Badge></CardAction>
               </CardHeader>
               <CardContent>
@@ -171,7 +168,36 @@ export default function Generator({ hostCatalog }: { hostCatalog: HostCatalog })
                   <Separator />
 
                   <FieldSet>
-                    <FieldLegend>2. Which roles do you need?</FieldLegend>
+                    <FieldLegend>2. Standalone or With Planr?</FieldLegend>
+                    <FieldDescription>
+                      Standalone writes host-native agent files and {setupTransport.configPath}. With Planr also adds Planr policy files for repositories that already use Planr.
+                    </FieldDescription>
+                    <ToggleGroup
+                      aria-label="Setup mode"
+                      value={[config.integration]}
+                      onValueChange={(values) => values[0] && setConfig(setIntegration(config, values[0] as "standalone" | "planr"))}
+                      variant="outline"
+                      spacing={0}
+                      className="grid w-full grid-cols-2"
+                    >
+                      <ToggleGroupItem value="standalone" className="w-full">Standalone</ToggleGroupItem>
+                      <ToggleGroupItem value="planr" className="w-full">With Planr</ToggleGroupItem>
+                    </ToggleGroup>
+                    <Alert>
+                      <ShieldCheckIcon aria-hidden="true" />
+                      <AlertTitle>{config.integration === "planr" ? "Planr integration" : "Standalone setup"}</AlertTitle>
+                      <AlertDescription>
+                        {config.integration === "planr"
+                          ? "Use this only when the target repository has Planr. Switchloom remains the CLI transport; Planr consumes the additional generated policy files."
+                          : "No Planr dependency is required. The CLI expands the setup into repository-local files for the selected host."}
+                      </AlertDescription>
+                    </Alert>
+                  </FieldSet>
+
+                  <Separator />
+
+                  <FieldSet>
+                    <FieldLegend>3. Which roles do you need?</FieldLegend>
                     <FieldDescription>Orchestrator is always included. Add only roles that create a real handoff.</FieldDescription>
                     <ToggleGroup
                       aria-label="Team roles"
@@ -193,7 +219,7 @@ export default function Generator({ hostCatalog }: { hostCatalog: HostCatalog })
                   <Separator />
 
                   <FieldSet>
-                    <FieldLegend>3. Tune each role</FieldLegend>
+                    <FieldLegend>4. Tune each role</FieldLegend>
                     <FieldDescription>Start with a team-wide preset, then override any role below.</FieldDescription>
                     <FieldGroup>
                       <Field>
@@ -244,14 +270,15 @@ export default function Generator({ hostCatalog }: { hostCatalog: HostCatalog })
             <Card className="min-w-0 lg:sticky lg:top-6">
               <CardHeader>
                 <CardTitle>Your {host.label} team</CardTitle>
-                <CardDescription>{config.roles.length} focused roles · {Object.keys(files).length} generated files</CardDescription>
+                <CardDescription>{config.roles.length} focused roles · {config.integration === "planr" ? "Planr setup spec" : "standalone setup spec"}</CardDescription>
                 <CardAction><Badge>{config.roles.length}/4</Badge></CardAction>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="team">
                   <TabsList className="w-full">
                     <TabsTrigger value="team">Team</TabsTrigger>
-                    <TabsTrigger value="files">Files</TabsTrigger>
+                    <TabsTrigger value="commands">Commands</TabsTrigger>
+                    <TabsTrigger value="spec">Spec</TabsTrigger>
                   </TabsList>
                   <TabsContent value="team" className="pt-3">
                     <div className="flex flex-col gap-3">
@@ -271,24 +298,33 @@ export default function Generator({ hostCatalog }: { hostCatalog: HostCatalog })
                       })}
                     </div>
                   </TabsContent>
-                  <TabsContent value="files" className="pt-3">
-                    <ul className="flex flex-col gap-2">
-                      {Object.keys(files).map((path) => <li key={path} className="truncate font-mono text-[0.7rem] text-muted-foreground">{path}</li>)}
-                    </ul>
+                  <TabsContent value="commands" className="pt-3">
+                    <ol className="flex flex-col gap-2">
+                      {commands.map((command) => (
+                        <li key={command} className="rounded-sm bg-muted px-2 py-1 font-mono text-[0.68rem] leading-5 text-muted-foreground">
+                          {command}
+                        </li>
+                      ))}
+                    </ol>
+                  </TabsContent>
+                  <TabsContent value="spec" className="pt-3">
+                    <pre className="max-h-80 overflow-auto rounded-sm bg-muted p-3 text-[0.68rem] leading-5 text-muted-foreground">
+                      {JSON.stringify(setup, null, 2)}
+                    </pre>
                   </TabsContent>
                 </Tabs>
               </CardContent>
               <CardFooter className="flex-col items-stretch gap-2">
-                <Button size="lg" onClick={download} disabled={downloading}>
-                  <DownloadSimpleIcon data-icon="inline-start" aria-hidden="true" />
-                  {downloading ? "Building setup…" : "Download setup (.zip)"}
-                </Button>
-                <Button variant="outline" onClick={copy}>
+                <Button size="lg" onClick={copy}>
                   {copyState === "copied" ? <CheckIcon data-icon="inline-start" aria-hidden="true" /> : <CopyIcon data-icon="inline-start" aria-hidden="true" />}
-                  {copyState === "copied" ? "Copied summary" : "Copy team summary"}
+                  {copyState === "copied" ? "Copied command" : "Copy npx recipe command"}
+                </Button>
+                <Button variant="outline" onClick={downloadConfig}>
+                  <DownloadSimpleIcon data-icon="inline-start" aria-hidden="true" />
+                  Download .switchloom/config.toml
                 </Button>
                 <p className="pt-1 text-center text-[0.7rem] leading-5 text-muted-foreground">
-                  Extract into your repository root and review before committing.
+                  Custom setup specs are not verified recommendations. Preview before apply; the selected host remains model and execution authority.
                 </p>
               </CardFooter>
             </Card>
@@ -321,7 +357,7 @@ function RoleCard({ role, config, hostCatalog, onModel, onEffort }: {
   onEffort: (effort: string) => void;
 }) {
   const host = HOSTS[config.host];
-  const models = hostCatalog[config.host];
+  const models = hostCatalog[config.host].models;
   const assignment = config.assignments[role];
   const model = models.find((candidate) => candidate.id === assignment.model)!;
   return (

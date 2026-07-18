@@ -8,6 +8,7 @@ describe("website security headers", () => {
     const headers = await readFile(resolve("website/public/_headers"), "utf8");
 
     expect(headers).toContain("script-src 'self' 'unsafe-inline'");
+    expect(headers).toContain("font-src 'self' data:");
     expect(headers).toContain("object-src 'none'");
     expect(headers).toContain("frame-ancestors 'none'");
   });

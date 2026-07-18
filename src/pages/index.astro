@@ -1,10 +1,11 @@
 ---
 import "@/styles/global.css";
 import Generator from "@/components/Generator";
-import { hostCatalogFrom } from "@/lib/generator";
+import { hostCatalogFrom, setupTransportFrom } from "@/lib/generator";
 import catalog from "../../website/data/catalog.json";
 
 const hostCatalog = hostCatalogFrom(catalog);
+const setupTransport = setupTransportFrom(catalog);
 ---
 
 <!doctype html>
@@ -14,9 +15,10 @@ const hostCatalog = hostCatalogFrom(catalog);
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content="Build a deterministic model-routing team for Codex, Cursor, or Claude Code." />
     <meta name="theme-color" content="#f7f5ef" />
+    <link rel="icon" href="/brand/codex.svg" type="image/svg+xml" />
     <title>Switchloom — Build your coding-agent team</title>
   </head>
   <body>
-    <Generator client:load hostCatalog={hostCatalog} />
+    <Generator client:load hostCatalog={hostCatalog} setupTransport={setupTransport} />
   </body>
 </html>

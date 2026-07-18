@@ -5,6 +5,7 @@ export const PRESET_IDS = ["light", "balanced", "high"] as const;
 export type RoleId = (typeof ROLE_IDS)[number];
 export type HostId = (typeof HOST_IDS)[number];
 export type PresetId = (typeof PRESET_IDS)[number];
+export type SetupIntegration = "standalone" | "planr";
 
 export type ModelOption = {
   id: string;
@@ -17,10 +18,12 @@ export type ModelOption = {
 export type RoleAssignment = { model: string; effort?: string };
 export type GeneratorConfig = {
   host: HostId;
+  integration: SetupIntegration;
+  usagePolicy: string;
   roles: RoleId[];
   assignments: Record<RoleId, RoleAssignment>;
 };
-export type HostCatalog = Record<HostId, ModelOption[]>;
+export type HostCatalog = Record<HostId, { binding: string; models: ModelOption[] }>;
 
 export const ROLES: Record<RoleId, { label: string; short: string; instructions: string; writable: boolean }> = {
   orchestrator: {
@@ -96,6 +99,12 @@ export const PRESETS: Record<PresetId, { label: string; short: string }> = {
   high: { label: "High", short: "Prioritizes stronger models and deeper reasoning." },
 };
 
+const PRESET_USAGE_POLICIES: Record<PresetId, string> = {
+  light: "low-usage",
+  balanced: "balanced",
+  high: "max-quality",
+};
+
 const PRESET_ASSIGNMENTS: Record<HostId, Record<PresetId, Record<RoleId, RoleAssignment>>> = {
   codex: {
     light: {
@@ -144,15 +153,6 @@ const PRESET_ASSIGNMENTS: Record<HostId, Record<PresetId, Record<RoleId, RoleAss
   },
 };
 
-// Codex publishes model-specific effort support through its model manifest.
-// Ultra is intentionally exposed only as a manual choice: unlike the regular
-// effort ladder, it enables automatic multi-agent delegation.
-export const CODEX_FRONTIER_MODELS: readonly ModelOption[] = [
-  { id: "gpt-5.6-sol", label: "Sol", provider: "OpenAI", efforts: ["low", "medium", "high", "xhigh", "ultra"], tier: "premium" },
-  { id: "gpt-5.6-terra", label: "Terra", provider: "OpenAI", efforts: ["low", "medium", "high", "xhigh", "ultra"], tier: "standard" },
-  { id: "gpt-5.6-luna", label: "Luna", provider: "OpenAI", efforts: ["low", "medium", "high", "xhigh"], tier: "standard" },
-] as const;
-
 function modelLabel(model: string) {
   const labels: Record<string, string> = {
     "gpt-5.6-sol": "Sol",
@@ -170,95 +170,93 @@ function modelLabel(model: string) {
   return labels[model] ?? model;
 }
 
-export const CURSOR_FRONTIER_MODELS: readonly ModelOption[] = [
-  { id: "gpt-5.6-sol", label: "GPT-5.6 Sol", provider: "OpenAI", efforts: ["low", "medium", "high", "xhigh", "max"], tier: "premium" },
-  { id: "gpt-5.6-terra", label: "GPT-5.6 Terra", provider: "OpenAI", efforts: ["low", "medium", "high", "xhigh", "max"], tier: "standard" },
-  { id: "gpt-5.6-luna", label: "GPT-5.6 Luna", provider: "OpenAI", efforts: ["low", "medium", "high", "xhigh", "max"], tier: "standard" },
-  { id: "fable-5", label: "Fable 5", provider: "Anthropic", efforts: ["low", "medium", "high", "xhigh", "max"], tier: "premium" },
-  { id: "claude-opus-4-8", label: "Opus 4.8", provider: "Anthropic", efforts: ["low", "medium", "high", "xhigh", "max"], tier: "premium" },
-  { id: "claude-sonnet-5", label: "Sonnet 5", provider: "Anthropic", efforts: ["low", "medium", "high", "xhigh", "max"], tier: "standard" },
-  { id: "grok-4.5", label: "Grok 4.5", provider: "Cursor", efforts: ["low", "medium", "high"], tier: "premium" },
-  { id: "composer-2.5", label: "Composer 2.5", provider: "Cursor", efforts: [], tier: "standard" },
-] as const;
+function modelProvider(model: string) {
+  if (model.startsWith("gpt-")) return "OpenAI";
+  if (model.startsWith("claude-") || model === "opus" || model === "sonnet" || model === "fable-5") return "Anthropic";
+  if (model.startsWith("grok") || model.startsWith("composer")) return "Cursor";
+  return undefined;
+}
 
-type CatalogProfile = { model?: string; effort?: string; cost_tier?: string };
 type CatalogShape = {
-  compositions?: Array<{
-    binding?: {
-      host?: string;
-      profiles?: Record<string, CatalogProfile | undefined>;
-    };
-  }>;
+  setupContract?: {
+    recipePrefix?: string;
+    configPath?: string;
+    hosts?: Array<{
+      id?: string;
+      binding?: string;
+      models?: Array<{ id?: string; efforts?: string[]; tier?: string }>;
+    }>;
+  };
 };
 
 export function hostCatalogFrom(catalog: CatalogShape): HostCatalog {
-  const grouped: Record<HostId, Map<string, { efforts: Set<string>; tier: "standard" | "premium" }>> = {
-    codex: new Map(),
-    cursor: new Map(),
-    "claude-code": new Map(),
-  };
-  for (const composition of catalog.compositions ?? []) {
-    const host = composition.binding?.host;
-    if (!HOST_IDS.includes(host as HostId)) continue;
-    for (const profile of Object.values(composition.binding?.profiles ?? {})) {
-      if (!profile?.model) continue;
-      const values = grouped[host as HostId];
-      const current = values.get(profile.model) ?? { efforts: new Set<string>(), tier: "standard" as const };
-      if (profile.effort) current.efforts.add(profile.effort);
-      if (profile.cost_tier === "premium") current.tier = "premium";
-      values.set(profile.model, current);
-    }
-  }
-  const result: HostCatalog = { codex: [], cursor: [], "claude-code": [] };
+  const result = {} as HostCatalog;
   for (const host of HOST_IDS) {
-    result[host] = [...grouped[host]].map(([id, value]) => ({
-      id,
-      label: modelLabel(id),
-      efforts: [...value.efforts],
-      tier: value.tier,
-    }));
+    const setupHost = catalog.setupContract?.hosts?.find((entry) => entry.id === host);
+    if (!setupHost?.binding) throw new Error(`canonical setup contract has no ${host} binding`);
+    const models = setupHost.models?.map((model) => {
+      if (!model.id || !Array.isArray(model.efforts) || (model.tier !== "standard" && model.tier !== "premium")) {
+        throw new Error(`canonical setup contract has invalid ${host} model entry`);
+      }
+      const tier: ModelOption["tier"] = model.tier === "premium" ? "premium" : "standard";
+      return {
+        id: model.id,
+        label: modelLabel(model.id),
+        provider: modelProvider(model.id),
+        efforts: model.efforts,
+        tier,
+      };
+    }) ?? [];
+    result[host] = { binding: setupHost.binding, models };
   }
-  // Keep current host manifests authoritative where the composition catalog is
-  // intentionally narrower than the host's model picker.
-  result.codex = CODEX_FRONTIER_MODELS.map((model) => ({ ...model }));
-  // Cursor exposes many transient and legacy models, so keep its researched
-  // frontier set instead of mirroring every catalog entry.
-  result.cursor = CURSOR_FRONTIER_MODELS.map((model) => ({ ...model }));
   for (const host of HOST_IDS) {
-    if (result[host].length === 0) throw new Error(`canonical catalog has no ${host} model profiles`);
+    if (result[host].models.length === 0) throw new Error(`canonical setup contract has no ${host} model profiles`);
     for (const [role, assignment] of Object.entries(HOSTS[host].defaults)) {
-      const model = result[host].find((candidate) => candidate.id === assignment.model);
-      if (!model) throw new Error(`canonical catalog has no ${host} default model for ${role}: ${assignment.model}`);
+      const model = result[host].models.find((candidate) => candidate.id === assignment.model);
+      if (!model) throw new Error(`canonical setup contract has no ${host} default model for ${role}: ${assignment.model}`);
       if (assignment.effort && !model.efforts.includes(assignment.effort)) {
-        throw new Error(`canonical catalog has no ${host} default effort for ${role}: ${assignment.effort}`);
+        throw new Error(`canonical setup contract has no ${host} default effort for ${role}: ${assignment.effort}`);
       }
     }
   }
   return result;
 }
 
+export function setupTransportFrom(catalog: CatalogShape) {
+  const recipePrefix = catalog.setupContract?.recipePrefix;
+  const configPath = catalog.setupContract?.configPath;
+  if (!recipePrefix || !configPath) throw new Error("canonical setup contract is missing transport metadata");
+  return { recipePrefix, configPath };
+}
+
 export function createConfig(host: HostId = "codex"): GeneratorConfig {
   return {
     host,
+    integration: "standalone",
+    usagePolicy: "balanced",
     roles: [...ROLE_IDS],
     assignments: structuredClone(HOSTS[host].defaults),
   };
 }
 
 export function changeHost(config: GeneratorConfig, host: HostId): GeneratorConfig {
-  return { ...createConfig(host), roles: [...config.roles] };
+  return { ...createConfig(host), integration: config.integration, usagePolicy: config.usagePolicy, roles: [...config.roles] };
+}
+
+export function setIntegration(config: GeneratorConfig, integration: SetupIntegration): GeneratorConfig {
+  return { ...config, integration };
 }
 
 export function applyPreset(config: GeneratorConfig, preset: PresetId, catalog: HostCatalog): GeneratorConfig {
   const assignments = structuredClone(PRESET_ASSIGNMENTS[config.host][preset]);
   for (const [role, assignment] of Object.entries(assignments)) {
-    const model = catalog[config.host].find((candidate) => candidate.id === assignment.model);
+    const model = catalog[config.host].models.find((candidate) => candidate.id === assignment.model);
     if (!model) throw new Error(`${preset} preset has no ${config.host} model for ${role}: ${assignment.model}`);
     if (assignment.effort && !model.efforts.includes(assignment.effort)) {
       throw new Error(`${preset} preset has no ${config.host} effort for ${role}: ${assignment.effort}`);
     }
   }
-  return { ...config, assignments };
+  return { ...config, usagePolicy: PRESET_USAGE_POLICIES[preset], assignments };
 }
 
 export function setRoles(config: GeneratorConfig, roles: readonly string[]): GeneratorConfig {
@@ -267,7 +265,7 @@ export function setRoles(config: GeneratorConfig, roles: readonly string[]): Gen
 }
 
 export function setModel(config: GeneratorConfig, role: RoleId, modelId: string, catalog: HostCatalog): GeneratorConfig {
-  const model = catalog[config.host].find((candidate) => candidate.id === modelId);
+  const model = catalog[config.host].models.find((candidate) => candidate.id === modelId);
   if (!model) throw new Error(`unsupported ${config.host} model: ${modelId}`);
   return {
     ...config,
@@ -280,70 +278,147 @@ export function setModel(config: GeneratorConfig, role: RoleId, modelId: string,
 
 export function setEffort(config: GeneratorConfig, role: RoleId, effort: string, catalog: HostCatalog): GeneratorConfig {
   const assignment = config.assignments[role];
-  const model = catalog[config.host].find((candidate) => candidate.id === assignment.model);
+  const model = catalog[config.host].models.find((candidate) => candidate.id === assignment.model);
   if (!model?.efforts.includes(effort)) throw new Error(`unsupported effort ${effort} for ${assignment.model}`);
   return { ...config, assignments: { ...config.assignments, [role]: { ...assignment, effort } } };
 }
 
-function yaml(role: RoleId, assignment: RoleAssignment) {
-  const lines = ["---", `name: switchloom-${role}`, `model: ${assignment.model}`];
-  if (assignment.effort) lines.push(`effort: ${assignment.effort}`);
-  lines.push("---", ROLES[role].instructions, "");
+export type SetupSpecV1 = {
+  schema_version: 1;
+  host: string;
+  integration: SetupIntegration;
+  usage_policy: string;
+  selected_roles: Record<string, {
+    model: string;
+    effort?: string;
+    spawn?: {
+      agent_type: string;
+      task_name: string;
+      fork_turns: { mode: "none" };
+    };
+  }>;
+  routes: Array<{ work_type: string; role: string; fallbacks: string[] }>;
+  route_default: { role: string; fallbacks: string[] };
+};
+
+function routingRole(config: GeneratorConfig, preferred: RoleId, fallback: RoleId = "orchestrator") {
+  return config.roles.includes(preferred) ? preferred : fallback;
+}
+
+export function setupSpec(config: GeneratorConfig, catalog: HostCatalog): SetupSpecV1 {
+  const selected_roles: SetupSpecV1["selected_roles"] = {};
+  for (const role of config.roles) {
+    const assignment = config.assignments[role];
+    selected_roles[role] = {
+      model: assignment.model,
+      ...(assignment.effort ? { effort: assignment.effort } : {}),
+      ...(config.host === "codex"
+        ? {
+            spawn: {
+              agent_type: `switchloom_${role}`,
+              task_name: role,
+              fork_turns: { mode: "none" },
+            },
+          }
+        : {}),
+    };
+  }
+  const reviewFallback = routingRole(config, "reviewer");
+  return {
+    schema_version: 1,
+    host: catalog[config.host].binding,
+    integration: config.integration,
+    usage_policy: config.usagePolicy,
+    selected_roles,
+    routes: [
+      { work_type: "planning", role: "orchestrator", fallbacks: [] },
+      { work_type: "code", role: routingRole(config, "implementer"), fallbacks: [] },
+      { work_type: "review", role: reviewFallback, fallbacks: [] },
+      { work_type: "verification", role: routingRole(config, "verifier", reviewFallback), fallbacks: [] },
+    ],
+    route_default: { role: "orchestrator", fallbacks: [] },
+  };
+}
+
+function jsonRecipePayload(spec: SetupSpecV1) {
+  return `${JSON.stringify(spec, null, 2)}\n`;
+}
+
+function base64Url(bytes: Uint8Array) {
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 1) binary += String.fromCharCode(bytes[index]);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+export function setupRecipe(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_") {
+  return `${recipePrefix}${base64Url(new TextEncoder().encode(jsonRecipePayload(setupSpec(config, catalog))))}`;
+}
+
+function tomlString(value: string) {
+  return JSON.stringify(value);
+}
+
+function tomlArray(values: readonly string[]) {
+  return `[${values.map(tomlString).join(", ")}]`;
+}
+
+export function setupConfigToml(config: GeneratorConfig, catalog: HostCatalog) {
+  const spec = setupSpec(config, catalog);
+  const lines = [
+    "schema_version = 1",
+    `host = ${tomlString(spec.host)}`,
+    `integration = ${tomlString(spec.integration)}`,
+    `usage_policy = ${tomlString(spec.usage_policy)}`,
+    "",
+  ];
+  for (const route of spec.routes) {
+    lines.push("[[routes]]", `work_type = ${tomlString(route.work_type)}`, `role = ${tomlString(route.role)}`, `fallbacks = ${tomlArray(route.fallbacks)}`, "");
+  }
+  lines.push("[route_default]", `role = ${tomlString(spec.route_default.role)}`, `fallbacks = ${tomlArray(spec.route_default.fallbacks)}`, "");
+  for (const role of config.roles) {
+    const selection = spec.selected_roles[role];
+    lines.push(`[selected_roles.${role}]`, `model = ${tomlString(selection.model)}`);
+    if (selection.effort) lines.push(`effort = ${tomlString(selection.effort)}`);
+    lines.push("");
+    if (selection.spawn) {
+      lines.push(
+        `[selected_roles.${role}.spawn]`,
+        `agent_type = ${tomlString(selection.spawn.agent_type)}`,
+        `task_name = ${tomlString(selection.spawn.task_name)}`,
+        "",
+        `[selected_roles.${role}.spawn.fork_turns]`,
+        `mode = ${tomlString(selection.spawn.fork_turns.mode)}`,
+        "",
+      );
+    }
+  }
   return lines.join("\n");
 }
 
-function codexAgent(role: RoleId, assignment: RoleAssignment) {
-  const definition = ROLES[role];
-  return [
-    `name = "switchloom_${role}"`,
-    `description = "${definition.short}"`,
-    `model = "${assignment.model}"`,
-    `model_reasoning_effort = "${assignment.effort}"`,
-    `sandbox_mode = "${definition.writable ? "workspace-write" : "read-only"}"`,
-    "",
-    "developer_instructions = \"\"\"",
-    definition.instructions,
-    "\"\"\"",
-    "",
-  ].join("\n");
+export function shellQuote(value: string) {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
-export function generateFiles(config: GeneratorConfig): Record<string, string> {
-  const files: Record<string, string> = {};
-  for (const role of config.roles) {
-    const assignment = config.assignments[role];
-    if (config.host === "codex") files[`.codex/agents/switchloom-${role}.toml`] = codexAgent(role, assignment);
-    if (config.host === "cursor") files[`.cursor/agents/switchloom-${role}.md`] = yaml(role, assignment);
-    if (config.host === "claude-code") files[`.claude/agents/switchloom-${role}.md`] = yaml(role, assignment);
-  }
+export function recipeApplyCommand(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_") {
+  return `npx switchloom@latest apply --recipe ${shellQuote(setupRecipe(config, catalog, recipePrefix))} --repository .`;
+}
 
-  const routeLines = config.roles.map((role) => `- ${ROLES[role].label}: \`switchloom-${role}\` — ${ROLES[role].short}`);
-  files[config.host === "codex" ? ".codex/skills/switchloom-routing/SKILL.md" : "SWITCHLOOM.md"] = [
-    "# Switchloom routing",
-    "",
-    `Host: ${HOSTS[config.host].label}`,
-    "",
-    "Route work to the narrowest suitable role. The orchestrator keeps synthesis ownership.",
-    "",
-    ...routeLines,
-    "",
-  ].join("\n");
-  files["switchloom.config.json"] = `${JSON.stringify(config, null, 2)}\n`;
-  files["README-SWITCHLOOM.md"] = [
-    "# Your Switchloom setup",
-    "",
-    `Generated for ${HOSTS[config.host].label} with ${config.roles.length} roles.`,
-    "",
-    "Extract this archive into the root of your repository, review the generated files, and commit the files you want to share with your team.",
-    "The selected host remains authoritative for model availability, execution, and billing.",
-    "",
-  ].join("\n");
-  return files;
+export function lifecycleCommands(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_") {
+  const recipe = shellQuote(setupRecipe(config, catalog, recipePrefix));
+  return [
+    "npm install -g switchloom",
+    `switchloom preview --recipe ${recipe} --repository .`,
+    `switchloom apply --recipe ${recipe} --repository .`,
+    "switchloom update --repository .",
+    "switchloom status --repository .",
+    "switchloom rollback --repository .",
+    "switchloom uninstall --repository .",
+  ];
 }
 
 export function setupSummary(config: GeneratorConfig) {
   return [
-    `${HOSTS[config.host].label} team`,
+    `${HOSTS[config.host].label} ${config.integration === "planr" ? "with Planr" : "standalone"} team`,
     ...config.roles.map((role) => {
       const value = config.assignments[role];
       return `${ROLES[role].label}: ${value.model}${value.effort ? ` · ${value.effort}` : ""}`;
