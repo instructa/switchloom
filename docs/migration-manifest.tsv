@@ -52,8 +52,8 @@ planr-consumer	planr-001	src/routing_bundle.rs	keep-then-delete	Planr Goal B	Pla
 planr-consumer	planr-002	src/routing_bundle/tests.rs	split	Planr Goal B	Portable bundle validation fixtures move here; Planr consumer tests become deletion oracle.
 planr-consumer	planr-003	src/cli/policy.rs	replace	Planr Goal B	Policy CLI ownership moves here; Planr keeps only integration-facing surfaces.
 planr-consumer	planr-004	src/app/routing.rs	replace	Planr Goal B	Planr keeps opaque route resolution, not compiler/catalog logic.
-planr-consumer	planr-005	src/app/agents.rs	keep	Planr Goal B	Planr graph/agent profile integration remains Planr-owned.
-planr-consumer	planr-006	src/app/agents_init.rs	keep	Planr Goal B	Planr initialization remains Planr-owned.
+planr-consumer	planr-005	src/app/agents.rs	keep	Planr Goal B	Planr-owned route resolution/effective evidence stays; remove only legacy producer naming if present.
+planr-consumer	planr-006	src/app/agents_init.rs	keep	Planr Goal B	Planr-owned provider-neutral registry scaffold stays; update hints to external Switchloom output if needed.
 planr-consumer	planr-007	src/app/policy.rs	keep	Planr Goal B	Planr execution policy stays Planr-owned.
 planr-consumer	planr-008	src/execution_policy.rs	keep	Planr Goal B	Planr execution constraints stay Planr-owned.
 planr-consumer	planr-009	src/usage_policy.rs	keep	Planr Goal B	Planr usage constraints stay Planr-owned.
@@ -64,6 +64,38 @@ planr-consumer	planr-013	plugins/planr/agents/planr-reviewer.md	keep	Planr plugi
 planr-consumer	planr-014	plugins/planr/agents/planr-worker.md	keep	Planr plugin	Planr plugin worker role stays Planr-owned.
 planr-consumer	planr-015	plugins/planr/skills/planr-loop/agents/planr-reviewer.md	keep	Planr plugin	Planr loop reviewer role stays Planr-owned.
 planr-consumer	planr-016	plugins/planr/skills/planr-loop/agents/planr-worker.md	keep	Planr plugin	Planr loop worker role stays Planr-owned.
+planr-consumer	planr-017	src/cli.rs	replace	Planr Goal B	Remove legacy routing bundle subcommand surface; keep Planr-owned neutral agents/policy commands.
+planr-consumer	planr-018	src/main.rs	replace	Planr Goal B	Remove routing_bundle module wiring when the legacy bundle command is cut.
+planr-consumer	planr-019	docs/MODEL_ROUTING.md	replace	Planr Goal B	Rewrite around Switchloom-produced declarations and Planr route evidence, with no planr-routing compiler instructions.
+planr-consumer	planr-020	docs/ROUTING_BUNDLES.md	replace	Planr Goal B	Replace legacy bundle guide with external Switchloom handoff/consumer notes or delete if redundant.
+planr-consumer	planr-021	docs/CLI_REFERENCE.md	replace	Planr Goal B	Regenerate CLI docs after removing planr routing bundle inspect/preview/apply.
+planr-consumer	planr-022	docs/GOALS.md	replace	Planr Goal B	Replace planr-routing examples with Switchloom optional Planr setup flow.
+planr-consumer	planr-023	docs/EXAMPLE_WEBAPP.md	replace	Planr Goal B	Replace planr routing bundle examples with released Switchloom declaration fixtures.
+planr-consumer	planr-024	docs/fixtures/mcp-contract.json	replace	Planr Goal B	Regenerate/remove MCP command fixtures for deleted routing bundle commands.
+planr-consumer	planr-025	docs/INSTALL.md	replace	Planr Goal B	Keep install docs provider-neutral; route pins come from Switchloom output, not Planr Core.
+planr-consumer	planr-026	docs/HOOKS.md	replace	Planr Goal B	Update generated-doc links after routing bundle docs are removed or rewritten.
+planr-consumer	planr-027	docs/ARCHITECTURE.md	replace	Planr Goal B	Remove planr-routing workspace/package ownership from Planr architecture.
+planr-consumer	planr-028	docs/documentation/CONTRACT.md	replace	Planr Goal B	Remove documentation contract gaps that require Planr-owned routing package docs.
+planr-consumer	planr-029	docs/SKILLS.md	replace	Planr Goal B	Describe optional model-routing files as Switchloom output only.
+planr-consumer	planr-030	docs/CODEX.md	replace	Planr Goal B	Replace planr-routing compile/apply examples with released Switchloom command flow.
+planr-consumer	planr-031	plugins/planr/skills/planr-loop/SKILL.md	keep	Planr plugin	Keep neutral effective-evidence caution; remove only legacy routing-bundle producer naming if still present.
+planr-consumer	planr-032	tests/e2e.rs	replace	Planr Goal B	Replace routing bundle exclusivity assertions with Switchloom fixture/declaration consumption assertions.
+planr-consumer	planr-033	src/rolefiles.rs	keep	Planr Goal B	Keep static workflow roles host-neutral; ensure comments point to Switchloom-produced artifacts only.
+planr-consumer	planr-034	Cargo.toml	replace	Planr Goal B	Remove planr-routing workspace member/package wiring from Planr root Cargo workspace.
+planr-consumer	planr-035	Cargo.lock	replace	Planr Goal B	Regenerate Planr lockfile after removing planr-routing package membership.
+planr-consumer	planr-036	package.json	replace	Planr Goal B	Remove legacy routing package scripts from Planr root npm metadata.
+planr-consumer	planr-037	pnpm-workspace.yaml	replace	Planr Goal B	Remove planr-routing workspace package from Planr pnpm workspace.
+planr-consumer	planr-038	pnpm-lock.yaml	replace	Planr Goal B	Regenerate Planr pnpm lockfile after removing planr-routing package.
+planr-consumer	planr-039	README.md	replace	Planr Goal B	Replace legacy planr-routing package links with Switchloom release/setup references.
+planr-consumer	planr-040	CHANGELOG.md	keep	Planr Goal B	Keep historical release notes; new Goal B entries should document the hard cut without treating legacy routing as current owner.
+planr-consumer	planr-041	apps/docs/content/docs/contributing/architecture.mdx	replace	Planr Goal B	Remove planr-routing architecture ownership; document external Switchloom boundary.
+planr-consumer	planr-042	apps/docs/content/docs/reference/cli-generated.mdx	replace	Planr Goal B	Regenerate app CLI docs after deleting routing bundle commands.
+planr-consumer	planr-043	apps/docs/content/docs/reference/cli.mdx	replace	Planr Goal B	Update app CLI reference narrative for Switchloom-produced declarations.
+planr-consumer	planr-044	apps/docs/scripts/verify-shell.mjs	replace	Planr Goal B	Remove legacy routing bundle command assertions and add current Planr shell/docs assertions.
+planr-consumer	planr-045	docs/MCP_CONTRACT.md	replace	Planr Goal B	Remove or rewrite RoutingBundle v1 inspect/preview/apply MCP capability after the hard cut.
+planr-consumer	planr-046	apps/docs/content/docs/reference/configuration-and-storage.mdx	replace	Planr Goal B	Replace Routing bundles write-behavior text with Switchloom-produced declaration consumption boundaries.
+planr-consumer	planr-047	apps/docs/redirects.mjs	keep	Planr docs app	Historical routing-bundles redirect-only record may remain if it only preserves old URL navigation.
+planr-consumer	planr-048	docs/documentation/INFORMATION_ARCHITECTURE.md	keep	Planr docs	Historical routing-bundles redirect inventory may remain if it only documents URL migration.
 cli-command	cmd-001	planr-routing policy list	move-generalize	model-routing policy list	List official policies.
 cli-command	cmd-002	planr-routing policy show <policy> --host <host>	move-generalize	model-routing policy show <policy> --host <host>	Show one policy.
 cli-command	cmd-003	planr-routing compile <policy> --host <host>	move-generalize	model-routing compile <policy> --host <host>	Compile bundle JSON.
@@ -75,9 +107,11 @@ cli-command	cmd-008	planr-routing registry sign <file> --signer <id> --private-k
 cli-command	cmd-009	planr-routing registry verify <file> --signature <path> --trusted-signer <id> --trusted-public-key-file <path>	move-generalize	model-routing registry verify <file> --signature <path> --trusted-signer <id> --trusted-public-key-file <path>	Verify registry signature.
 generated-artifact	art-001	.planr/agents.toml	move-generalize	.planr/agents.toml	Optional Planr integration declaration only.
 generated-artifact	art-002	.planr/policy.toml	move-generalize	.planr/policy.toml	Optional Planr integration policy only.
-generated-artifact	art-003	.codex/agents/planr-worker.toml	move-generalize	.codex/agents/model-routing-worker.toml	Host-native Codex worker role artifact.
-generated-artifact	art-004	.codex/agents/planr-reviewer.toml	move-generalize	.codex/agents/model-routing-reviewer.toml	Host-native Codex reviewer role artifact.
-generated-artifact	art-005	.claude/agents/planr-worker.md	move-generalize	.claude/agents/model-routing-worker.md	Host-native Claude worker role artifact.
-generated-artifact	art-006	.claude/agents/planr-reviewer.md	move-generalize	.claude/agents/model-routing-reviewer.md	Host-native Claude reviewer role artifact.
-generated-artifact	art-007	.cursor/agents/planr-worker.md	move-generalize	.cursor/agents/model-routing-worker.md	Host-native Cursor worker role artifact.
-generated-artifact	art-008	.cursor/agents/planr-reviewer.md	move-generalize	.cursor/agents/model-routing-reviewer.md	Host-native Cursor reviewer role artifact.
+generated-artifact	art-003	.codex/agents/model-routing-luna-xhigh.toml	move-generalize	.codex/agents/model-routing-luna-xhigh.toml	Current v0.2.0 Codex mechanical profile artifact.
+generated-artifact	art-004	.codex/agents/model-routing-sol-high.toml	move-generalize	.codex/agents/model-routing-sol-high.toml	Current v0.2.0 Codex reviewer profile artifact.
+generated-artifact	art-005	.codex/agents/model-routing-sol-medium.toml	move-generalize	.codex/agents/model-routing-sol-medium.toml	Current v0.2.0 Codex driver profile artifact.
+generated-artifact	art-006	.codex/agents/model-routing-sol-ultra.toml	move-generalize	.codex/agents/model-routing-sol-ultra.toml	Current v0.2.0 Codex moonshot profile artifact.
+generated-artifact	art-007	.codex/agents/model-routing-terra-high.toml	move-generalize	.codex/agents/model-routing-terra-high.toml	Current v0.2.0 Codex implementer profile artifact.
+generated-artifact	art-008	.codex/agents/model-routing-terra-medium.toml	move-generalize	.codex/agents/model-routing-terra-medium.toml	Current v0.2.0 Codex explorer profile artifact.
+generated-artifact	art-009	.claude/agents/model-routing-preset-worker.md	move-generalize	.claude/agents/model-routing-preset-worker.md	Current v0.2.0 Claude Code preset worker artifact.
+generated-artifact	art-010	.cursor/agents/model-routing-preset-worker.md	move-generalize	.cursor/agents/model-routing-preset-worker.md	Current v0.2.0 Cursor preset worker artifact.

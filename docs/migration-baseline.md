@@ -25,14 +25,15 @@ The manifest covers:
   tree.
 - `6` current generated/untracked `planr-routing` paths that are intentionally
   inventoried separately from frozen source.
-- `16` Planr-side routing consumer, test, and plugin-role paths that Goal B must
-  keep, split, replace, or delete.
+- `48` Planr-side routing consumer, workspace/package metadata, CLI, docs, app
+  docs, test, and plugin paths that Goal B must keep, split, replace, or
+  delete.
 - `9` frozen CLI command surfaces: `policy list`, `policy show`, `compile`,
   `probe`, `evaluate`, `catalog build`, `catalog verify`, `registry sign`, and
   `registry verify`.
-- `8` generated repository artifact paths, including `.planr/agents.toml`,
-  `.planr/policy.toml`, and host-native Codex, Claude Code, and Cursor role
-  artifacts.
+- `10` generated repository artifact paths, including `.planr/agents.toml`,
+  `.planr/policy.toml`, six current v0.2.0 Codex profile TOMLs, one Claude Code
+  preset worker, and one Cursor preset worker.
 
 Run the comparison check with:
 
@@ -44,16 +45,19 @@ The check verifies that tag `v1.5.0` resolves to
 `7a01ad54cb41fd755f368a79339a96a997f693d0`, compares every frozen tracked
 `planr-routing` file from that Git tree to the `source-file` rows in both
 directions, rejects wildcard source entries, and verifies all required CLI
-command and generated artifact rows are present.
+command rows, active Planr consumer mappings from a case-insensitive whole-repo
+scan for routing lexical variants with explicit generated/dependency exclusions,
+unique type/source mappings, current generated artifact rows, and the absence of
+direct Planr package dependencies.
 
 ## Baseline Proof
 
-The initial standalone package has no third-party or Planr dependencies. Verify with:
+The initial standalone package had no third-party or Planr dependencies. The
+current Switchloom package has standalone third-party dependencies but no Planr
+dependency. Verify with:
 
 ```sh
 cargo metadata --no-deps --format-version 1
 cargo tree --no-dedupe
 sh scripts/check-migration-manifest.sh
 ```
-
-Both commands should show only the `model-routing` package until later slices intentionally add standalone dependencies.
