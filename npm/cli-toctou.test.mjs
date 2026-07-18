@@ -42,7 +42,7 @@ test("interactive setup apply uses the previewed config snapshot after confirmat
   await writeFile(mutated, setupToml("planr"));
 
   const harness = String.raw`
-import json, os, pty, select, subprocess, sys, time
+import errno, json, os, pty, select, subprocess, sys, time
 binary, config, mutated, repository = sys.argv[1:5]
 master, slave = pty.openpty()
 proc = subprocess.Popen([binary, "apply", "--config", config, "--repository", repository], stdin=slave, stdout=slave, stderr=slave, close_fds=True)
@@ -54,7 +54,12 @@ mutated_once = False
 while time.time() < deadline:
     ready, _, _ = select.select([master], [], [], 0.05)
     if ready:
-        chunk = os.read(master, 4096)
+        try:
+            chunk = os.read(master, 4096)
+        except OSError as error:
+            if error.errno != errno.EIO:
+                raise
+            break
         if not chunk:
             break
         output += chunk
@@ -109,7 +114,7 @@ test("interactive setup apply aborts when repository symlink retargets after pre
   await writeFile(config, setupToml("standalone"));
 
   const harness = String.raw`
-import json, os, pty, select, subprocess, sys, time
+import errno, json, os, pty, select, subprocess, sys, time
 binary, config, repo_link, repo_b = sys.argv[1:5]
 master, slave = pty.openpty()
 proc = subprocess.Popen([binary, "apply", "--config", config, "--repository", repo_link], stdin=slave, stdout=slave, stderr=slave, close_fds=True)
@@ -121,7 +126,12 @@ deadline = time.time() + 10
 while time.time() < deadline:
     ready, _, _ = select.select([master], [], [], 0.05)
     if ready:
-        chunk = os.read(master, 4096)
+        try:
+            chunk = os.read(master, 4096)
+        except OSError as error:
+            if error.errno != errno.EIO:
+                raise
+            break
         if not chunk:
             break
         output += chunk
