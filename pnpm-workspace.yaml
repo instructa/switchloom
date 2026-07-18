@@ -2,3 +2,13 @@ allowBuilds:
   esbuild: true
   sharp: true
   workerd: true
+minimumReleaseAgeExclude:
+  - astro@7.1.1
+# Alchemy's static Website resource only executes the configured build command
+# and uploads dist/website; it does not load Astro's adapter API. The upstream
+# optional peer range still stops at Astro 5, so this tested static-only path is
+# allowed to use the security-fixed Astro major.
+peerDependencyRules:
+  allowedVersions:
+    astro: ">=7 <8"
+    "@cloudflare/workers-types": ">=4 <6"

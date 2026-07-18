@@ -1,18 +1,9 @@
 #!/usr/bin/env node
-import { copyFile, mkdir, readdir, rm, stat } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const PUBLIC_SITE_FILES = Object.freeze([
-  "_headers",
-  "app.mjs",
-  "catalog-model.mjs",
-  "data/catalog.json",
-  "index.html",
-  "styles.css",
-]);
-
-export const PUBLIC_SITE_PREFIXES = Object.freeze(["data/bundles/"]);
+export const REQUIRED_SITE_FILES = Object.freeze(["_headers", "index.html", "data/catalog.json"]);
 
 async function regularFile(path) {
   try {
@@ -41,14 +32,13 @@ export async function publicationFiles(root) {
 
 export async function verifyPublication(root) {
   const actual = await publicationFiles(root);
-  const missing = PUBLIC_SITE_FILES.filter((file) => !actual.includes(file));
-  const unexpected = actual.filter(
-    (file) => !PUBLIC_SITE_FILES.includes(file) && !PUBLIC_SITE_PREFIXES.some((prefix) => file.startsWith(prefix)),
-  );
-  if (missing.length > 0 || unexpected.length > 0) {
-    throw new Error(
-      `publish output mismatch\nmissing: ${missing.join(", ") || "none"}\nunexpected: ${unexpected.join(", ") || "none"}`,
-    );
+  const missing = REQUIRED_SITE_FILES.filter((file) => !actual.includes(file));
+  if (missing.length > 0) throw new Error(`publish output is missing: ${missing.join(", ")}`);
+  if (!actual.some((file) => file.startsWith("_astro/") && file.endsWith(".js"))) {
+    throw new Error("publish output is missing the Astro client bundle");
+  }
+  if (!actual.some((file) => file.startsWith("data/bundles/") && file.endsWith(".json"))) {
+    throw new Error("publish output is missing canonical bundle downloads");
   }
   return actual;
 }
@@ -56,27 +46,25 @@ export async function verifyPublication(root) {
 export async function buildSite({ sourceRoot, outputRoot }) {
   const source = resolve(sourceRoot);
   const output = resolve(outputRoot);
-  if (output === source || output.startsWith(`${source}${sep}`)) {
-    throw new Error("publish output must not be inside the website source directory");
+  if (output === source || output.startsWith(`${source}${sep}`) || source.startsWith(`${output}${sep}`)) {
+    throw new Error("catalog source and site output must be separate");
   }
 
-  const files = await publicationFiles(source);
-  const allowedFiles = files.filter(
-    (file) => PUBLIC_SITE_FILES.includes(file) || PUBLIC_SITE_PREFIXES.some((prefix) => file.startsWith(prefix)),
-  );
-  for (const relativePath of PUBLIC_SITE_FILES) {
-    const input = join(source, relativePath);
-    if (!(await regularFile(input))) {
-      throw new Error(`missing public website artifact: ${relativePath}`);
-    }
+  const catalogPath = join(source, "catalog.json");
+  const bundlesPath = join(source, "bundles");
+  if (!(await regularFile(catalogPath))) throw new Error("missing canonical catalog: catalog.json");
+  const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
+  if (!Array.isArray(catalog.compositions) || catalog.compositions.length === 0) {
+    throw new Error("canonical catalog has no compositions");
   }
+  if ((await publicationFiles(bundlesPath)).length === 0) throw new Error("canonical bundle directory is empty");
+  if (!(await regularFile(join(output, "index.html")))) throw new Error("Astro build must run before catalog publication");
 
-  await rm(output, { recursive: true, force: true });
-  for (const relativePath of allowedFiles) {
-    const destination = join(output, relativePath);
-    await mkdir(dirname(destination), { recursive: true });
-    await copyFile(join(source, relativePath), destination);
-  }
+  const destination = join(output, "data");
+  await rm(destination, { recursive: true, force: true });
+  await mkdir(destination, { recursive: true });
+  await cp(catalogPath, join(destination, "catalog.json"));
+  await cp(bundlesPath, join(destination, "bundles"), { recursive: true });
 
   return verifyPublication(output);
 }
@@ -85,10 +73,10 @@ const modulePath = fileURLToPath(import.meta.url);
 if (process.argv[1] && resolve(process.argv[1]) === modulePath) {
   const repositoryRoot = resolve(dirname(modulePath), "..");
   buildSite({
-    sourceRoot: join(repositoryRoot, "website"),
+    sourceRoot: join(repositoryRoot, "website", "data"),
     outputRoot: join(repositoryRoot, "dist", "website"),
   })
-    .then((files) => console.log(`built ${files.length} public website artifacts in dist/website`))
+    .then((files) => console.log(`published ${files.length} Astro website artifacts in dist/website`))
     .catch((error) => {
       console.error(error instanceof Error ? error.message : error);
       process.exitCode = 1;

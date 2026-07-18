@@ -2,7 +2,7 @@
 
 **Deterministic model routing for coding agents.**
 
-Switchloom is a standalone policy compiler and repository-safe host artifact manager for agentic coding environments. It owns routing definitions, bundle schemas, model/effort/fork choices, catalog evidence, signatures, and host-specific artifacts for Codex, Claude Code, Cursor, and mixed-host setups. The command-line interface remains `model-routing`.
+Switchloom is a standalone policy compiler and repository-safe host artifact manager for agentic coding environments. It owns routing definitions, bundle schemas, model/effort/fork choices, catalog evidence, signatures, and host-specific artifacts for Codex, Claude Code, Cursor, and mixed-host setups. The primary command is `switchloom`; `model-routing` remains available as a compatibility alias.
 
 Planr integration is optional. The package graph must build without Planr dependencies, and standalone operation is the default.
 
@@ -34,9 +34,36 @@ Download the archive for your platform from the
 [latest GitHub release](https://github.com/instructa/switchloom/releases/latest),
 verify it against `SHA256SUMS`, and place `model-routing` on your `PATH`.
 
+## Setup from the website
+
+The generator at [switchloom.ai](https://switchloom.ai) produces only the versioned
+`SetupSpecV1` transport. It does not compile or write host files in the browser. Its primary
+action copies a shell-safe command like:
+
+```sh
+npx switchloom@latest preview --recipe 'sw1_...'
+npx switchloom@latest apply --recipe 'sw1_...'
+```
+
+The secondary action downloads the same setup as a readable `.switchloom/config.toml`:
+
+```sh
+switchloom preview --config .switchloom/config.toml
+switchloom apply --config .switchloom/config.toml
+switchloom status
+switchloom update
+switchloom rollback
+switchloom uninstall
+```
+
+Setup-backed apply previews the exact repository-local change set and asks for confirmation.
+Use `--yes` only in an explicitly non-interactive workflow. Standalone mode never emits
+`.planr`; optional Planr mode emits provider-neutral Planr declarations and thin native roles,
+while Switchloom remains independent of Planr at build and runtime.
+
 ## Current Status
 
-The v0.1.0 standalone baseline compiles independently and records the frozen Planr v1.5.0 routing inventory in [docs/migration-baseline.md](docs/migration-baseline.md).
+The v0.2.0 setup-contract release compiles independently and records the frozen Planr v1.5.0 routing inventory in [docs/migration-baseline.md](docs/migration-baseline.md).
 
 ## Baseline Commands
 
@@ -48,22 +75,25 @@ cargo run -- --version
 cargo run -- baseline
 ```
 
-## Public Catalog
+## Website Generator
 
-The static website is generated from the same canonical compiler output used by the CLI. Standalone Switchloom is the default; Planr is an optional integration mode shown as an explicit website control.
+The static Astro website is an above-the-fold team generator built with React and shadcn. Users first choose standalone or optional Planr integration, then choose Codex, Cursor, or Claude Code, select up to four explicit roles, start from a Light, Balanced, or High team preset, and optionally override each role's model and reasoning effort. The primary result is a CLI recipe; the secondary result is a readable setup config. Only the Rust CLI compiles and applies project-native files. The host remains authoritative for model availability, execution, and billing.
+
+Claude Code model and effort options are derived at build time from the canonical catalog produced by the Rust compiler. Codex mirrors its current desktop picker: `low`, `medium`, `high`, and `xhigh`, while Terra and Sol additionally expose `ultra` as a manual-only mode. Pure `max` is intentionally omitted because the desktop picker does not expose it separately; Ultra sends Max reasoning plus automatic multi-agent delegation. Cursor uses a deliberately small, researched frontier allowlist because its full picker changes frequently; the website presents those models in a searchable selector. Generated custom setups are local and unverified until the user reviews them.
 
 ```sh
 cargo run -- catalog build --output website/data/catalog.json
 cargo run -- catalog verify website/data/catalog.json
-node --test website/*.test.mjs
-node scripts/build-site.mjs
+pnpm site:check
+pnpm site:dev
 ```
 
-The Cloudflare/Alchemy publication stack is repo-owned. Test deployments are pinned to the `test` stage:
+The Cloudflare/Alchemy publication stack is repo-owned and requires Node.js 22 or newer. Test deployments are pinned to the `test` stage; production publishes the custom `switchloom.ai` domain only from the explicit `prod` stage:
 
 ```sh
 node scripts/cloudflare-test.mjs deploy
 node scripts/cloudflare-test.mjs destroy
+pnpm exec alchemy deploy --stage prod
 ```
 
 ## Repository Policy
@@ -81,11 +111,11 @@ pnpm security:check
 ## Releases
 
 Releases are created only through the repository-owned script. Prepare and
-commit a bracketed changelog section such as `## [0.1.0]`, then run:
+commit a bracketed changelog section such as `## [0.2.0]`, then run:
 
 ```sh
-RELEASE_DRY_RUN=1 scripts/release.sh 0.1.0 "Initial standalone release"
-scripts/release.sh 0.1.0 "Initial standalone release"
+RELEASE_DRY_RUN=1 scripts/release.sh 0.2.0 "Setup contract and CLI lifecycle"
+scripts/release.sh 0.2.0 "Setup contract and CLI lifecycle"
 ```
 
 The script requires a clean, synchronized `main`, runs the complete local

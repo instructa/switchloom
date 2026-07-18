@@ -11,6 +11,7 @@ const app = await alchemy("model-routing");
 
 export const presetCatalog = await Website("preset-catalog", {
   name: `model-routing-${app.stage}-catalog`,
+  domains: app.stage === "prod" ? ["switchloom.ai"] : [],
   assets: "./dist/website",
   build: {
     command: "pnpm site:build",

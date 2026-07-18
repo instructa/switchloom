@@ -3838,6 +3838,415 @@
   ],
   "generatedAtUnix": 1784160000,
   "schemaVersion": 1,
+  "setupContract": {
+    "configPath": ".switchloom/config.toml",
+    "hosts": [
+      {
+        "binding": "codex-openai",
+        "defaultSpec": {
+          "host": "codex-openai",
+          "integration": "standalone",
+          "route_default": {
+            "fallbacks": [],
+            "role": "driver"
+          },
+          "routes": [
+            {
+              "fallbacks": [],
+              "role": "explorer",
+              "work_type": "exploration"
+            },
+            {
+              "fallbacks": [],
+              "role": "explorer",
+              "work_type": "research"
+            },
+            {
+              "fallbacks": [],
+              "role": "worker",
+              "work_type": "code"
+            },
+            {
+              "fallbacks": [],
+              "role": "mechanical",
+              "work_type": "mechanical"
+            },
+            {
+              "fallbacks": [],
+              "role": "reviewer",
+              "work_type": "review"
+            },
+            {
+              "fallbacks": [],
+              "role": "moonshot",
+              "work_type": "moonshot"
+            }
+          ],
+          "schema_version": 1,
+          "selected_roles": {
+            "driver": {
+              "effort": "medium",
+              "model": "gpt-5.6-sol"
+            },
+            "explorer": {
+              "effort": "medium",
+              "model": "gpt-5.6-terra",
+              "spawn": {
+                "agent_type": "model_routing_terra_medium",
+                "fork_turns": {
+                  "mode": "none"
+                },
+                "task_name": "explorer"
+              }
+            },
+            "mechanical": {
+              "effort": "xhigh",
+              "model": "gpt-5.6-luna",
+              "spawn": {
+                "agent_type": "model_routing_luna_xhigh",
+                "fork_turns": {
+                  "mode": "none"
+                },
+                "task_name": "mechanical"
+              }
+            },
+            "moonshot": {
+              "effort": "ultra",
+              "model": "gpt-5.6-sol",
+              "spawn": {
+                "agent_type": "model_routing_sol_ultra",
+                "fork_turns": {
+                  "mode": "none"
+                },
+                "task_name": "moonshot"
+              }
+            },
+            "reviewer": {
+              "effort": "high",
+              "model": "gpt-5.6-sol",
+              "spawn": {
+                "agent_type": "model_routing_sol_high",
+                "fork_turns": {
+                  "mode": "none"
+                },
+                "task_name": "reviewer"
+              }
+            },
+            "worker": {
+              "effort": "high",
+              "model": "gpt-5.6-terra",
+              "spawn": {
+                "agent_type": "model_routing_terra_high",
+                "fork_turns": {
+                  "mode": "none"
+                },
+                "task_name": "worker"
+              }
+            }
+          },
+          "usage_policy": "balanced"
+        },
+        "id": "codex",
+        "models": [
+          {
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "ultra"
+            ],
+            "id": "gpt-5.6-sol",
+            "tier": "premium"
+          },
+          {
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "ultra"
+            ],
+            "id": "gpt-5.6-terra",
+            "tier": "standard"
+          },
+          {
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ],
+            "id": "gpt-5.6-luna",
+            "tier": "standard"
+          }
+        ],
+        "runtimeHost": "codex",
+        "supportsPlanrIntegration": true
+      },
+      {
+        "binding": "claude-native",
+        "defaultSpec": {
+          "host": "claude-native",
+          "integration": "standalone",
+          "route_default": {
+            "fallbacks": [],
+            "role": "driver"
+          },
+          "routes": [
+            {
+              "fallbacks": [
+                "driver"
+              ],
+              "role": "worker",
+              "work_type": "code"
+            }
+          ],
+          "schema_version": 1,
+          "selected_roles": {
+            "driver": {
+              "effort": "high",
+              "model": "opus"
+            },
+            "worker": {
+              "effort": "medium",
+              "model": "sonnet"
+            }
+          },
+          "usage_policy": "balanced"
+        },
+        "id": "claude-code",
+        "models": [
+          {
+            "efforts": [
+              "medium",
+              "high"
+            ],
+            "id": "opus",
+            "tier": "premium"
+          },
+          {
+            "efforts": [
+              "medium",
+              "high"
+            ],
+            "id": "sonnet",
+            "tier": "standard"
+          }
+        ],
+        "runtimeHost": "claude-code",
+        "supportsPlanrIntegration": true
+      },
+      {
+        "binding": "cursor-openai",
+        "defaultSpec": {
+          "host": "cursor-openai",
+          "integration": "standalone",
+          "route_default": {
+            "fallbacks": [],
+            "role": "driver"
+          },
+          "routes": [
+            {
+              "fallbacks": [
+                "driver"
+              ],
+              "role": "worker",
+              "work_type": "code"
+            }
+          ],
+          "schema_version": 1,
+          "selected_roles": {
+            "driver": {
+              "model": "gpt-5.5"
+            },
+            "worker": {
+              "model": "gpt-5.4-mini"
+            }
+          },
+          "usage_policy": "balanced"
+        },
+        "id": "cursor",
+        "models": [
+          {
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ],
+            "id": "gpt-5.6-sol",
+            "tier": "premium"
+          },
+          {
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ],
+            "id": "gpt-5.6-terra",
+            "tier": "standard"
+          },
+          {
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ],
+            "id": "gpt-5.6-luna",
+            "tier": "standard"
+          },
+          {
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ],
+            "id": "fable-5",
+            "tier": "premium"
+          },
+          {
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ],
+            "id": "claude-opus-4-8",
+            "tier": "premium"
+          },
+          {
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ],
+            "id": "claude-sonnet-5",
+            "tier": "standard"
+          },
+          {
+            "efforts": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "id": "grok-4.5",
+            "tier": "premium"
+          },
+          {
+            "efforts": [],
+            "id": "composer-2.5",
+            "tier": "standard"
+          }
+        ],
+        "runtimeHost": "cursor",
+        "supportsPlanrIntegration": true
+      },
+      {
+        "binding": "mixed-host",
+        "defaultSpec": {
+          "host": "mixed-host",
+          "integration": "standalone",
+          "route_default": {
+            "fallbacks": [],
+            "role": "driver"
+          },
+          "routes": [
+            {
+              "fallbacks": [],
+              "role": "worker",
+              "work_type": "code"
+            },
+            {
+              "fallbacks": [],
+              "role": "mechanical",
+              "work_type": "mechanical"
+            },
+            {
+              "fallbacks": [],
+              "role": "reviewer",
+              "work_type": "review"
+            }
+          ],
+          "schema_version": 1,
+          "selected_roles": {
+            "driver": {
+              "model": "fable-5"
+            },
+            "mechanical": {
+              "effort": "xhigh",
+              "model": "gpt-5.6-luna"
+            },
+            "reviewer": {
+              "effort": "high",
+              "model": "gpt-5.6-sol"
+            },
+            "worker": {
+              "effort": "high",
+              "model": "gpt-5.6-terra"
+            }
+          },
+          "usage_policy": "balanced"
+        },
+        "id": "mixed-host",
+        "models": [
+          {
+            "efforts": [
+              "medium",
+              "high",
+              "xhigh"
+            ],
+            "id": "gpt-5.6-sol",
+            "tier": "premium"
+          },
+          {
+            "efforts": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "id": "gpt-5.6-terra",
+            "tier": "standard"
+          },
+          {
+            "efforts": [
+              "high"
+            ],
+            "id": "opus",
+            "tier": "premium"
+          },
+          {
+            "efforts": [
+              "medium"
+            ],
+            "id": "sonnet",
+            "tier": "standard"
+          }
+        ],
+        "runtimeHost": "mixed-host",
+        "supportsPlanrIntegration": true
+      }
+    ],
+    "recipePrefix": "sw1_",
+    "schemaVersion": 1,
+    "setupSpecVersion": 1,
+    "transport": {
+      "encoding": "base64url-no-padding",
+      "maxDecodedBytes": 65536,
+      "mayContainCredentials": false,
+      "mayContainScripts": false
+    }
+  },
   "source": {
     "entryCount": 20,
     "message": "Entries stay experimental until authenticated live evidence and an offline maintainer signature pass.",
