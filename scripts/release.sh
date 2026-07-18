@@ -62,9 +62,9 @@ replace package.json "s/\"version\": \".*\"/\"version\": \"$version\"/"
 # Refresh only the root package version in Cargo.lock before all subsequent
 # locked builds and package checks.
 cargo check --quiet
-cargo run --quiet -- compile balanced --host codex-openai --integration planr \
+cargo run --quiet --bin model-routing -- compile balanced --host codex-openai --integration planr \
   --output fixtures/routing-bundle-v1/valid-balanced-codex.json
-cargo run --quiet -- compile balanced --host mixed-host --integration planr \
+cargo run --quiet --bin model-routing -- compile balanced --host mixed-host --integration planr \
   --output fixtures/routing-bundle-v1/valid-balanced-mixed.json
 cargo build --release --locked
 node scripts/regenerate-preset-catalog.mjs
