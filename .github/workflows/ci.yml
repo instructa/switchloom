@@ -53,5 +53,5 @@ jobs:
         run: rustup toolchain install 1.85.0 --profile minimal
       - name: Build CLI binaries for PTY tests
         run: cargo +1.85.0 build --bins
-      - name: Test npm package
-        run: npm run distribution:test
+      - name: Test npm wrapper
+        run: node --test npm/*.test.mjs
