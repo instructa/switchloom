@@ -50,7 +50,8 @@ superseding public `v0.2.1` bytes are the release gate for Goal B.
 - Release workflow: `https://github.com/instructa/switchloom/actions/runs/29682448374`
 - Tag: `v0.2.1`
 - Commit: `56ce22ad33d7c8d2cf7ff1836639ee27ede36d67`
-- Commit subject: `release 0.2.1: Superseding native provenance and Codex discovery proof`
+- Tagged commit subject:
+  `Merge pull request #11 from instructa/codex/non-destructive-release-0.2.1`
 - npm package: `switchloom@0.2.1`
 - npm tarball: `https://registry.npmjs.org/switchloom/-/switchloom-0.2.1.tgz`
 - npm integrity:
@@ -91,7 +92,7 @@ metadata or the Rust workspace metadata.
 | Area | Evidence |
 | --- | --- |
 | Release publication | Planr item `i-publish-and-smoke-test-the-super-b218` records public `v0.2.1` GitHub release, green Release workflow, npm Trusted Publisher package identity, Homebrew formula identity, production website deployment, and public-byte runtime receipt. |
-| Release review | Pending until an independent review closes this final item. |
+| Release review chain | Initial independent review `i-review-publish-and-smoke-test-th-f424` closed not-complete with two documentation findings: the tagged commit subject needed correction, and this row needed a durable review-chain receipt. Fix item `i-fix-findings-for-review-publish-f3c2` is the remediation record for both findings, and its follow-up independent checker-2 gate is the final review closure path for the Goal A handoff. |
 | Public GitHub check | `gh release view v0.2.1 --repo instructa/switchloom --json tagName,targetCommitish,url,publishedAt,isDraft,isPrerelease,assets` returned public non-draft `v0.2.1` with the five assets listed above. |
 | Public workflow check | `gh run view 29682448374 --repo instructa/switchloom --json conclusion,status,url,createdAt,updatedAt,headSha,event,workflowName` returned `conclusion: success`, `status: completed`, `headSha: 56ce22ad33d7c8d2cf7ff1836639ee27ede36d67`. |
 | Public npm check | `npm view switchloom@0.2.1 version dist.integrity dist.shasum dist.tarball --json` returned version `0.2.1` and the integrity/shasum/tarball listed above; `npm view switchloom@0.2.1 name version bin dependencies optionalDependencies peerDependencies --json` returned the bin contract and no dependency objects. |
