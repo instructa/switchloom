@@ -1,6 +1,9 @@
 name: Release Candidate
 
 on:
+  push:
+    branches:
+      - "codex/**"
   workflow_dispatch:
     inputs:
       ref:
@@ -10,8 +13,11 @@ on:
 
 permissions: {}
 
+env:
+  CANDIDATE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+
 concurrency:
-  group: release-candidate-${{ github.event.inputs.ref }}
+  group: release-candidate-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -40,7 +46,7 @@ jobs:
       - name: Checkout selected ref
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
-          ref: ${{ github.event.inputs.ref }}
+          ref: ${{ env.CANDIDATE_REF }}
           persist-credentials: false
       - name: Install Rust target
         run: rustup target add ${{ matrix.rust_target }}
@@ -105,7 +111,7 @@ jobs:
       - name: Checkout selected ref
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
-          ref: ${{ github.event.inputs.ref }}
+          ref: ${{ env.CANDIDATE_REF }}
           persist-credentials: false
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
