@@ -14,11 +14,11 @@ if [ -z "$current_target" ]; then
 fi
 
 for native in npm/native/*/model-routing; do
-  if rg -a -F -q '0.1.1' "$native"; then
+  if grep -aFq '0.1.1' "$native"; then
     printf 'stale native version string found in %s\n' "$native" >&2
     exit 1
   fi
-  if ! rg -a -F -q "$package_version" "$native"; then
+  if ! grep -aFq "$package_version" "$native"; then
     printf 'package version %s not found in %s\n' "$package_version" "$native" >&2
     exit 1
   fi
