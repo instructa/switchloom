@@ -6,7 +6,7 @@
   "generated_at": "2026-07-16T00:00:00Z",
   "source": {
     "package": "model-routing",
-    "package_version": "0.2.0",
+    "package_version": "0.2.1",
     "integration": "standalone"
   },
   "policy": {
@@ -173,6 +173,13 @@
       "mode": "create",
       "content": "name = \"model_routing_terra_high\"\ndescription = \"Normal implementation and testing.\"\nmodel = \"gpt-5.6-terra\"\nmodel_reasoning_effort = \"high\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nImplement one picked item, keep the slice small, and record real verification evidence.\n\"\"\"\n",
       "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
+    },
+    {
+      "path": ".codex/config.toml",
+      "media_type": "application/toml",
+      "mode": "replace",
+      "content": "[agents.model_routing_luna_xhigh]\nconfig_file = \"./agents/model-routing-luna-xhigh.toml\"\n\n[agents.model_routing_sol_high]\nconfig_file = \"./agents/model-routing-sol-high.toml\"\n\n[agents.model_routing_terra_high]\nconfig_file = \"./agents/model-routing-terra-high.toml\"\n",
+      "sha256": "673a3abad282412014d93160a42e2366c203553ff18530951afd7394e78c11c8"
     },
     {
       "path": ".cursor/agents/model-routing-fable-driver.md",

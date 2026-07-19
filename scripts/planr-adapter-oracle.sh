@@ -29,14 +29,14 @@ require_absent() {
 
 planr --db "$db" project init "Model Routing Planr Oracle" --json > "$workdir/project-init.json"
 
-cargo run --manifest-path "$repo_root/Cargo.toml" -- compile balanced \
+cargo run --manifest-path "$repo_root/Cargo.toml" --bin model-routing -- compile balanced \
   --host codex-openai \
   --integration planr \
   --output "$workdir/planr.json" \
   > "$workdir/compile.stdout" \
   2> "$workdir/compile.stderr"
 
-cargo run --manifest-path "$repo_root/Cargo.toml" -- apply "$workdir/planr.json" \
+cargo run --manifest-path "$repo_root/Cargo.toml" --bin model-routing -- apply "$workdir/planr.json" \
   --repository "$workdir" \
   > "$workdir/apply.json" \
   2> "$workdir/apply.stderr"
@@ -113,6 +113,10 @@ require_contains 'name = "model_routing_terra_high"' "$workdir/.codex/agents/mod
 require_contains 'name = "model_routing_sol_high"' "$workdir/.codex/agents/model-routing-sol-high.toml"
 require_contains "Protocol preload: \$planr-work" "$workdir/.codex/agents/model-routing-terra-high.toml"
 require_contains "Protocol preload: \$planr-review" "$workdir/.codex/agents/model-routing-sol-high.toml"
+require_contains '[agents.model_routing_terra_high]' "$workdir/.codex/config.toml"
+require_contains 'config_file = "./agents/model-routing-terra-high.toml"' "$workdir/.codex/config.toml"
+require_contains '[agents.model_routing_sol_high]' "$workdir/.codex/config.toml"
+require_contains 'config_file = "./agents/model-routing-sol-high.toml"' "$workdir/.codex/config.toml"
 require_absent 'model-routing' \
   "$workdir/worker-route.json" \
   "$workdir/worker-pick-peek.json" \
@@ -155,7 +159,7 @@ require_contains '"kind": "verification"' "$workdir/loop-log-list.json"
 require_contains 'printf oracle-worker-ok' "$workdir/loop-log-list.json"
 require_contains 'review verdict: complete' "$workdir/loop-log-list.json"
 
-cargo run --manifest-path "$repo_root/Cargo.toml" -- uninstall \
+cargo run --manifest-path "$repo_root/Cargo.toml" --bin model-routing -- uninstall \
   --repository "$workdir" \
   > "$workdir/uninstall.json" \
   2> "$workdir/uninstall.stderr"

@@ -140,6 +140,7 @@ check_entry cli-command "planr-routing registry verify <file> --signature <path>
 
 check_entry generated-artifact ".planr/agents.toml"
 check_entry generated-artifact ".planr/policy.toml"
+check_entry_with_target generated-artifact ".codex/config.toml" ".codex/config.toml"
 check_entry_with_target generated-artifact ".codex/agents/model-routing-luna-xhigh.toml" ".codex/agents/model-routing-luna-xhigh.toml"
 check_entry_with_target generated-artifact ".codex/agents/model-routing-sol-high.toml" ".codex/agents/model-routing-sol-high.toml"
 check_entry_with_target generated-artifact ".codex/agents/model-routing-sol-medium.toml" ".codex/agents/model-routing-sol-medium.toml"
@@ -151,6 +152,7 @@ check_entry_with_target generated-artifact ".cursor/agents/model-routing-preset-
 
 check_artifact_in_file ".planr/agents.toml" "fixtures/routing-bundle-v1/valid-balanced-codex.json"
 check_artifact_in_file ".planr/policy.toml" "fixtures/routing-bundle-v1/valid-balanced-codex.json"
+check_artifact_in_file ".codex/config.toml" "fixtures/routing-bundle-v1/valid-balanced-codex.json"
 check_artifact_in_file ".codex/agents/model-routing-luna-xhigh.toml" "fixtures/routing-bundle-v1/valid-balanced-codex.json"
 check_artifact_in_file ".codex/agents/model-routing-sol-high.toml" "fixtures/routing-bundle-v1/valid-balanced-codex.json"
 check_artifact_in_file ".codex/agents/model-routing-sol-medium.toml" "fixtures/routing-bundle-v1/valid-balanced-codex.json"

@@ -31,9 +31,9 @@ cargo test --manifest-path "$repo_root/Cargo.toml" --workspace --all-targets --a
 sh "$repo_root/scripts/check-migration-manifest.sh"
 node --test "$repo_root"/scripts/*.test.mjs "$repo_root"/website/*.test.mjs
 node "$repo_root/scripts/regenerate-preset-catalog.mjs" --routing-bin "$repo_root/target/debug/model-routing"
-cargo run --manifest-path "$repo_root/Cargo.toml" -- catalog verify "$repo_root/website/data/catalog.json"
+cargo run --manifest-path "$repo_root/Cargo.toml" --bin model-routing -- catalog verify "$repo_root/website/data/catalog.json"
 node "$repo_root/scripts/build-site.mjs"
-cargo run --manifest-path "$repo_root/Cargo.toml" -- evaluate balanced --host codex-openai > "$workdir/evaluate-codex.json"
+cargo run --manifest-path "$repo_root/Cargo.toml" --bin model-routing -- evaluate balanced --host codex-openai > "$workdir/evaluate-codex.json"
 require_contains '"status": "experimental"' "$workdir/evaluate-codex.json"
 require_contains '"recommended": false' "$workdir/evaluate-codex.json"
 require_contains '"offline_reproducible": true' "$workdir/evaluate-codex.json"
@@ -64,7 +64,15 @@ require_absent 'receipt' "$package_files"
 require_absent 'credential' "$package_files"
 require_absent 'secret' "$package_files"
 betterleaks dir "$repo_root"
-trivy fs --skip-db-update --skip-java-db-update --scanners vuln,secret,misconfig "$repo_root"
+trivy fs \
+  --skip-db-update \
+  --skip-java-db-update \
+  --scanners vuln,secret,misconfig \
+  --skip-dirs "$repo_root/node_modules" \
+  --skip-dirs "$repo_root/target" \
+  --skip-dirs "$repo_root/dist" \
+  --skip-dirs "$repo_root/.pnpm-store" \
+  "$repo_root"
 zizmor "$repo_root/.github/workflows"
 
 printf 'offline verification suite passed\n'

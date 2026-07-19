@@ -1,0 +1,149 @@
+name: Release Candidate
+
+on:
+  push:
+    branches:
+      - "codex/**"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref, branch, tag, or SHA to build
+        required: true
+        default: main
+
+permissions: {}
+
+env:
+  CANDIDATE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+
+concurrency:
+  group: release-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-native:
+    name: Build native ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            rust_target: aarch64-apple-darwin
+            runner: macos-14
+          - target: darwin-x86_64
+            rust_target: x86_64-apple-darwin
+            runner: macos-14
+          - target: linux-x86_64
+            rust_target: x86_64-unknown-linux-gnu
+            runner: ubuntu-24.04
+          - target: linux-arm64
+            rust_target: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: ${{ env.CANDIDATE_REF }}
+          persist-credentials: false
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.rust_target }}
+      - name: Verify candidate version
+        run: |
+          test "$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)" = "0.2.1"
+          test "$(jq -r .version package.json)" = "0.2.1"
+      - name: Build native candidate
+        env:
+          SWITCHLOOM_TARGET: ${{ matrix.target }}
+          SWITCHLOOM_CARGO_TARGET: ${{ matrix.rust_target }}
+        run: scripts/build-release.sh
+      - name: Stage npm native binary
+        run: |
+          mkdir -p "npm/native/${{ matrix.target }}"
+          install -m 755 "target/${{ matrix.rust_target }}/release/model-routing" \
+            "npm/native/${{ matrix.target }}/model-routing"
+      - name: Verify native version on matching runner
+        run: |
+          test "$(./target/${{ matrix.rust_target }}/release/model-routing --version)" = "model-routing 0.2.1"
+      - name: Write native provenance
+        env:
+          TARGET: ${{ matrix.target }}
+          RUST_TARGET: ${{ matrix.rust_target }}
+          RUNNER_NAME: ${{ matrix.runner }}
+        run: |
+          mkdir -p "native-provenance/$TARGET"
+          sha="$(shasum -a 256 "npm/native/$TARGET/model-routing" | awk '{print $1}')"
+          version="$(./target/$RUST_TARGET/release/model-routing --version)"
+          git_sha="$(git rev-parse HEAD)"
+          built_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          jq -n \
+            --arg target "$TARGET" \
+            --arg rust_target "$RUST_TARGET" \
+            --arg runner "$RUNNER_NAME" \
+            --arg path "npm/native/$TARGET/model-routing" \
+            --arg version "$version" \
+            --arg sha256 "$sha" \
+            --arg git_sha "$git_sha" \
+            --arg built_at "$built_at" \
+            '{target:$target,rust_target:$rust_target,runner:$runner,path:$path,version:$version,sha256:$sha256,git_sha:$git_sha,built_at:$built_at}' \
+            > "native-provenance/$TARGET/provenance.json"
+          printf '%s  npm/native/%s/model-routing\n' "$sha" "$TARGET" \
+            > "native-provenance/$TARGET/SHA256SUMS"
+      - name: Upload native candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: switchloom-native-${{ matrix.target }}
+          path: |
+            npm/native/${{ matrix.target }}/model-routing
+            native-provenance/${{ matrix.target }}/provenance.json
+            native-provenance/${{ matrix.target }}/SHA256SUMS
+          if-no-files-found: error
+
+  package-check:
+    name: Validate npm package from native matrix
+    needs: build-native
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: ${{ env.CANDIDATE_REF }}
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Download native candidates
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          pattern: switchloom-native-*
+          path: rc-artifacts
+      - name: Stage native candidates and provenance
+        run: |
+          mkdir -p npm/native provenance-parts
+          for target in darwin-arm64 darwin-x86_64 linux-arm64 linux-x86_64; do
+            mkdir -p "npm/native/$target"
+            install -m 755 "rc-artifacts/switchloom-native-$target/npm/native/$target/model-routing" \
+              "npm/native/$target/model-routing"
+            cp "rc-artifacts/switchloom-native-$target/native-provenance/$target/provenance.json" \
+              "provenance-parts/$target.json"
+          done
+          git_sha="$(git rev-parse HEAD)"
+          jq -s \
+            --arg package_version "$(jq -r .version package.json)" \
+            --arg git_sha "$git_sha" \
+            '{schema_version:"switchloom.native_provenance.v1",package_version:$package_version,git_sha:$git_sha,generated_by:"github-actions-release-candidate",targets:.}' \
+            provenance-parts/*.json > npm/native/provenance.json
+      - name: Validate native provenance and npm package
+        run: bash scripts/npm-pack-check.sh
+      - name: Upload package provenance
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: switchloom-native-provenance
+          path: npm/native/provenance.json
+          if-no-files-found: error
