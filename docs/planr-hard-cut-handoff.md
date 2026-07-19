@@ -1,11 +1,49 @@
 # Planr Hard-Cut Handoff Receipt
 
-Date: 2026-07-18
+Date: 2026-07-19
 
 This receipt is the Goal A gate for starting the Planr Goal B hard cut. It
 does not modify `/Users/kregenrek/projects/planr`; it records the independently
 published Switchloom release and the exact Planr routing responsibilities that
 now have a standalone owner or an explicit deletion action.
+
+## Superseding Candidate Status
+
+The public `v0.2.0` release remains the latest published Switchloom release, but
+its original native Codex discovery evidence had a release-gating gap: the
+published package generated repository-local Codex role files, yet the accepted
+receipt did not prove the checksum-identified installed candidate executed the
+full status/uninstall lifecycle while preserving unmanaged repository content.
+
+The current unpublished superseding candidate is `0.2.1`. It must replace
+`v0.2.0` before Planr Goal B starts. The canonical retained `0.2.1` candidate
+proof chain is:
+
+- `/private/tmp/model-routing-codex-standalone.COTXUA` proves exact `0.2.1`
+  package-byte execution, repository-local Codex role discovery, authentic Terra
+  High maker and Sol High reviewer spawns with `fork_turns = none`, and
+  unchanged global Codex config hash
+  `18cbbaee5e263f8bb011a174913721a8866a4d156d62c7fc74bc2d7103abcb3c`.
+- The canonical `0.2.1` candidate crate hash in that receipt is
+  `e5c2eee164433f3433f8aef2aca46624d88a46c8b4db502aa63804017b83769e`, and
+  the installed binary hash is
+  `7e214789885a66e4788c778fd8d7681c1a67de0aed5f728735ff678c8965049f`.
+- The same `0.2.1` installed binary ran `status` and `uninstall` only against
+  the generated temporary repository. It removed seven Switchloom-managed
+  artifacts, left `bundle_id: null` with no managed artifacts on post-status,
+  and preserved the unmanaged sentinel file byte-identically.
+- `/private/tmp/model-routing-codex-standalone.yGExSi` remains a `0.2.0`
+  behavioral precursor only. It is useful for comparing the same proof shape,
+  but it is not the canonical `0.2.1` release-candidate proof because its crate
+  and installed binary are `0.2.0`.
+- `/Users/kregenrek/projects/planr` remained at protected HEAD
+  `d7f0afae24643d4a1e475474426c37ca00e5dbe3` with
+  `git status --porcelain=v1 -z` SHA-256
+  `45d1759e7ff4c3f45b15eaf3c331f82186173610427a5e0a38cdd945151d5f33`.
+
+Do not use the `v0.2.0` publication as the final Goal A handoff. Publish and
+smoke-test the superseding `0.2.1` candidate first, then update the public
+release identity below to the verified public bytes.
 
 ## Release Identity
 

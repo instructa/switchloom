@@ -2,6 +2,23 @@
 
 All notable changes to Switchloom are recorded here.
 
+## [0.2.1] - 2026-07-19
+
+- Prepared a superseding release candidate after the `0.2.0` native Codex
+  discovery proof gap: the published bytes generated correct repository-local
+  role files, but the first release evidence did not prove the installed
+  candidate could execute the complete status/uninstall lifecycle while keeping
+  unmanaged configuration intact.
+- Added retained proof for a checksum-identified installed candidate running
+  status and uninstall against a generated repository, removing only managed
+  Switchloom artifacts and preserving an unmanaged sentinel byte-for-byte.
+- Strengthened the standalone Codex oracle so package receipt discovery follows
+  the manifest version instead of hard-coding a crate name, keeping future
+  release-candidate proofs tied to the candidate's package bytes.
+- Recorded the superseding native Terra High maker and Sol High reviewer proof
+  with equal before/after global Codex config hashes, fork-free child context,
+  package checksum provenance, and exact Planr baseline preservation.
+
 ## [0.2.0] - 2026-07-18
 
 - Added the strict, versioned `SetupSpecV1` contract with deterministic TOML, canonical JSON,

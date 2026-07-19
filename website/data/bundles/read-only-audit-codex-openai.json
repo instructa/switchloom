@@ -6,7 +6,7 @@
   "generated_at": "2026-07-16T00:00:00Z",
   "source": {
     "package": "model-routing",
-    "package_version": "0.2.0",
+    "package_version": "0.2.1",
     "integration": "standalone"
   },
   "policy": {
@@ -232,6 +232,13 @@
       "mode": "create",
       "content": "name = \"model_routing_terra_medium\"\ndescription = \"Repository exploration and research.\"\nmodel = \"gpt-5.6-terra\"\nmodel_reasoning_effort = \"medium\"\nsandbox_mode = \"read-only\"\n\ndeveloper_instructions = \"\"\"\nExplore the assigned scope, report concrete evidence, and do not edit files.\n\"\"\"\n",
       "sha256": "458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464"
+    },
+    {
+      "path": ".codex/config.toml",
+      "media_type": "application/toml",
+      "mode": "replace",
+      "content": "[agents.model_routing_luna_xhigh]\nconfig_file = \"./agents/model-routing-luna-xhigh.toml\"\n\n[agents.model_routing_sol_high]\nconfig_file = \"./agents/model-routing-sol-high.toml\"\n\n[agents.model_routing_sol_medium]\nconfig_file = \"./agents/model-routing-sol-medium.toml\"\n\n[agents.model_routing_sol_ultra]\nconfig_file = \"./agents/model-routing-sol-ultra.toml\"\n\n[agents.model_routing_terra_high]\nconfig_file = \"./agents/model-routing-terra-high.toml\"\n\n[agents.model_routing_terra_medium]\nconfig_file = \"./agents/model-routing-terra-medium.toml\"\n",
+      "sha256": "38511fd94693a95ebcdb0d2ca65f414109b05835172729c35f91d70d20d3b60d"
     }
   ],
   "evidence": {

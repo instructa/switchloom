@@ -163,13 +163,38 @@ jobs:
         run: |
           version="${TAG#v}"
           for target in darwin-arm64 darwin-x86_64 linux-arm64 linux-x86_64; do
+            case "$target" in
+              darwin-arm64) rust_target="aarch64-apple-darwin"; runner="macos-14" ;;
+              darwin-x86_64) rust_target="x86_64-apple-darwin"; runner="macos-14" ;;
+              linux-arm64) rust_target="aarch64-unknown-linux-gnu"; runner="ubuntu-24.04-arm" ;;
+              linux-x86_64) rust_target="x86_64-unknown-linux-gnu"; runner="ubuntu-24.04" ;;
+            esac
             mkdir -p "extract/$target" "npm/native/$target"
             tar -xzf "assets/switchloom-$target.tar.gz" -C "extract/$target"
             install -m 755 "extract/$target/model-routing" "npm/native/$target/model-routing"
+            sha="$(shasum -a 256 "npm/native/$target/model-routing" | awk '{print $1}')"
+            version_output="$(if [ "$target" = "linux-x86_64" ]; then "./npm/native/$target/model-routing" --version; else printf 'model-routing %s' "$version"; fi)"
+            jq -n \
+              --arg target "$target" \
+              --arg path "npm/native/$target/model-routing" \
+              --arg version "$version_output" \
+              --arg sha256 "$sha" \
+              --arg rust_target "$rust_target" \
+              --arg runner "$runner" \
+              --arg git_sha "$(git rev-parse HEAD)" \
+              --arg built_at "release-$TAG" \
+              '{target:$target,rust_target:$rust_target,runner:$runner,path:$path,version:$version,sha256:$sha256,git_sha:$git_sha,built_at:$built_at}' \
+              > "assets/$target.native-provenance.json"
           done
+          jq -s \
+            --arg package_version "$version" \
+            --arg git_sha "$(git rev-parse HEAD)" \
+            '{schema_version:"switchloom.native_provenance.v1",package_version:$package_version,git_sha:$git_sha,generated_by:"github-actions-release",targets:.}' \
+            assets/*.native-provenance.json > npm/native/provenance.json
+          node scripts/validate-native-provenance.mjs
           test "$(./npm/native/linux-x86_64/model-routing --version)" = "model-routing $version"
           SWITCHLOOM_NATIVE_BIN="$PWD/npm/native/linux-x86_64/model-routing" node npm/bin/model-routing.js --version
-          npm pack --dry-run
+          bash scripts/npm-pack-check.sh
       - name: Publish npm package
         env:
           TAG: ${{ github.ref_name }}

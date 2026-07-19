@@ -23,6 +23,7 @@ const GENERATED_AT: &str = "2026-07-16T00:00:00Z";
 const GENERATED_AT_UNIX: i64 = 1_784_160_000;
 pub const SETUP_CONFIG_PATH: &str = ".switchloom/config.toml";
 pub const SETUP_RECIPE_PREFIX: &str = "sw1_";
+const CODEX_CONFIG_PATH: &str = ".codex/config.toml";
 const MAX_SETUP_RECIPE_BYTES: usize = 65_536;
 const MAX_SETUP_RECIPE_ENCODED_BYTES: usize = encoded_base64url_len(MAX_SETUP_RECIPE_BYTES);
 const EVALUATION_SUITE: &str = include_str!("../evaluations/preset-suite-v1.toml");
@@ -961,15 +962,17 @@ fn compile_source(source: PolicySource, integration: Integration) -> Result<Rout
             content: source.policy_toml.clone(),
         }));
     }
-    artifacts.extend(
-        source
-            .artifacts
-            .iter()
-            .filter(|artifact| include_artifact_for_integration(artifact, integration))
-            .cloned()
-            .map(|artifact| artifact_for_integration(artifact, integration))
-            .map(bundle_artifact),
-    );
+    let mut host_artifacts = source
+        .artifacts
+        .iter()
+        .filter(|artifact| include_artifact_for_integration(artifact, integration))
+        .cloned()
+        .map(|artifact| artifact_for_integration(artifact, integration))
+        .collect::<Vec<_>>();
+    if let Some(codex_config) = render_codex_agent_registration_artifact(&host_artifacts)? {
+        host_artifacts.push(codex_config);
+    }
+    artifacts.extend(host_artifacts.into_iter().map(bundle_artifact));
     artifacts.sort_by(|left, right| left.path.cmp(&right.path));
 
     Ok(RoutingBundleV1 {
@@ -1406,17 +1409,7 @@ pub fn status_repository(repository: &Path) -> Result<LifecycleReport> {
     let mut reports = Vec::new();
     for artifact in &manifest.artifacts {
         let target = resolve_repository_target(&repository, &artifact.path)?;
-        let status = if !target.exists() {
-            "missing"
-        } else {
-            let content = fs::read(&target)
-                .with_context(|| format!("failed to read `{}`", target.display()))?;
-            if sha256(&content) == artifact.sha256 {
-                "managed"
-            } else {
-                "modified"
-            }
-        };
+        let status = status_for_managed_artifact(&target, artifact)?;
         reports.push(LifecycleArtifactReport {
             path: artifact.path.clone(),
             mode: "managed".to_string(),
@@ -1441,19 +1434,7 @@ pub fn uninstall_repository(repository: &Path) -> Result<LifecycleReport> {
     let mut reports = Vec::new();
     for artifact in &manifest.artifacts {
         let target = resolve_repository_target(&repository, &artifact.path)?;
-        let status = if !target.exists() {
-            "missing"
-        } else {
-            let content = fs::read(&target)
-                .with_context(|| format!("failed to read `{}`", target.display()))?;
-            if sha256(&content) != artifact.sha256 {
-                "preserved-modified"
-            } else {
-                fs::remove_file(&target)
-                    .with_context(|| format!("failed to remove `{}`", target.display()))?;
-                "removed"
-            }
-        };
+        let status = uninstall_managed_artifact(&target, artifact)?;
         reports.push(LifecycleArtifactReport {
             path: artifact.path.clone(),
             mode: "managed".to_string(),
@@ -1586,6 +1567,7 @@ struct PlannedArtifact {
     target: PathBuf,
     mode: String,
     content: Option<String>,
+    managed_content: Option<String>,
     sha256: String,
     status: String,
 }
@@ -1621,6 +1603,15 @@ fn plan_artifacts(
                 .iter()
                 .find(|managed| managed.path == artifact.path)
         });
+        if artifact.path == CODEX_CONFIG_PATH {
+            planned.push(plan_codex_config_artifact(
+                repository,
+                artifact,
+                target,
+                managed_entry,
+            )?);
+            continue;
+        }
         let status = if target.exists() {
             let metadata = fs::symlink_metadata(&target)
                 .with_context(|| format!("failed to inspect `{}`", target.display()))?;
@@ -1650,6 +1641,7 @@ fn plan_artifacts(
             target,
             mode: artifact.mode.clone(),
             content: Some(artifact.content.clone()),
+            managed_content: Some(artifact.content.clone()),
             sha256: artifact.sha256.clone(),
             status: status.to_string(),
         });
@@ -1664,12 +1656,29 @@ fn plan_artifacts(
                 continue;
             }
             let target = resolve_repository_target(repository, &artifact.path)?;
-            let status = preserved_or_removed_status(&target, artifact)?;
+            let (status, content) = if artifact.path == CODEX_CONFIG_PATH {
+                let status = preserved_or_removed_status(&target, artifact)?;
+                let content = if status == "removed" {
+                    remove_managed_codex_config_entries(&target, artifact)?
+                } else {
+                    artifact.content.clone()
+                };
+                (status, content)
+            } else {
+                let status = preserved_or_removed_status(&target, artifact)?;
+                let content = if status == "removed" {
+                    None
+                } else {
+                    artifact.content.clone()
+                };
+                (status, content)
+            };
             planned.push(PlannedArtifact {
                 path: artifact.path.clone(),
                 target,
                 mode: "delete".to_string(),
-                content: artifact.content.clone(),
+                content,
+                managed_content: artifact.content.clone(),
                 sha256: artifact.sha256.clone(),
                 status,
             });
@@ -1740,6 +1749,12 @@ fn plan_rollback_artifacts(
             .artifacts
             .iter()
             .find(|managed| managed.path == artifact.path);
+        if artifact.path == CODEX_CONFIG_PATH {
+            planned.push(plan_codex_config_rollback_artifact(
+                repository, artifact, content, target, current,
+            )?);
+            continue;
+        }
         let status = if target.exists() {
             let current_content = fs::read(&target)
                 .with_context(|| format!("failed to read `{}`", target.display()))?;
@@ -1764,6 +1779,7 @@ fn plan_rollback_artifacts(
             target,
             mode: "replace".to_string(),
             content: Some(content),
+            managed_content: artifact.content.clone(),
             sha256: artifact.sha256.clone(),
             status: status.to_string(),
         });
@@ -1777,18 +1793,163 @@ fn plan_rollback_artifacts(
             continue;
         }
         let target = resolve_repository_target(repository, &artifact.path)?;
-        let status = preserved_or_removed_status(&target, artifact)?;
+        let (status, content) = if artifact.path == CODEX_CONFIG_PATH {
+            let status = preserved_or_removed_status(&target, artifact)?;
+            let content = if status == "removed" {
+                remove_managed_codex_config_entries(&target, artifact)?
+            } else {
+                artifact.content.clone()
+            };
+            (status, content)
+        } else {
+            let status = preserved_or_removed_status(&target, artifact)?;
+            let content = if status == "removed" {
+                None
+            } else {
+                artifact.content.clone()
+            };
+            (status, content)
+        };
         planned.push(PlannedArtifact {
             path: artifact.path.clone(),
             target,
             mode: "delete".to_string(),
-            content: artifact.content.clone(),
+            content,
+            managed_content: artifact.content.clone(),
             sha256: artifact.sha256.clone(),
             status,
         });
     }
     reject_parent_child_targets(&planned)?;
     Ok(planned)
+}
+
+fn plan_codex_config_artifact(
+    repository: &Path,
+    artifact: &BundleArtifact,
+    target: PathBuf,
+    managed_entry: Option<&ManagedArtifact>,
+) -> Result<PlannedArtifact> {
+    let (status, content) = if target.exists() {
+        ensure_artifact_target_is_regular(&target, &artifact.path)?;
+        let current = fs::read_to_string(&target)
+            .with_context(|| format!("failed to read `{}`", target.display()))?;
+        if let Some(managed) = managed_entry {
+            if codex_config_contains_managed_entries(&current, managed)? {
+                if codex_config_has_unmanaged_conflict(&current, &artifact.content, Some(managed))?
+                {
+                    ("conflict".to_string(), Some(current))
+                } else if managed.content.as_deref() == Some(artifact.content.as_str())
+                    && codex_config_contains_desired_entries(&current, &artifact.content)?
+                {
+                    ("unchanged".to_string(), Some(current))
+                } else {
+                    (
+                        "update".to_string(),
+                        merge_codex_config_entries(
+                            Some(&current),
+                            Some(managed),
+                            &artifact.content,
+                        )?,
+                    )
+                }
+            } else {
+                ("preserved-modified".to_string(), Some(current))
+            }
+        } else if codex_config_has_unmanaged_conflict(&current, &artifact.content, None)? {
+            ("conflict".to_string(), Some(current))
+        } else if codex_config_contains_desired_entries(&current, &artifact.content)? {
+            ("unchanged".to_string(), Some(current))
+        } else {
+            (
+                "update".to_string(),
+                merge_codex_config_entries(Some(&current), None, &artifact.content)?,
+            )
+        }
+    } else {
+        ensure_parent_is_safe(repository, &target)?;
+        ("create".to_string(), Some(artifact.content.clone()))
+    };
+    Ok(PlannedArtifact {
+        path: artifact.path.clone(),
+        target,
+        mode: artifact.mode.clone(),
+        content,
+        managed_content: Some(artifact.content.clone()),
+        sha256: artifact.sha256.clone(),
+        status,
+    })
+}
+
+fn plan_codex_config_rollback_artifact(
+    repository: &Path,
+    artifact: &ManagedArtifact,
+    desired_content: String,
+    target: PathBuf,
+    current: Option<&ManagedArtifact>,
+) -> Result<PlannedArtifact> {
+    let (status, content) = if target.exists() {
+        ensure_artifact_target_is_regular(&target, &artifact.path)?;
+        let current_text = fs::read_to_string(&target)
+            .with_context(|| format!("failed to read `{}`", target.display()))?;
+        if let Some(managed) = current {
+            if codex_config_contains_managed_entries(&current_text, managed)? {
+                if codex_config_has_unmanaged_conflict(
+                    &current_text,
+                    &desired_content,
+                    Some(managed),
+                )? {
+                    ("conflict".to_string(), Some(current_text))
+                } else if managed.content.as_deref() == Some(desired_content.as_str())
+                    && codex_config_contains_desired_entries(&current_text, &desired_content)?
+                {
+                    ("unchanged".to_string(), Some(current_text))
+                } else {
+                    (
+                        "rollback".to_string(),
+                        merge_codex_config_entries(
+                            Some(&current_text),
+                            Some(managed),
+                            &desired_content,
+                        )?,
+                    )
+                }
+            } else {
+                ("preserved-modified".to_string(), Some(current_text))
+            }
+        } else if codex_config_has_unmanaged_conflict(&current_text, &desired_content, None)? {
+            ("conflict".to_string(), Some(current_text))
+        } else {
+            (
+                "rollback".to_string(),
+                merge_codex_config_entries(Some(&current_text), None, &desired_content)?,
+            )
+        }
+    } else {
+        ensure_parent_is_safe(repository, &target)?;
+        ("create".to_string(), Some(desired_content.clone()))
+    };
+    Ok(PlannedArtifact {
+        path: artifact.path.clone(),
+        target,
+        mode: "replace".to_string(),
+        content,
+        managed_content: Some(desired_content),
+        sha256: artifact.sha256.clone(),
+        status,
+    })
+}
+
+fn ensure_artifact_target_is_regular(target: &Path, artifact_path: &str) -> Result<()> {
+    let metadata = fs::symlink_metadata(target)
+        .with_context(|| format!("failed to inspect `{}`", target.display()))?;
+    if metadata.file_type().is_symlink() {
+        bail!("artifact target `{artifact_path}` is a symlink");
+    }
+    if !metadata.is_file() {
+        bail!("artifact target `{artifact_path}` is not a file");
+    }
+    Ok(())
 }
 
 fn preserved_or_removed_status(target: &Path, artifact: &ManagedArtifact) -> Result<String> {
@@ -1800,6 +1961,15 @@ fn preserved_or_removed_status(target: &Path, artifact: &ManagedArtifact) -> Res
     if metadata.file_type().is_symlink() {
         bail!("artifact target `{}` is a symlink", artifact.path);
     }
+    if artifact.path == CODEX_CONFIG_PATH {
+        let current = fs::read_to_string(target)
+            .with_context(|| format!("failed to read `{}`", target.display()))?;
+        return if codex_config_contains_managed_entries(&current, artifact)? {
+            Ok("removed".to_string())
+        } else {
+            Ok("preserved-modified".to_string())
+        };
+    }
     let current =
         fs::read(target).with_context(|| format!("failed to read `{}`", target.display()))?;
     if sha256(&current) == artifact.sha256 {
@@ -1807,6 +1977,222 @@ fn preserved_or_removed_status(target: &Path, artifact: &ManagedArtifact) -> Res
     } else {
         Ok("preserved-modified".to_string())
     }
+}
+
+fn status_for_managed_artifact(target: &Path, artifact: &ManagedArtifact) -> Result<&'static str> {
+    if !target.exists() {
+        return Ok("missing");
+    }
+    let metadata = fs::symlink_metadata(target)
+        .with_context(|| format!("failed to inspect `{}`", target.display()))?;
+    if metadata.file_type().is_symlink() {
+        bail!("artifact target `{}` is a symlink", artifact.path);
+    }
+    if artifact.path == CODEX_CONFIG_PATH {
+        let current = fs::read_to_string(target)
+            .with_context(|| format!("failed to read `{}`", target.display()))?;
+        return if codex_config_contains_managed_entries(&current, artifact)? {
+            Ok("managed")
+        } else {
+            Ok("modified")
+        };
+    }
+    let content =
+        fs::read(target).with_context(|| format!("failed to read `{}`", target.display()))?;
+    if sha256(&content) == artifact.sha256 {
+        Ok("managed")
+    } else {
+        Ok("modified")
+    }
+}
+
+fn uninstall_managed_artifact(target: &Path, artifact: &ManagedArtifact) -> Result<&'static str> {
+    if !target.exists() {
+        return Ok("missing");
+    }
+    let metadata = fs::symlink_metadata(target)
+        .with_context(|| format!("failed to inspect `{}`", target.display()))?;
+    if metadata.file_type().is_symlink() {
+        bail!("artifact target `{}` is a symlink", artifact.path);
+    }
+    if artifact.path == CODEX_CONFIG_PATH {
+        let current = fs::read_to_string(target)
+            .with_context(|| format!("failed to read `{}`", target.display()))?;
+        if !codex_config_contains_managed_entries(&current, artifact)? {
+            return Ok("preserved-modified");
+        }
+        match remove_managed_codex_config_entries(target, artifact)? {
+            Some(content) => fs::write(target, content.as_bytes())
+                .with_context(|| format!("failed to write `{}`", target.display()))?,
+            None => fs::remove_file(target)
+                .with_context(|| format!("failed to remove `{}`", target.display()))?,
+        }
+        return Ok("removed");
+    }
+    let content =
+        fs::read(target).with_context(|| format!("failed to read `{}`", target.display()))?;
+    if sha256(&content) != artifact.sha256 {
+        Ok("preserved-modified")
+    } else {
+        fs::remove_file(target)
+            .with_context(|| format!("failed to remove `{}`", target.display()))?;
+        Ok("removed")
+    }
+}
+
+fn codex_config_contains_managed_entries(
+    current_content: &str,
+    managed: &ManagedArtifact,
+) -> Result<bool> {
+    let managed_content = managed.content.as_deref().ok_or_else(|| {
+        anyhow::anyhow!("managed artifact `{}` has no stored content", managed.path)
+    })?;
+    Ok(
+        !codex_config_has_unmanaged_conflict(current_content, managed_content, None)?
+            && codex_config_contains_desired_entries(current_content, managed_content)?,
+    )
+}
+
+fn codex_config_contains_desired_entries(
+    current_content: &str,
+    desired_content: &str,
+) -> Result<bool> {
+    let current = codex_agent_entries(current_content)?;
+    let desired = codex_agent_entries(desired_content)?;
+    Ok(desired
+        .iter()
+        .all(|(name, desired_entry)| current.get(name) == Some(desired_entry)))
+}
+
+fn codex_config_has_unmanaged_conflict(
+    current_content: &str,
+    desired_content: &str,
+    previously_managed: Option<&ManagedArtifact>,
+) -> Result<bool> {
+    let current = codex_agent_entries(current_content)?;
+    let desired = codex_agent_entries(desired_content)?;
+    let old_keys = previously_managed
+        .and_then(|managed| managed.content.as_deref())
+        .map(codex_agent_entry_names)
+        .transpose()?
+        .unwrap_or_default();
+    Ok(desired.iter().any(|(name, desired_entry)| {
+        !old_keys.contains(name)
+            && current
+                .get(name)
+                .is_some_and(|entry| entry != desired_entry)
+    }))
+}
+
+fn merge_codex_config_entries(
+    current_content: Option<&str>,
+    previously_managed: Option<&ManagedArtifact>,
+    desired_content: &str,
+) -> Result<Option<String>> {
+    let mut root = match current_content {
+        Some(content) => parse_toml_root(content)?,
+        None => toml::value::Table::new(),
+    };
+    if let Some(managed) = previously_managed {
+        let managed_content = managed.content.as_deref().ok_or_else(|| {
+            anyhow::anyhow!("managed artifact `{}` has no stored content", managed.path)
+        })?;
+        remove_codex_agent_entries(&mut root, &codex_agent_entry_names(managed_content)?)?;
+    }
+    upsert_codex_agent_entries(&mut root, codex_agent_entries(desired_content)?)?;
+    render_toml_root(root)
+}
+
+fn remove_managed_codex_config_entries(
+    target: &Path,
+    managed: &ManagedArtifact,
+) -> Result<Option<String>> {
+    let current = fs::read_to_string(target)
+        .with_context(|| format!("failed to read `{}`", target.display()))?;
+    let managed_content = managed.content.as_deref().ok_or_else(|| {
+        anyhow::anyhow!("managed artifact `{}` has no stored content", managed.path)
+    })?;
+    let mut root = parse_toml_root(&current)?;
+    remove_codex_agent_entries(&mut root, &codex_agent_entry_names(managed_content)?)?;
+    render_toml_root(root)
+}
+
+fn parse_toml_root(content: &str) -> Result<toml::value::Table> {
+    match toml::from_str::<toml::Value>(content)? {
+        toml::Value::Table(table) => Ok(table),
+        _ => bail!("Codex config must be a TOML table"),
+    }
+}
+
+fn codex_agent_entry_names(content: &str) -> Result<BTreeSet<String>> {
+    Ok(codex_agent_entries(content)?.into_keys().collect())
+}
+
+fn codex_agent_entries(content: &str) -> Result<BTreeMap<String, toml::Value>> {
+    let root = parse_toml_root(content)?;
+    let Some(agents) = root.get("agents") else {
+        return Ok(BTreeMap::new());
+    };
+    let agents = agents
+        .as_table()
+        .ok_or_else(|| anyhow::anyhow!("Codex config `agents` must be a table"))?;
+    Ok(agents
+        .iter()
+        .map(|(name, value)| (name.clone(), value.clone()))
+        .collect())
+}
+
+fn remove_codex_agent_entries(
+    root: &mut toml::value::Table,
+    names: &BTreeSet<String>,
+) -> Result<()> {
+    let Some(agents_value) = root.get_mut("agents") else {
+        return Ok(());
+    };
+    let agents = agents_value
+        .as_table_mut()
+        .ok_or_else(|| anyhow::anyhow!("Codex config `agents` must be a table"))?;
+    for name in names {
+        agents.remove(name);
+    }
+    if agents.is_empty() {
+        root.remove("agents");
+    }
+    Ok(())
+}
+
+fn upsert_codex_agent_entries(
+    root: &mut toml::value::Table,
+    entries: BTreeMap<String, toml::Value>,
+) -> Result<()> {
+    if entries.is_empty() {
+        return Ok(());
+    }
+    if !root.contains_key("agents") {
+        root.insert(
+            "agents".to_string(),
+            toml::Value::Table(toml::value::Table::new()),
+        );
+    }
+    let agents = root
+        .get_mut("agents")
+        .and_then(toml::Value::as_table_mut)
+        .ok_or_else(|| anyhow::anyhow!("Codex config `agents` must be a table"))?;
+    for (name, value) in entries {
+        agents.insert(name, value);
+    }
+    Ok(())
+}
+
+fn render_toml_root(root: toml::value::Table) -> Result<Option<String>> {
+    if root.is_empty() {
+        return Ok(None);
+    }
+    let mut content = toml::to_string_pretty(&toml::Value::Table(root))?;
+    if !content.ends_with('\n') {
+        content.push('\n');
+    }
+    Ok(Some(content))
 }
 
 fn commit_transaction(
@@ -1837,16 +2223,14 @@ fn commit_transaction(
         {
             continue;
         }
-        let staged = if artifact.status == "removed" {
-            None
-        } else {
-            let staged = stage_root.join(format!("artifact-{index}"));
-            let content = artifact.content.as_ref().ok_or_else(|| {
-                anyhow::anyhow!("artifact `{}` has no staged content", artifact.path)
-            })?;
-            fs::write(&staged, content.as_bytes())
-                .with_context(|| format!("failed to stage `{}`", artifact.path))?;
-            Some(staged)
+        let staged = match &artifact.content {
+            Some(content) => {
+                let staged = stage_root.join(format!("artifact-{index}"));
+                fs::write(&staged, content.as_bytes())
+                    .with_context(|| format!("failed to stage `{}`", artifact.path))?;
+                Some(staged)
+            }
+            None => None,
         };
         writes.push(TransactionalWrite {
             label: artifact.path.clone(),
@@ -2229,7 +2613,7 @@ fn resolve_repository_target(repository: &Path, artifact_path: &str) -> Result<P
     let normalized_text = normalized
         .to_str()
         .ok_or_else(|| anyhow::anyhow!("artifact path `{artifact_path}` is not UTF-8"))?;
-    if normalized_text == ".codex/config.toml" || normalized_text.starts_with(".model-routing/") {
+    if normalized_text.starts_with(".model-routing/") {
         bail!("artifact path `{artifact_path}` targets a reserved path");
     }
     if normalized_text == SETUP_CONFIG_PATH {
@@ -2242,6 +2626,9 @@ fn resolve_repository_target(repository: &Path, artifact_path: &str) -> Result<P
 }
 
 fn allowed_repository_target(path: &str) -> bool {
+    if path == ".codex/config.toml" {
+        return true;
+    }
     [
         ".codex/agents/",
         ".claude/agents/",
@@ -2316,7 +2703,7 @@ fn manifest_from_plan(
             .map(|artifact| ManagedArtifact {
                 path: artifact.path.clone(),
                 sha256: artifact.sha256.clone(),
-                content: artifact.content.clone(),
+                content: artifact.managed_content.clone(),
             })
             .collect(),
         previous,
@@ -3299,6 +3686,65 @@ fn artifact_for_integration(
         artifact.content = render_planr_native_role(&artifact);
     }
     artifact
+}
+
+fn render_codex_agent_registration_artifact(
+    artifacts: &[SourceArtifact],
+) -> Result<Option<SourceArtifact>> {
+    #[derive(Serialize)]
+    struct CodexAgentRegistrationConfig {
+        agents: BTreeMap<String, CodexAgentRegistration>,
+    }
+
+    #[derive(Serialize)]
+    struct CodexAgentRegistration {
+        config_file: String,
+    }
+
+    let mut agents = BTreeMap::new();
+    for artifact in artifacts
+        .iter()
+        .filter(|artifact| artifact.path.starts_with(".codex/agents/"))
+    {
+        let parsed: toml::Value = toml::from_str(&artifact.content)
+            .with_context(|| format!("Codex agent artifact `{}` must be TOML", artifact.path))?;
+        let agent_type = parsed
+            .get("name")
+            .and_then(toml::Value::as_str)
+            .ok_or_else(|| {
+                anyhow::anyhow!("Codex agent artifact `{}` must declare name", artifact.path)
+            })?;
+        let Some(file_name) = artifact.path.strip_prefix(".codex/") else {
+            bail!(
+                "Codex agent artifact `{}` must be relative to .codex",
+                artifact.path
+            );
+        };
+        if let Some(existing) = agents.insert(
+            agent_type.to_string(),
+            CodexAgentRegistration {
+                config_file: format!("./{file_name}"),
+            },
+        ) {
+            bail!(
+                "Codex agent_type `{agent_type}` is registered by multiple artifacts, including `{}`",
+                existing.config_file
+            );
+        }
+    }
+    if agents.is_empty() {
+        return Ok(None);
+    }
+    let mut content = toml::to_string_pretty(&CodexAgentRegistrationConfig { agents })?;
+    if !content.ends_with('\n') {
+        content.push('\n');
+    }
+    Ok(Some(SourceArtifact {
+        path: ".codex/config.toml".to_string(),
+        media_type: "application/toml".to_string(),
+        mode: "replace".to_string(),
+        content,
+    }))
 }
 
 fn render_planr_native_role(artifact: &SourceArtifact) -> String {
@@ -4586,7 +5032,7 @@ mod tests {
         let bundle = compile_policy("balanced", "codex-openai", Integration::Standalone).unwrap();
         let preview = preview_bundle(&repository, &bundle).unwrap();
         assert_eq!(preview.action, "preview");
-        assert_eq!(preview.artifacts.len(), 6);
+        assert_eq!(preview.artifacts.len(), 7);
         assert!(
             preview
                 .artifacts
@@ -4640,7 +5086,7 @@ mod tests {
         let mut bundle =
             compile_policy("balanced", "codex-openai", Integration::Standalone).unwrap();
 
-        bundle.artifacts[0].path = ".codex/config.toml".to_string();
+        bundle.artifacts[0].path = ".model-routing/unsafe.toml".to_string();
         assert!(
             preview_bundle(&repository, &bundle)
                 .unwrap_err()
@@ -4726,6 +5172,129 @@ mod tests {
             sha256(&fs::read(repository.join(&original.artifacts[0].path)).unwrap()),
             original.artifacts[0].sha256
         );
+    }
+
+    #[test]
+    fn lifecycle_codex_config_merges_unrelated_entries_update_rollback_and_uninstall() {
+        let repository = temp_repo("codex-config-ownership");
+        fs::create_dir_all(repository.join(".codex")).unwrap();
+        fs::write(
+            repository.join(CODEX_CONFIG_PATH),
+            "[agents.local_reviewer]\nconfig_file = \"./agents/local-reviewer.toml\"\n\n[features]\nlocal = true\n",
+        )
+        .unwrap();
+
+        let codex = compile_policy("balanced", "codex-openai", Integration::Standalone).unwrap();
+        let applied = apply_bundle_file_with_bundle(&repository, &codex).unwrap();
+        assert!(
+            applied.artifacts.iter().any(|artifact| {
+                artifact.path == CODEX_CONFIG_PATH && artifact.status == "update"
+            })
+        );
+        let config_after_apply = fs::read_to_string(repository.join(CODEX_CONFIG_PATH)).unwrap();
+        assert_codex_config_entry(
+            &config_after_apply,
+            "local_reviewer",
+            "./agents/local-reviewer.toml",
+        );
+        assert_codex_config_entry(
+            &config_after_apply,
+            "model_routing_terra_high",
+            "./agents/model-routing-terra-high.toml",
+        );
+        assert_codex_config_entry(
+            &config_after_apply,
+            "model_routing_sol_high",
+            "./agents/model-routing-sol-high.toml",
+        );
+        assert!(config_after_apply.contains("[features]"));
+
+        let mixed = compile_policy("balanced", "mixed-host", Integration::Standalone).unwrap();
+        let mixed_file = write_bundle_file(&repository, "mixed.json", &mixed);
+        let update = update_bundle_file(&repository, &mixed_file).unwrap();
+        assert!(
+            update.artifacts.iter().any(|artifact| {
+                artifact.path == CODEX_CONFIG_PATH && artifact.status == "update"
+            })
+        );
+        let config_after_update = fs::read_to_string(repository.join(CODEX_CONFIG_PATH)).unwrap();
+        assert_codex_config_entry(
+            &config_after_update,
+            "local_reviewer",
+            "./agents/local-reviewer.toml",
+        );
+        assert_codex_config_entry(
+            &config_after_update,
+            "model_routing_terra_high",
+            "./agents/model-routing-terra-high.toml",
+        );
+        assert_no_codex_config_entry(&config_after_update, "model_routing_sol_medium");
+        assert_no_codex_config_entry(&config_after_update, "model_routing_sol_ultra");
+
+        let rollback = rollback_repository(&repository).unwrap();
+        assert!(rollback.artifacts.iter().any(|artifact| {
+            artifact.path == CODEX_CONFIG_PATH && artifact.status == "rollback"
+        }));
+        let config_after_rollback = fs::read_to_string(repository.join(CODEX_CONFIG_PATH)).unwrap();
+        assert_codex_config_entry(
+            &config_after_rollback,
+            "local_reviewer",
+            "./agents/local-reviewer.toml",
+        );
+        assert_codex_config_entry(
+            &config_after_rollback,
+            "model_routing_sol_medium",
+            "./agents/model-routing-sol-medium.toml",
+        );
+        assert_codex_config_entry(
+            &config_after_rollback,
+            "model_routing_sol_ultra",
+            "./agents/model-routing-sol-ultra.toml",
+        );
+
+        let uninstall = uninstall_repository(&repository).unwrap();
+        assert!(uninstall.artifacts.iter().any(|artifact| {
+            artifact.path == CODEX_CONFIG_PATH && artifact.status == "removed"
+        }));
+        let config_after_uninstall =
+            fs::read_to_string(repository.join(CODEX_CONFIG_PATH)).unwrap();
+        assert_codex_config_entry(
+            &config_after_uninstall,
+            "local_reviewer",
+            "./agents/local-reviewer.toml",
+        );
+        assert_no_codex_config_entry(&config_after_uninstall, "model_routing_terra_high");
+        assert_no_codex_config_entry(&config_after_uninstall, "model_routing_sol_high");
+        assert!(config_after_uninstall.contains("[features]"));
+        assert!(!repository.join(MANIFEST_PATH).exists());
+    }
+
+    #[test]
+    fn lifecycle_codex_config_modified_managed_entry_is_preserved_with_repair() {
+        let repository = temp_repo("codex-config-modified-entry");
+        let codex = compile_policy("balanced", "codex-openai", Integration::Standalone).unwrap();
+        apply_bundle_file_with_bundle(&repository, &codex).unwrap();
+        fs::write(
+            repository.join(CODEX_CONFIG_PATH),
+            "[agents.model_routing_terra_high]\nconfig_file = \"./agents/hacked.toml\"\n",
+        )
+        .unwrap();
+
+        let status = status_repository(&repository).unwrap();
+        assert!(status.artifacts.iter().any(|artifact| {
+            artifact.path == CODEX_CONFIG_PATH
+                && artifact.status == "modified"
+                && artifact.repair.is_some()
+        }));
+
+        let uninstall = uninstall_repository(&repository).unwrap();
+        assert!(uninstall.artifacts.iter().any(|artifact| {
+            artifact.path == CODEX_CONFIG_PATH
+                && artifact.status == "preserved-modified"
+                && artifact.repair.is_some()
+        }));
+        assert!(repository.join(CODEX_CONFIG_PATH).exists());
+        assert!(repository.join(MANIFEST_PATH).exists());
     }
 
     #[test]
@@ -5040,6 +5609,19 @@ mod tests {
         bundle_file
     }
 
+    fn assert_codex_config_entry(content: &str, agent_type: &str, config_file: &str) {
+        let parsed: toml::Value = toml::from_str(content).unwrap();
+        assert_eq!(
+            parsed["agents"][agent_type]["config_file"].as_str(),
+            Some(config_file)
+        );
+    }
+
+    fn assert_no_codex_config_entry(content: &str, agent_type: &str) {
+        let parsed: toml::Value = toml::from_str(content).unwrap();
+        assert!(parsed["agents"].get(agent_type).is_none());
+    }
+
     fn has_transaction_directory(repository: &Path) -> bool {
         fs::read_dir(repository.join(".model-routing"))
             .unwrap()
@@ -5069,15 +5651,30 @@ mod tests {
     fn codex_agent_types_match_registered_toml_names() {
         for host in ["codex-openai", "mixed-host"] {
             let bundle = compile_policy("balanced", host, Integration::Standalone).unwrap();
+            let config = bundle
+                .artifacts
+                .iter()
+                .find(|artifact| artifact.path == ".codex/config.toml")
+                .expect("Codex role config should be generated");
+            let parsed_config: toml::Value = toml::from_str(&config.content).unwrap();
+            let config_agents = parsed_config["agents"].as_table().unwrap();
             let registered_names = bundle
                 .artifacts
                 .iter()
                 .filter(|artifact| artifact.path.starts_with(".codex/agents/"))
                 .map(|artifact| {
-                    toml::from_str::<toml::Value>(&artifact.content).unwrap()["name"]
-                        .as_str()
-                        .unwrap()
-                        .to_string()
+                    let agent_type =
+                        toml::from_str::<toml::Value>(&artifact.content).unwrap()["name"]
+                            .as_str()
+                            .unwrap()
+                            .to_string();
+                    let relative_config_file =
+                        artifact.path.strip_prefix(".codex/").unwrap().to_string();
+                    assert_eq!(
+                        config_agents[&agent_type]["config_file"].as_str(),
+                        Some(format!("./{relative_config_file}").as_str())
+                    );
+                    agent_type
                 })
                 .collect::<std::collections::BTreeSet<_>>();
             for profile in bundle
@@ -5089,6 +5686,41 @@ mod tests {
                 assert!(registered_names.contains(agent_type));
             }
         }
+    }
+
+    #[test]
+    fn fresh_repository_registers_codex_native_role_discovery_config() {
+        let repository = temp_repo("codex-native-discovery-config");
+        let bundle = compile_policy("balanced", "codex-openai", Integration::Standalone).unwrap();
+        apply_bundle_file_with_bundle(&repository, &bundle).unwrap();
+
+        for role in ["model-routing-terra-high", "model-routing-sol-high"] {
+            assert!(
+                repository
+                    .join(format!(".codex/agents/{role}.toml"))
+                    .exists(),
+                "generated native Codex role file {role} should exist"
+            );
+        }
+
+        let config = bundle
+            .artifacts
+            .iter()
+            .find(|artifact| artifact.path == ".codex/config.toml")
+            .expect("repository-local Codex role discovery config should be generated");
+        let parsed: toml::Value = toml::from_str(&config.content).unwrap();
+        assert_eq!(
+            parsed["agents"]["model_routing_terra_high"]["config_file"].as_str(),
+            Some("./agents/model-routing-terra-high.toml")
+        );
+        assert_eq!(
+            parsed["agents"]["model_routing_sol_high"]["config_file"].as_str(),
+            Some("./agents/model-routing-sol-high.toml")
+        );
+        assert_eq!(
+            fs::read_to_string(repository.join(".codex/config.toml")).unwrap(),
+            config.content
+        );
     }
 
     #[test]
