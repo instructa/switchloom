@@ -7,17 +7,15 @@ does not modify `/Users/kregenrek/projects/planr`; it records the independently
 published Switchloom release and the exact Planr routing responsibilities that
 now have a standalone owner or an explicit deletion action.
 
-## Superseding Candidate Status
+## Superseding Release Status
 
-The public `v0.2.0` release remains the latest published Switchloom release, but
-its original native Codex discovery evidence had a release-gating gap: the
+The public `v0.2.0` release had a native Codex discovery evidence gap: the
 published package generated repository-local Codex role files, yet the accepted
 receipt did not prove the checksum-identified installed candidate executed the
 full status/uninstall lifecycle while preserving unmanaged repository content.
 
-The current unpublished superseding candidate is `0.2.1`. It must replace
-`v0.2.0` before Planr Goal B starts. The canonical retained `0.2.1` candidate
-proof chain is:
+The public superseding release is now `v0.2.1`. It replaces `v0.2.0` for the
+final Goal A handoff. The canonical retained `0.2.1` candidate proof chain is:
 
 - `/private/tmp/model-routing-codex-standalone.COTXUA` proves exact `0.2.1`
   package-byte execution, repository-local Codex role discovery, authentic Terra
@@ -41,40 +39,40 @@ proof chain is:
   `git status --porcelain=v1 -z` SHA-256
   `45d1759e7ff4c3f45b15eaf3c331f82186173610427a5e0a38cdd945151d5f33`.
 
-Do not use the `v0.2.0` publication as the final Goal A handoff. Publish and
-smoke-test the superseding `0.2.1` candidate first, then update the public
-release identity below to the verified public bytes.
+Do not use the `v0.2.0` publication as the final Goal A handoff. The
+superseding public `v0.2.1` bytes are the release gate for Goal B.
 
 ## Release Identity
 
 - Repository: `https://github.com/instructa/switchloom`
 - Production website: `https://switchloom.ai`
-- Release: `https://github.com/instructa/switchloom/releases/tag/v0.2.0`
-- Release workflow: `https://github.com/instructa/switchloom/actions/runs/29643657292`
-- Tag: `v0.2.0`
-- Commit: `e1db0f7d9cdb213fc9a48f46e8696bdbe9f616dd`
-- Commit subject: `release 0.2.0: Setup contract and CLI lifecycle`
-- npm package: `switchloom@0.2.0`
-- npm tarball: `https://registry.npmjs.org/switchloom/-/switchloom-0.2.0.tgz`
+- Release: `https://github.com/instructa/switchloom/releases/tag/v0.2.1`
+- Release workflow: `https://github.com/instructa/switchloom/actions/runs/29682448374`
+- Tag: `v0.2.1`
+- Commit: `56ce22ad33d7c8d2cf7ff1836639ee27ede36d67`
+- Tagged commit subject:
+  `Merge pull request #11 from instructa/codex/non-destructive-release-0.2.1`
+- npm package: `switchloom@0.2.1`
+- npm tarball: `https://registry.npmjs.org/switchloom/-/switchloom-0.2.1.tgz`
 - npm integrity:
-  `sha512-Cd8YCpQGZ1PuNe0TSBd3MR9S2jA0o+ikdKCg2Sh+sn1ldIRBksjRk0axJOZdyCWrQC6OHdUc3KX7CJGEjrgfPQ==`
-- npm shasum: `3eba2b8c35963dcb15b815b08361da7cb4d00208`
-- Homebrew formula: `instructa/tap/switchloom`, version `0.2.0`
+  `sha512-vUKHxYXHt7Sx7MkYQz5MRZ0Ll544iHoadHGCgvJPUYkpUzQWtzjt1o3xhyeQwExCA6tuLQ5vZnLPz+fO5uMiXg==`
+- npm shasum: `e813283f54d0d64b5fd4835e17687aaaf3b0a6cb`
+- Homebrew formula: `instructa/tap/switchloom`, version `0.2.1`
 
 ## Release Artifacts
 
-GitHub release `v0.2.0` is public and non-draft. It contains aggregate
+GitHub release `v0.2.1` is public and non-draft. It contains aggregate
 `SHA256SUMS` and four platform archives:
 
 | Asset | SHA-256 |
 | --- | --- |
-| `SHA256SUMS` | `2aae33623f13bb68798fc1c21831cd2310e48285c3c2b661cadbf34455d063d8` |
-| `switchloom-darwin-arm64.tar.gz` | `028e1de5218b0493d826c1043551330e3581f677722c5597ff7dc6bc59b294a6` |
-| `switchloom-darwin-x86_64.tar.gz` | `dcb18b7d782a91b439b8c45623ee3de5dcf574789d33438567390b4994b6e046` |
-| `switchloom-linux-arm64.tar.gz` | `73af0de9b07e9095c6ef9798596f93668ea038b2f52d70ec9a37f97ff34cb50e` |
-| `switchloom-linux-x86_64.tar.gz` | `a6be2974ce3b7ddf12f989931c458d619bf5740069803733ac1edb29a3054217` |
+| `SHA256SUMS` | `3a72c5a6b4d3ceafda42593b0ceaa08ae36c5d2e908226eadfa2d82873567b7e` |
+| `switchloom-darwin-arm64.tar.gz` | `2ec8344ecd38b41d4af47a77f6d5ff7882d4298ea73555d4c7cffa984dcdea0d` |
+| `switchloom-darwin-x86_64.tar.gz` | `fc70d0b52c9b0e4932a505debba8d2aa75e0478189574f928fef6fdd312faf5b` |
+| `switchloom-linux-arm64.tar.gz` | `561ebc772633f285326c08a3a9b9a8b2316bde0ea99f0d9a32def4a1838bf355` |
+| `switchloom-linux-x86_64.tar.gz` | `0ba788c46404892f7bd7c1828eb9a52e9b92b6deba64bf71fed5eb3d39728deb` |
 
-The Homebrew formula points at the same four `v0.2.0` release archives and
+The Homebrew formula points at the same four `v0.2.1` release archives and
 uses the matching platform checksums above.
 
 ## Package Graph
@@ -84,22 +82,23 @@ metadata or the Rust workspace metadata.
 
 | Command | Result |
 | --- | --- |
-| `npm view switchloom@0.2.0 name version bin dependencies optionalDependencies peerDependencies --json` | Published package is `switchloom` version `0.2.0`, exposes bins `switchloom` and `model-routing` pointing to `npm/bin/model-routing.js`, and reports no runtime, optional, or peer dependency objects. |
+| `npm view switchloom@0.2.1 name version bin dependencies optionalDependencies peerDependencies --json` | Published package is `switchloom` version `0.2.1`, exposes bins `switchloom` and `model-routing` pointing to `npm/bin/model-routing.js`, and reports no runtime, optional, or peer dependency objects. |
 | `jq -r '.dependencies // {}, .peerDependencies // {}, .optionalDependencies // {}' package.json` | Local package metadata prints `{}` for each dependency graph. |
-| `cargo metadata --format-version 1 --no-deps \| jq -r '.packages[] \| select(.name=="model-routing") \| {name,version,dependencies:[.dependencies[].name],targets:[.targets[] \| {name,kind}]}'` | Rust package is `model-routing` version `0.2.0`; dependencies are `anyhow`, `clap`, `ed25519-dalek`, `serde`, `serde_json`, `sha2`, and `toml`; targets are library `model_routing` plus binaries `model-routing` and `switchloom`. No dependency is named `planr`. |
+| `cargo metadata --format-version 1 --no-deps \| jq -r '.packages[] \| select(.name=="model-routing") \| {name,version,dependencies:[.dependencies[].name],targets:[.targets[] \| {name,kind}]}'` | Rust package is `model-routing` version `0.2.1`; dependencies are `anyhow`, `clap`, `ed25519-dalek`, `serde`, `serde_json`, `sha2`, and `toml`; targets are library `model_routing` plus binaries `model-routing` and `switchloom`. No dependency is named `planr`. |
 | `sh scripts/check-migration-manifest.sh` | The checker scans local package metadata and fails on direct `planr` entries in `package.json`, `Cargo.toml`, or `Cargo.lock`. |
 
 ## Verification Receipts
 
 | Area | Evidence |
 | --- | --- |
-| Release publication | Planr item `i-publish-and-smoke-test-the-switc-3ca4`, completion log `2026-07-18 13:04:32`, records public GitHub release, green Release run, npm Trusted Publisher publish, Homebrew formula test, production website verification, and exact-version npm/Homebrew lifecycle smokes. |
-| Release review | Planr review `i-review-publish-and-smoke-test-th-e99e`, verdict complete at `2026-07-18 13:04:57`. |
-| Public GitHub check | `gh release view v0.2.0 --repo instructa/switchloom --json tagName,targetCommitish,url,publishedAt,isDraft,isPrerelease,assets` returned public non-draft `v0.2.0` with the five assets listed above. |
-| Public workflow check | `gh run view 29643657292 --repo instructa/switchloom --json conclusion,status,url,createdAt,updatedAt,headSha,event,workflowName` returned `conclusion: success`, `status: completed`, `headSha: e1db0f7d9cdb213fc9a48f46e8696bdbe9f616dd`. |
-| Public npm check | `npm view switchloom@0.2.0 version dist.integrity dist.shasum dist.tarball --json` returned version `0.2.0` and the integrity/shasum/tarball listed above; `npm view switchloom@0.2.0 name version bin dependencies optionalDependencies peerDependencies --json` returned the bin contract and no dependency objects. |
-| Public website check | `curl -I https://switchloom.ai` returned HTTP `200`, Cloudflare, `content-security-policy`, `permissions-policy`, `referrer-policy`, and `x-content-type-options` headers. |
-| Public Homebrew check | `gh api repos/instructa/homebrew-tap/contents/Formula/switchloom.rb --jq '.content' \| base64 --decode` returned formula version `0.2.0`, release archive URLs, matching platform SHA-256 values, and `switchloom --version` formula test. |
+| Release publication | Planr item `i-publish-and-smoke-test-the-super-b218` records public `v0.2.1` GitHub release, green Release workflow, npm Trusted Publisher package identity, Homebrew formula identity, production website deployment, and public-byte runtime receipt. |
+| Release review chain | Initial independent review `i-review-publish-and-smoke-test-th-f424` closed not-complete with two documentation findings: the tagged commit subject needed correction, and this row needed a durable review-chain receipt. Fix item `i-fix-findings-for-review-publish-f3c2` is the remediation record for both findings, and its follow-up independent checker-2 gate is the final review closure path for the Goal A handoff. |
+| Public GitHub check | `gh release view v0.2.1 --repo instructa/switchloom --json tagName,targetCommitish,url,publishedAt,isDraft,isPrerelease,assets` returned public non-draft `v0.2.1` with the five assets listed above. |
+| Public workflow check | `gh run view 29682448374 --repo instructa/switchloom --json conclusion,status,url,createdAt,updatedAt,headSha,event,workflowName` returned `conclusion: success`, `status: completed`, `headSha: 56ce22ad33d7c8d2cf7ff1836639ee27ede36d67`. |
+| Public npm check | `npm view switchloom@0.2.1 version dist.integrity dist.shasum dist.tarball --json` returned version `0.2.1` and the integrity/shasum/tarball listed above; `npm view switchloom@0.2.1 name version bin dependencies optionalDependencies peerDependencies --json` returned the bin contract and no dependency objects. |
+| Public website check | Production deploy to `https://switchloom.ai` exited `0`; `/private/tmp/switchloom-public-0.2.1.MN008L/website-home.headers` and `/private/tmp/switchloom-public-0.2.1.MN008L/website-catalog.headers` record live HTTP `200`, and `/private/tmp/switchloom-public-0.2.1.MN008L/website-live.sha256` records exact catalog and bundle byte equality. |
+| Public Homebrew check | `gh api repos/instructa/homebrew-tap/contents/Formula/switchloom.rb --jq '.content' \| base64 --decode` returned formula version `0.2.1`, release archive URLs, matching platform SHA-256 values, and `switchloom --version` formula test. |
+| Public-byte runtime check | `/private/tmp/switchloom-public-0.2.1.MN008L` records the exact public npm proof. Fresh repository `/private/tmp/switchloom-public-0.2.1.MN008L/repository-retry-4` installed public `switchloom@0.2.1`; `/private/tmp/switchloom-public-0.2.1.MN008L/npm-tarball.sha1` matches npm shasum `e813283f54d0d64b5fd4835e17687aaaf3b0a6cb`, and `/private/tmp/switchloom-public-0.2.1.MN008L/npm-tarball.sha256` records tarball SHA-256 `028176063ce20b4981aa4e13199b25169b2f8296f648eeeec9291e6955e7549a`. `/private/tmp/switchloom-public-0.2.1.MN008L/retry-4-codex-runtime-evidence.json` validates complete parent `019f79dc-79cf-7342-90ae-f81ff1075e5a` runtime evidence: worker `model_routing_terra_high`, `fork_turns = none`, `gpt-5.6-terra` high; reviewer `model_routing_sol_high`, `fork_turns = none`, `gpt-5.6-sol` high; `/private/tmp/switchloom-public-0.2.1.MN008L/retry-4-validate-runtime-evidence.stdout` says `codex runtime evidence validation passed`. Global Codex config hashes in `retry-4-global-config-before.sha256` and `retry-4-global-config-after.sha256` are identical at `18cbbaee5e263f8bb011a174913721a8866a4d156d62c7fc74bc2d7103abcb3c`. Lifecycle cleanup is recorded by `retry-4-uninstall.json`, which removed only seven Switchloom-managed artifacts; `retry-4-status-after-uninstall.json` reports `bundle_id: null` and no artifacts; unmanaged `user-preserved.toml` survived with SHA-256 `ae9ae1bb9273d0b5f6641c430eb98efc1134a4c25bccf1a0dbf602bea29bd16b` in `retry-4-sentinel-after.sha256`; inventory after uninstall is `retry-4-inventory-after-uninstall.txt`. |
 | Website/CLI parity | Planr item `i-prove-website-cli-standal-f9f5` and follow-up fixes record full `site:check`, Cloudflare verification, generated SetupSpec transport, desktop/mobile browser checks, CLI replay, and Planr recipe lifecycle evidence. |
 | Authenticated Codex oracles | Planr item `i-pass-offline-safety-website-and-5aac` and follow-up logs record authenticated standalone and Planr-integrated Codex evidence for effective model, effort, role, non-`all` fork policy, Planr loop dispatch, and negative receipt checks. |
 | Migration manifest | `sh scripts/check-migration-manifest.sh` verifies `docs/migration-manifest.tsv` covers the frozen Planr routing inventory, legacy command transfers, active Planr consumer/deletion mappings from a case-insensitive whole current Planr repo scan for routing lexical variants, unique type/source mappings, current generated artifact targets, and no direct Planr package dependency. |
@@ -115,7 +114,7 @@ The exhaustive mapping is `docs/migration-manifest.tsv`.
   Switchloom source; dependency install artifacts are never moved or published.
 - `cli-command` rows transfer old `planr-routing ...` commands to the
   standalone `model-routing`/`switchloom` command surface.
-- `generated-artifact` rows transfer current Switchloom v0.2.0 outputs: optional
+- `generated-artifact` rows transfer current Switchloom v0.2.1 outputs: optional
   `.planr/agents.toml` and `.planr/policy.toml`; Codex
   `.codex/agents/model-routing-luna-xhigh.toml`,
   `.codex/agents/model-routing-sol-high.toml`,
@@ -179,8 +178,8 @@ Goal B should run from `/Users/kregenrek/projects/planr` only after this item's
 review is complete.
 
 1. Confirm the Switchloom release gate still holds:
-   `gh release view v0.2.0 --repo instructa/switchloom`,
-   `npm view switchloom@0.2.0 version`, and
+   `gh release view v0.2.1 --repo instructa/switchloom`,
+   `npm view switchloom@0.2.1 version`, and
    `gh api repos/instructa/homebrew-tap/contents/Formula/switchloom.rb`.
 2. Delete or replace every `planr-consumer` row in
    `docs/migration-manifest.tsv` whose disposition is `keep-then-delete`,
@@ -193,7 +192,7 @@ review is complete.
 5. Remove legacy user-facing `planr routing bundle` command paths and any tests
    that require Planr to compile Switchloom-owned bundles internally.
 6. Replace Planr bundle/route tests with fixtures produced by
-   `switchloom@0.2.0` and assertions that Planr consumes declarations, resolves
+   `switchloom@0.2.1` and assertions that Planr consumes declarations, resolves
    routes, and logs effective evidence.
 7. Regenerate Planr CLI docs and generated fixtures so `docs/CLI_REFERENCE.md`,
    `docs/fixtures/mcp-contract.json`,
