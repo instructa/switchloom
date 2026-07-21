@@ -50,47 +50,16 @@ jobs:
           persist-credentials: false
       - name: Install Rust target
         run: rustup target add ${{ matrix.rust_target }}
-      - name: Verify candidate version
-        run: |
-          test "$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)" = "0.2.2"
-          test "$(jq -r .version package.json)" = "0.2.2"
       - name: Build native candidate
-        env:
-          SWITCHLOOM_TARGET: ${{ matrix.target }}
-          SWITCHLOOM_CARGO_TARGET: ${{ matrix.rust_target }}
-        run: scripts/build-release.sh
-      - name: Stage npm native binary
         run: |
-          mkdir -p "npm/native/${{ matrix.target }}"
-          install -m 755 "target/${{ matrix.rust_target }}/release/model-routing" \
-            "npm/native/${{ matrix.target }}/model-routing"
-      - name: Verify native version on matching runner
-        run: |
-          test "$(./target/${{ matrix.rust_target }}/release/model-routing --version)" = "model-routing 0.2.2"
-      - name: Write native provenance
-        env:
-          TARGET: ${{ matrix.target }}
-          RUST_TARGET: ${{ matrix.rust_target }}
-          RUNNER_NAME: ${{ matrix.runner }}
-        run: |
-          mkdir -p "native-provenance/$TARGET"
-          sha="$(shasum -a 256 "npm/native/$TARGET/model-routing" | awk '{print $1}')"
-          version="$(./target/$RUST_TARGET/release/model-routing --version)"
-          git_sha="$(git rev-parse HEAD)"
-          built_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          jq -n \
-            --arg target "$TARGET" \
-            --arg rust_target "$RUST_TARGET" \
-            --arg runner "$RUNNER_NAME" \
-            --arg path "npm/native/$TARGET/model-routing" \
-            --arg version "$version" \
-            --arg sha256 "$sha" \
-            --arg git_sha "$git_sha" \
-            --arg built_at "$built_at" \
-            '{target:$target,rust_target:$rust_target,runner:$runner,path:$path,version:$version,sha256:$sha256,git_sha:$git_sha,built_at:$built_at}' \
-            > "native-provenance/$TARGET/provenance.json"
-          printf '%s  npm/native/%s/model-routing\n' "$sha" "$TARGET" \
-            > "native-provenance/$TARGET/SHA256SUMS"
+          cargo run --quiet -p xtask -- release package \
+            --target "${{ matrix.target }}" \
+            --cargo-target "${{ matrix.rust_target }}" \
+            --stage-npm \
+            --provenance-dir native-provenance \
+            --runner "${{ matrix.runner }}" \
+            --git-sha "$(git rev-parse HEAD)" \
+            --built-at github-actions-release-candidate
       - name: Upload native candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -125,22 +94,19 @@ jobs:
           path: rc-artifacts
       - name: Stage native candidates and provenance
         run: |
-          mkdir -p npm/native provenance-parts
+          mkdir -p npm/native
           for target in darwin-arm64 darwin-x86_64 linux-arm64 linux-x86_64; do
             mkdir -p "npm/native/$target"
             install -m 755 "rc-artifacts/switchloom-native-$target/npm/native/$target/model-routing" \
               "npm/native/$target/model-routing"
-            cp "rc-artifacts/switchloom-native-$target/native-provenance/$target/provenance.json" \
-              "provenance-parts/$target.json"
           done
-          git_sha="$(git rev-parse HEAD)"
-          jq -s \
-            --arg package_version "$(jq -r .version package.json)" \
-            --arg git_sha "$git_sha" \
-            '{schema_version:"switchloom.native_provenance.v1",package_version:$package_version,git_sha:$git_sha,generated_by:"github-actions-release-candidate",targets:.}' \
-            provenance-parts/*.json > npm/native/provenance.json
+          cargo run --quiet -p xtask -- release package \
+            --assemble-provenance \
+            --git-sha "$(git rev-parse HEAD)" \
+            --built-at github-actions-release-candidate \
+            --generated-by github-actions-release-candidate
       - name: Validate native provenance and npm package
-        run: bash scripts/npm-pack-check.sh
+        run: cargo run --quiet -p xtask -- release verify --inventory-only --require-provenance
       - name: Upload package provenance
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

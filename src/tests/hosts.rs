@@ -1,0 +1,436 @@
+use crate::*;
+use std::collections::{BTreeMap, BTreeSet};
+
+#[test]
+fn adapter_contract_distinguishes_external_runner_runtime_class() {
+    let binding = HostBinding {
+        id: "pi-runner".to_string(),
+        version: "1.0.0".to_string(),
+        host: "pi".to_string(),
+        runtime_class: RuntimeClass::ExternalRunner,
+        default_role: Some("worker".to_string()),
+        capability_evidence: vec!["pi-runner-contract".to_string()],
+        known_limitations: vec!["process isolation is runner-owned".to_string()],
+        capabilities: BindingCapabilities {
+            model_override: true,
+            effort_override: true,
+            fork_none: true,
+            fork_all: false,
+        },
+        profiles: BTreeMap::from([(
+            "worker".to_string(),
+            BindingProfile {
+                profile: "pi-worker".to_string(),
+                client: "pi".to_string(),
+                model: "gpt-5.6-terra".to_string(),
+                agent_type: None,
+                effort: Some("high".to_string()),
+                cost_tier: Some("standard".to_string()),
+                fork_turns: Some(ForkPolicy {
+                    mode: "none".to_string(),
+                    turns: None,
+                }),
+            },
+        )]),
+        routes: Vec::new(),
+        verification: BindingVerification {
+            id: "pi-smoke-v1".to_string(),
+            max_age_seconds: Some(60),
+        },
+        artifacts: Vec::new(),
+    };
+    let contract =
+        adapter_contract_for_binding("balanced", &binding, Integration::Standalone).unwrap();
+    assert_eq!(
+        contract.capability.runtime_class,
+        RuntimeClass::ExternalRunner
+    );
+    assert_eq!(contract.adapter.runtime_class, RuntimeClass::ExternalRunner);
+    assert_eq!(
+        contract.adapter.dispatch_recipe.invocation,
+        "external-runner-process"
+    );
+}
+
+#[test]
+fn pi_external_adapter_declares_typed_runner_contract() {
+    let bundle = compile_policy("balanced", "pi-external", Integration::Standalone).unwrap();
+    let contract = bundle.adapter_contract.as_ref().unwrap();
+    assert_eq!(
+        contract.capability.runtime_class,
+        RuntimeClass::ExternalRunner
+    );
+    assert_eq!(contract.adapter.runtime_class, RuntimeClass::ExternalRunner);
+    assert_eq!(
+        contract.adapter.dispatch_recipe.invocation,
+        "external-runner-process"
+    );
+    for field in [
+        "agent_type",
+        "provider",
+        "model",
+        "effort",
+        "fork_turns",
+        "isolation",
+        "task",
+    ] {
+        assert!(
+            contract
+                .adapter
+                .dispatch_recipe
+                .required_fields
+                .contains(&field.to_string()),
+            "Pi dispatch recipe should require {field}"
+        );
+    }
+    assert_eq!(
+        contract.capability.observability.effective_model,
+        GuaranteeLevel::Advisory
+    );
+    assert!(
+        contract
+            .capability
+            .known_limitations
+            .iter()
+            .any(|limitation| limitation.contains("process-isolated"))
+    );
+
+    let workflow = bundle
+        .artifacts
+        .iter()
+        .find(|artifact| artifact.path == ".pi/workflows/model-routing-preset-runner.json")
+        .unwrap();
+    assert!(
+        workflow
+            .content
+            .contains("\"runtime_class\": \"external-runner\"")
+    );
+    assert!(
+        workflow
+            .content
+            .contains("\"agent_type\": \"switchloom-pi-worker\"")
+    );
+    assert!(
+        workflow
+            .content
+            .contains("\"provider_model\": \"openai/gpt-4o-mini\"")
+    );
+    assert!(workflow.content.contains("\"thinking\": \"low\""));
+    assert!(workflow.content.contains("\"session\": \"none\""));
+    assert!(workflow.content.contains("\"task\""));
+}
+
+#[test]
+fn host_binding_runtime_class_is_required_and_explicit() {
+    let missing_runtime_class = r#"
+id = "pi-runner"
+version = "1.0.0"
+host = "pi"
+default_role = "worker"
+
+[capabilities]
+model_override = true
+effort_override = true
+fork_none = true
+fork_all = false
+
+[profiles.worker]
+profile = "pi-worker"
+client = "pi"
+model = "gpt-5.6-terra"
+
+[verification]
+id = "pi-smoke-v1"
+"#;
+    let error = toml::from_str::<HostBinding>(missing_runtime_class)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("runtime_class"));
+}
+
+#[test]
+fn adapter_contract_rejects_unsupported_required_guarantees() {
+    let mut contract = compile_policy("balanced", "cursor-openai", Integration::Standalone)
+        .unwrap()
+        .adapter_contract
+        .unwrap();
+    contract
+        .routing_intent
+        .required_guarantees
+        .push("effort_selection".to_string());
+    let error = validate_adapter_contract(&contract)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("unsupported"));
+}
+
+#[test]
+fn shared_adapter_validation_rejects_invalid_routes_before_rendering() {
+    let binding = HostBinding {
+        id: "cursor-test".to_string(),
+        version: "1.0.0".to_string(),
+        host: "cursor".to_string(),
+        runtime_class: RuntimeClass::NativeSubagent,
+        default_role: None,
+        capability_evidence: Vec::new(),
+        known_limitations: Vec::new(),
+        capabilities: BindingCapabilities {
+            model_override: true,
+            effort_override: false,
+            fork_none: true,
+            fork_all: false,
+        },
+        profiles: BTreeMap::from([(
+            "worker".to_string(),
+            BindingProfile {
+                profile: "cursor-worker".to_string(),
+                client: "cursor".to_string(),
+                model: "gpt-5.4-mini".to_string(),
+                agent_type: None,
+                effort: None,
+                cost_tier: Some("standard".to_string()),
+                fork_turns: Some(ForkPolicy {
+                    mode: "none".to_string(),
+                    turns: None,
+                }),
+            },
+        )]),
+        routes: vec![BindingRoute {
+            work_type: "code".to_string(),
+            role: "missing".to_string(),
+            fallback_roles: Vec::new(),
+        }],
+        verification: BindingVerification {
+            id: "cursor-test-v1".to_string(),
+            max_age_seconds: Some(60),
+        },
+        artifacts: Vec::new(),
+    };
+    let error = compile_host_adapter("balanced", &binding, Integration::Standalone)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("unknown role `missing`"));
+}
+
+#[test]
+fn shared_adapter_validation_rejects_duplicate_profile_ids_before_rendering() {
+    let binding = HostBinding {
+        id: "cursor-test".to_string(),
+        version: "1.0.0".to_string(),
+        host: "cursor".to_string(),
+        runtime_class: RuntimeClass::NativeSubagent,
+        default_role: Some("first".to_string()),
+        capability_evidence: Vec::new(),
+        known_limitations: Vec::new(),
+        capabilities: BindingCapabilities {
+            model_override: true,
+            effort_override: false,
+            fork_none: true,
+            fork_all: false,
+        },
+        profiles: BTreeMap::from([
+            (
+                "first".to_string(),
+                BindingProfile {
+                    profile: "cursor-worker".to_string(),
+                    client: "cursor".to_string(),
+                    model: "gpt-5.4-mini".to_string(),
+                    agent_type: None,
+                    effort: None,
+                    cost_tier: Some("standard".to_string()),
+                    fork_turns: Some(ForkPolicy {
+                        mode: "none".to_string(),
+                        turns: None,
+                    }),
+                },
+            ),
+            (
+                "second".to_string(),
+                BindingProfile {
+                    profile: "cursor-worker".to_string(),
+                    client: "cursor".to_string(),
+                    model: "gpt-5.5".to_string(),
+                    agent_type: None,
+                    effort: None,
+                    cost_tier: Some("premium".to_string()),
+                    fork_turns: Some(ForkPolicy {
+                        mode: "none".to_string(),
+                        turns: None,
+                    }),
+                },
+            ),
+        ]),
+        routes: vec![BindingRoute {
+            work_type: "code".to_string(),
+            role: "first".to_string(),
+            fallback_roles: vec!["second".to_string()],
+        }],
+        verification: BindingVerification {
+            id: "cursor-test-v1".to_string(),
+            max_age_seconds: Some(60),
+        },
+        artifacts: Vec::new(),
+    };
+    let error = compile_host_adapter("balanced", &binding, Integration::Standalone)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("both normalize to profile `cursor-worker`"));
+}
+
+#[test]
+fn dispatch_recipe_artifact_paths_match_final_bundle_artifacts() {
+    let bundle = compile_policy("balanced", "mixed-host", Integration::Planr).unwrap();
+    let contract_paths = bundle
+        .adapter_contract
+        .as_ref()
+        .unwrap()
+        .adapter
+        .dispatch_recipe
+        .artifact_paths
+        .iter()
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    let artifact_paths = bundle
+        .artifacts
+        .iter()
+        .map(|artifact| artifact.path.clone())
+        .collect::<BTreeSet<_>>();
+    assert_eq!(contract_paths, artifact_paths);
+    assert!(
+        !contract_paths
+            .iter()
+            .any(|path| path.contains("model-routing-native-routing"))
+    );
+}
+
+#[test]
+fn claude_and_cursor_native_adapters_emit_artifacts_with_advisory_effective_routing() {
+    for (host, expected_path, requested_model) in [
+        (
+            "claude-native",
+            ".claude/agents/model-routing-preset-worker.md",
+            "sonnet",
+        ),
+        (
+            "cursor-openai",
+            ".cursor/agents/model-routing-preset-worker.md",
+            "gpt-5.4-mini",
+        ),
+        (
+            "cursor-fable-grok",
+            ".cursor/agents/model-routing-preset-worker.md",
+            "cursor-grok-4.5-medium",
+        ),
+        (
+            "opencode-native",
+            ".opencode/agents/model-routing-preset-worker.md",
+            "opencode/gpt-5-nano",
+        ),
+    ] {
+        let bundle = compile_policy("balanced", host, Integration::Standalone).unwrap();
+        let contract = bundle.adapter_contract.as_ref().unwrap();
+        assert_eq!(
+            contract.capability.runtime_class,
+            RuntimeClass::NativeSubagent
+        );
+        assert_eq!(contract.adapter.runtime_class, RuntimeClass::NativeSubagent);
+        assert_eq!(
+            contract.capability.observability.effective_model,
+            GuaranteeLevel::Advisory
+        );
+        assert_eq!(
+            contract
+                .capability
+                .guarantees
+                .get("model_selection")
+                .unwrap()
+                .level,
+            GuaranteeLevel::Advisory
+        );
+        assert!(
+            contract
+                .capability
+                .known_limitations
+                .iter()
+                .any(|limitation| limitation.contains("override"))
+                || contract
+                    .capability
+                    .known_limitations
+                    .iter()
+                    .any(|limitation| limitation.contains("preempt"))
+                || contract
+                    .capability
+                    .known_limitations
+                    .iter()
+                    .any(|limitation| limitation.contains("provider"))
+        );
+        assert!(
+            contract
+                .adapter
+                .dispatch_recipe
+                .artifact_paths
+                .contains(&expected_path.to_string())
+        );
+
+        let artifact = bundle
+            .artifacts
+            .iter()
+            .find(|artifact| artifact.path == expected_path)
+            .unwrap();
+        assert!(artifact.content.contains(requested_model));
+        assert!(artifact.content.contains("preserve routing evidence"));
+    }
+}
+
+#[test]
+fn codex_agent_types_match_registered_toml_names() {
+    for host in ["codex-openai", "mixed-host"] {
+        let source = show_policy("balanced", host).unwrap();
+        assert!(
+            source
+                .artifacts
+                .iter()
+                .all(|artifact| !artifact.path.starts_with(".codex/skills/"))
+        );
+        assert!(
+            source
+                .artifacts
+                .iter()
+                .all(|artifact| !artifact.content.contains("model-routing-native-routing"))
+        );
+        let bundle = compile_policy("balanced", host, Integration::Standalone).unwrap();
+        let config = bundle
+            .artifacts
+            .iter()
+            .find(|artifact| artifact.path == ".codex/config.toml")
+            .expect("Codex role config should be generated");
+        let parsed_config: toml::Value = toml::from_str(&config.content).unwrap();
+        let config_agents = parsed_config["agents"].as_table().unwrap();
+        let registered_names = bundle
+            .artifacts
+            .iter()
+            .filter(|artifact| artifact.path.starts_with(".codex/agents/"))
+            .map(|artifact| {
+                let agent_type = toml::from_str::<toml::Value>(&artifact.content).unwrap()["name"]
+                    .as_str()
+                    .unwrap()
+                    .to_string();
+                let relative_config_file =
+                    artifact.path.strip_prefix(".codex/").unwrap().to_string();
+                assert_eq!(
+                    config_agents[&agent_type]["config_file"].as_str(),
+                    Some(format!("./{relative_config_file}").as_str())
+                );
+                agent_type
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        for profile in bundle
+            .profiles
+            .values()
+            .filter(|profile| profile.client == "codex")
+        {
+            let agent_type = profile.agent_type.as_deref().unwrap();
+            assert!(registered_names.contains(agent_type));
+        }
+    }
+}

@@ -83,57 +83,33 @@ recipes and config files from the same `setupContract` embedded in the generated
 catalog; the CLI is the only writer of repository-local artifacts.
 
 ```sh
-model-routing catalog build --output website/data/catalog.json
-model-routing catalog verify website/data/catalog.json
+cargo run -p xtask -- release prepare --allow-dirty
+cargo run -p xtask -- release verify --inventory-only
 
 model-routing compile balanced --host codex-openai --output routing-bundle.json
 model-routing preview routing-bundle.json --repository .
 model-routing apply routing-bundle.json --repository .
 
-npx switchloom@latest preview --recipe 'sw1_...' --repository .
-npx switchloom@latest apply --recipe 'sw1_...' --repository .
+npx switchloom@0.3.0 preview --recipe 'sw1_...' --repository .
+npx switchloom@0.3.0 apply --recipe 'sw1_...' --repository .
 switchloom status --repository .
 switchloom update --repository .
 switchloom rollback --repository .
 switchloom uninstall --repository .
 switchloom doctor codex
-switchloom certify reports/native-host-certification/<host>/<timestamp>/workdir/dispatch-evidence.json \
-  --bundle reports/native-host-certification/<host>/<timestamp>/workdir/bundle.json
 ```
 
 Use `--integration planr` only when the repository should receive optional
 `.planr/agents.toml` and `.planr/policy.toml` declarations. Standalone setup
 must not emit `.planr` files.
 
-## Certification Flow
+## Maintainer Verification Boundary
 
-Certification requires a package digest, generated bundle, applied artifacts,
-requested invocation, nonce-bearing child output, `DispatchEvidenceV1`, and the
-bundle validator:
-
-```sh
-scripts/codex-standalone-oracle.sh
-scripts/native-host-certification-oracle.sh cursor-openai target/debug/model-routing
-scripts/native-host-certification-oracle.sh cursor-fable-grok target/debug/model-routing
-scripts/native-host-certification-oracle.sh claude-native target/debug/model-routing
-scripts/opencode-native-oracle.sh target/debug/model-routing
-scripts/pi-external-oracle.sh target/debug/model-routing
-
-switchloom certify reports/native-host-certification/<host>/<timestamp>/workdir/dispatch-evidence.json \
-  --bundle reports/native-host-certification/<host>/<timestamp>/workdir/bundle.json
-```
-
-`switchloom doctor <host>` probes the selected host CLI and reports the detected
-version without claiming authentication. `switchloom certify` is the
-user-facing alias for the strict `evidence validate` receipt check.
-
-For the active available-host release gate, Codex is the deterministic
-effective-routing certification target. The two Cursor profiles are live
-nonce-correlated requested-routing targets; their receipts remain `advisory`
-unless Cursor exposes host-authenticated effective role/model telemetry. Claude
-Code, OpenCode, and Pi remain unavailable or unverified unless their current
-report directories contain authentic nonce-bearing child evidence and passing
-validator output.
+Live host checks, receipt validation, catalog generation, and catalog verification
+are unpublished maintainer operations owned by `xtask`. They are exercised by the
+repository release workflow and are not part of the v0.3.0 public CLI contract.
+Public users should run `switchloom doctor <host>` to check host availability and
+version, then review `preview` output before `apply`.
 
 ## Planr Consumer Handoff
 

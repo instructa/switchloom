@@ -326,7 +326,7 @@ export default function Generator({ hostCatalog, setupTransport }: { hostCatalog
                   Download .switchloom/config.toml
                 </Button>
                 <p className="pt-1 text-center text-[0.7rem] leading-5 text-muted-foreground">
-                  Preview before apply, run doctor before certification, and keep advisory receipts distinct from deterministic effective-routing proof.
+                  Preview before apply, run doctor to check the host, and review every repository-local change before confirming setup.
                 </p>
               </CardFooter>
             </Card>

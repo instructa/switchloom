@@ -231,7 +231,7 @@ describe("Switchloom generator", () => {
     const recipe = setupRecipe(config, hostCatalog, transport.recipePrefix);
     expect(recipe).toMatch(/^sw1_[A-Za-z0-9_-]+$/);
     const command = recipeApplyCommand(config, hostCatalog, transport.recipePrefix);
-    expect(command).toMatch(/^npx switchloom@latest apply --recipe 'sw1_[A-Za-z0-9_-]+' --repository \.$/);
+    expect(command).toMatch(/^npx switchloom@0\.3\.0 apply --recipe 'sw1_[A-Za-z0-9_-]+' --repository \.$/);
     const toml = setupConfigToml(config, hostCatalog);
     expect(toml).toContain('host = "codex-openai"');
     expect(toml).toContain('integration = "standalone"');
@@ -243,11 +243,10 @@ describe("Switchloom generator", () => {
   it("shows the full CLI lifecycle without claiming custom setup verification", () => {
     const commands = lifecycleCommands(createConfig("cursor"), hostCatalog);
     expect(commands).toEqual([
-      "npm install -g switchloom",
+      "npm install -g switchloom@0.3.0",
       expect.stringMatching(/^switchloom preview --recipe 'sw1_/),
       expect.stringMatching(/^switchloom apply --recipe 'sw1_/),
       "switchloom doctor cursor",
-      "switchloom certify reports/native-host-certification/cursor-openai/<timestamp>/workdir/dispatch-evidence.json --bundle reports/native-host-certification/cursor-openai/<timestamp>/workdir/bundle.json",
       "switchloom update --repository .",
       "switchloom status --repository .",
       "switchloom rollback --repository .",
