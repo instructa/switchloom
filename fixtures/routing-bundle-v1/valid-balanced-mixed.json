@@ -6,7 +6,7 @@
   "generated_at": "2026-07-16T00:00:00Z",
   "source": {
     "package": "model-routing",
-    "package_version": "0.2.1",
+    "package_version": "0.2.2",
     "integration": "planr"
   },
   "policy": {
@@ -208,5 +208,208 @@
       "builtin-mixed-host-native-v2"
     ],
     "status": "experimental"
+  },
+  "adapter_contract": {
+    "schema_version": 1,
+    "routing_intent": {
+      "schema_version": 1,
+      "integration": "planr",
+      "semantic_roles": [
+        "driver",
+        "mechanical",
+        "reviewer",
+        "worker"
+      ],
+      "role_requests": [
+        {
+          "semantic_role": "driver",
+          "requested_model": "fable-5",
+          "instructions": "Route `driver` through `mixed-cursor-fable-driver`."
+        },
+        {
+          "semantic_role": "mechanical",
+          "requested_model": "gpt-5.6-luna",
+          "requested_effort": "xhigh",
+          "instructions": "Route `mechanical` through `mixed-codex-luna-xhigh`."
+        },
+        {
+          "semantic_role": "reviewer",
+          "requested_model": "gpt-5.6-sol",
+          "requested_effort": "high",
+          "instructions": "Route `reviewer` through `mixed-codex-sol-high`."
+        },
+        {
+          "semantic_role": "worker",
+          "requested_model": "gpt-5.6-terra",
+          "requested_effort": "high",
+          "instructions": "Route `worker` through `mixed-codex-terra-high`."
+        }
+      ],
+      "required_guarantees": [
+        "artifact_lifecycle",
+        "dispatch_identity"
+      ]
+    },
+    "capability": {
+      "schema_version": 1,
+      "host": "mixed-host",
+      "host_version_constraints": {
+        "evidence_max_age_seconds": 31536000
+      },
+      "runtime_class": "native-subagent",
+      "runtime_behavior": {
+        "capability_version": "builtin-mixed-host-native-v2",
+        "installed_host_version_source": "mixed-host --version",
+        "backend_selection_source": "host account, workspace, provider, or runner configuration outside Switchloom ownership",
+        "trust_boundary": "repository-local generated artifacts are Switchloom-managed; host authentication, account policy, and execution state are host-owned",
+        "discovery_behavior": "host-specific project artifact discovery",
+        "role_precedence": [
+          "Switchloom declares requested semantic role, profile, model, effort, and artifacts",
+          "the host runtime remains the authority for effective execution"
+        ],
+        "shared_filesystem": true,
+        "delegation_modes": {
+          "explicit_agent_type_dispatch": true,
+          "ultra_auto_delegation": false,
+          "automatic_delegation_requires_ultra": false
+        },
+        "source_references": [
+          "codex-0.144.0-native-v2-9ff47868eb",
+          "builtin-cursor-project-agent-contract"
+        ]
+      },
+      "discovery_artifacts": [
+        "codex-0.144.0-native-v2-9ff47868eb",
+        "builtin-cursor-project-agent-contract"
+      ],
+      "dispatch_fields": [
+        "profile",
+        "model",
+        "effort",
+        "agent_type",
+        "fork_turns"
+      ],
+      "model_control": {
+        "level": "advisory",
+        "field": "model",
+        "evidence_required": true
+      },
+      "effort_control": {
+        "level": "advisory",
+        "field": "effort",
+        "evidence_required": true
+      },
+      "context_semantics": {
+        "supports_fork_none": true,
+        "supports_fork_all": true,
+        "requires_bounded_context_for_overrides": false
+      },
+      "nesting": {
+        "max_depth": 1,
+        "level": "deterministic"
+      },
+      "parallelism": {
+        "max_parallel_children": 1,
+        "level": "advisory"
+      },
+      "observability": {
+        "requested_dispatch": "deterministic",
+        "effective_identity": "advisory",
+        "effective_model": "advisory",
+        "raw_evidence_refs": [
+          "codex-0.144.0-native-v2-9ff47868eb",
+          "builtin-cursor-project-agent-contract"
+        ]
+      },
+      "guarantees": {
+        "artifact_lifecycle": {
+          "level": "deterministic",
+          "reason": "Switchloom owns preview/apply/update/rollback/uninstall for managed artifacts.",
+          "evidence_required": false
+        },
+        "dispatch_identity": {
+          "level": "deterministic",
+          "reason": "Adapter can emit explicit local child identity and non-all context policy.",
+          "evidence_required": true
+        },
+        "effective_runtime_evidence": {
+          "level": "advisory",
+          "reason": "Generated bundles declare requested routing; certification must persist requested-versus-effective host evidence.",
+          "evidence_required": true
+        },
+        "effort_selection": {
+          "level": "advisory",
+          "reason": "Host accepts an effort-like field but effective precedence must be proven separately.",
+          "evidence_required": true
+        },
+        "model_selection": {
+          "level": "advisory",
+          "reason": "Host accepts a requested model but may apply account, workspace, or runtime precedence.",
+          "evidence_required": true
+        }
+      },
+      "known_limitations": [
+        "effective route evidence must be collected independently from each active host backend"
+      ]
+    },
+    "adapter": {
+      "schema_version": 1,
+      "adapter_id": "mixed-host",
+      "adapter_version": "2.0.0",
+      "runtime_class": "native-subagent",
+      "accepts_intent_schema": "RoutingIntentV1",
+      "emitted_artifact_modes": [
+        "create",
+        "replace"
+      ],
+      "dispatch_recipe": {
+        "invocation": "host-native-subagent",
+        "required_fields": [
+          "profile",
+          "model",
+          "effort",
+          "agent_type",
+          "fork_turns"
+        ],
+        "artifact_paths": [
+          ".codex/agents/model-routing-luna-xhigh.toml",
+          ".codex/agents/model-routing-sol-high.toml",
+          ".codex/agents/model-routing-terra-high.toml",
+          ".codex/config.toml",
+          ".cursor/agents/model-routing-fable-driver.md",
+          ".planr/agents.toml",
+          ".planr/policy.toml"
+        ]
+      },
+      "lifecycle_owner": "switchloom-managed"
+    },
+    "dispatch_evidence": {
+      "schema_version": 1,
+      "required_verdicts": [
+        "deterministic",
+        "advisory",
+        "unsupported"
+      ],
+      "receipt_schema": "DispatchEvidenceV1"
+    },
+    "planr_handoff": {
+      "schema_version": 1,
+      "switchloom_package": "switchloom@0.2.2",
+      "semantic_role_contract": "Planr supplies usage policy `balanced`, work_type routes, and semantic roles; Switchloom owns the selected host binding, model, effort, fork/context policy, and generated dispatch artifacts.",
+      "required_consumer_behavior": [
+        "Consume RoutingIntentV1 as the only source for semantic_role, work_type, selected profile, model, effort, agent_type, and fork_turns inputs.",
+        "Use the CLI lifecycle or SetupSpecV1 recipe commands to preview, apply, update, status, rollback, and uninstall repository-local artifacts.",
+        "Record Switchloom package version, package digest, bundle_id, host version, requested dispatch, effective child identity, nonce, and receipt paths before claiming certification.",
+        "Treat advisory or unsupported guarantees as uncertified until nonce-bearing live host evidence upgrades them.",
+        "For the available-host release gate, Codex may be certified from deterministic effective-routing evidence; Cursor profiles may only claim advisory nonce-correlated requested-routing evidence unless the host exposes authenticated effective role/model telemetry. Claude Code, OpenCode, and Pi remain unavailable or unverified until authentic receipts exist."
+      ],
+      "forbidden_duplicate_ownership": [
+        "Do not maintain a Planr-side model catalog, effort catalog, preset compiler, host adapter, or fork policy normalizer for Switchloom-owned inputs.",
+        "Do not re-normalize Switchloom model, effort, role, agent_type, profile, or fork policy identifiers in Planr.",
+        "Do not overwrite Switchloom-managed artifacts outside preview/apply/update/rollback/uninstall.",
+        "Do not mark Claude Code, OpenCode, Pi, or any advisory receipt as certified without live nonce-bearing child evidence."
+      ],
+      "certification_report_reference": "reports/native-host-certification/<host>/<timestamp>/workdir/dispatch-evidence.json plus the matching bundle.json, invocation receipt, package digest, and validator stdout"
+    }
   }
 }

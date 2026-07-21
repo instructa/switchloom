@@ -7,7 +7,8 @@ use model_routing::{
     preview_bundle_file, preview_prepared_setup, preview_saved_setup, preview_setup_config_file,
     preview_setup_recipe, probe_host, rollback_repository, show_policy, sign_registry,
     status_repository, uninstall_repository, update_bundle_file, update_saved_setup,
-    update_setup_config_file, update_setup_recipe, verify_registry_signature,
+    update_setup_config_file, update_setup_recipe, validate_dispatch_evidence_json_for_bundle,
+    verify_registry_signature,
 };
 use std::fs;
 use std::io::{self, Write};
@@ -31,8 +32,13 @@ enum Command {
     Status(RepositoryArgs),
     Uninstall(RepositoryArgs),
     Rollback(RepositoryArgs),
+    /// Check whether the selected host CLI is installed and report its version.
+    Doctor(ProbeArgs),
     Probe(ProbeArgs),
+    /// Validate a dispatch-evidence receipt against its generated bundle.
+    Certify(EvidenceValidateArgs),
     Evaluate(PolicySelector),
+    Evidence(EvidenceArgs),
     Catalog(CatalogArgs),
     Registry(RegistryArgs),
 }
@@ -93,6 +99,24 @@ struct ProbeArgs {
 struct CatalogArgs {
     #[command(subcommand)]
     command: CatalogCommand,
+}
+
+#[derive(Args)]
+struct EvidenceArgs {
+    #[command(subcommand)]
+    command: EvidenceCommand,
+}
+
+#[derive(Subcommand)]
+enum EvidenceCommand {
+    Validate(EvidenceValidateArgs),
+}
+
+#[derive(Args)]
+struct EvidenceValidateArgs {
+    receipt: PathBuf,
+    #[arg(long)]
+    bundle: PathBuf,
 }
 
 #[derive(Subcommand)]
@@ -243,14 +267,26 @@ fn run() -> Result<()> {
             "{}",
             serde_json::to_string_pretty(&rollback_repository(&args.repository)?)?
         ),
+        Command::Doctor(args) => println!(
+            "{}",
+            serde_json::to_string_pretty(&probe_host(&args.host, args.command.as_deref())?)?
+        ),
         Command::Probe(args) => println!(
             "{}",
             serde_json::to_string_pretty(&probe_host(&args.host, args.command.as_deref())?)?
         ),
+        Command::Certify(args) => {
+            validate_evidence_receipt(args.receipt, args.bundle)?;
+        }
         Command::Evaluate(selector) => println!(
             "{}",
             serde_json::to_string_pretty(&evaluate_policy(&selector.policy, &selector.host)?)?
         ),
+        Command::Evidence(args) => match args.command {
+            EvidenceCommand::Validate(args) => {
+                validate_evidence_receipt(args.receipt, args.bundle)?;
+            }
+        },
         Command::Catalog(args) => match args.command {
             CatalogCommand::Build(args) => {
                 let catalog = catalog_json()?;
@@ -290,6 +326,14 @@ fn run() -> Result<()> {
             }
         },
     }
+    Ok(())
+}
+
+fn validate_evidence_receipt(receipt_path: PathBuf, bundle_path: PathBuf) -> Result<()> {
+    let receipt = fs::read_to_string(receipt_path)?;
+    let bundle = fs::read_to_string(bundle_path)?;
+    validate_dispatch_evidence_json_for_bundle(&receipt, &bundle)?;
+    println!("dispatch evidence validated");
     Ok(())
 }
 

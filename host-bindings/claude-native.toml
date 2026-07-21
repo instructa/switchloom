@@ -2,11 +2,12 @@ schema_version = 1
 id = "claude-native"
 version = "1.0.0"
 host = "claude-code"
+runtime_class = "native-subagent"
 driver_role = "driver"
 default_role = "driver"
 capability_evidence = ["builtin-claude-project-agent-contract"]
 billing_assumptions = ["Model Routing records declared tiers; Claude Code remains billing authority"]
-known_limitations = ["session environment may preempt the requested subagent model"]
+known_limitations = ["session environment may preempt the requested subagent model", "effective child model is advisory unless a live Claude Code receipt exposes the executed model"]
 
 [capabilities]
 model_override = true
@@ -47,5 +48,5 @@ name: model-routing-preset-worker
 model: sonnet
 effort: medium
 ---
-Follow the generated role instructions and preserve routing evidence.
+Follow the generated role instructions and preserve routing evidence. Treat the declared model and effort as requested values; only claim a verified verdict when a live Claude Code receipt exposes matching effective execution.
 '''

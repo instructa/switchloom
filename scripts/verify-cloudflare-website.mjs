@@ -45,7 +45,7 @@ if (!html.includes("Build your coding-agent team")) {
 
 const catalogBytes = await fetchOk("/data/catalog.json");
 const catalog = JSON.parse(new TextDecoder().decode(catalogBytes));
-if (catalog.schemaVersion !== 1 || catalog.compositions?.length !== 20) {
+if (catalog.schemaVersion !== 1 || catalog.compositions?.length !== 28) {
   throw new Error("deployed catalog has unexpected shape");
 }
 if (catalog.setupContract?.recipePrefix !== "sw1_" || catalog.setupContract?.configPath !== ".switchloom/config.toml") {
@@ -54,7 +54,7 @@ if (catalog.setupContract?.recipePrefix !== "sw1_" || catalog.setupContract?.con
 if (catalog.setupContract?.transport?.mayContainCredentials !== false || catalog.setupContract?.transport?.mayContainScripts !== false) {
   throw new Error("deployed setup transport does not advertise credential/script-free recipes");
 }
-for (const host of ["codex", "cursor", "claude-code"]) {
+for (const host of ["codex", "cursor", "claude-code", "opencode", "pi"]) {
   const setupHost = catalog.setupContract?.hosts?.find((candidate) => candidate.id === host);
   if (!setupHost?.binding || !Array.isArray(setupHost.models) || setupHost.models.length === 0) {
     throw new Error(`deployed setup contract missing ${host} host inputs`);

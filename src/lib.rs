@@ -27,6 +27,8 @@ const CODEX_CONFIG_PATH: &str = ".codex/config.toml";
 const MAX_SETUP_RECIPE_BYTES: usize = 65_536;
 const MAX_SETUP_RECIPE_ENCODED_BYTES: usize = encoded_base64url_len(MAX_SETUP_RECIPE_BYTES);
 const EVALUATION_SUITE: &str = include_str!("../evaluations/preset-suite-v1.toml");
+const NPM_PACKAGE_JSON: &str = include_str!("../package.json");
+const CODEX_V2_RUNTIME_EVIDENCE_JSON: &str = include_str!("../docs/codex-v2-runtime-evidence.json");
 const MANIFEST_PATH: &str = ".model-routing/manifest.json";
 const TRANSACTION_JOURNAL: &str = "journal.json";
 thread_local! {
@@ -53,7 +55,7 @@ const POLICIES: [(&str, &str); 4] = [
     ),
 ];
 
-const BINDINGS: [(&str, &str); 5] = [
+const BINDINGS: [(&str, &str); 7] = [
     (
         "codex-openai",
         include_str!("../host-bindings/codex-openai.toml"),
@@ -69,6 +71,14 @@ const BINDINGS: [(&str, &str); 5] = [
     (
         "claude-native",
         include_str!("../host-bindings/claude-native.toml"),
+    ),
+    (
+        "opencode-native",
+        include_str!("../host-bindings/opencode-native.toml"),
+    ),
+    (
+        "pi-external",
+        include_str!("../host-bindings/pi-external.toml"),
     ),
     (
         "mixed-host",
@@ -90,6 +100,7 @@ pub struct PolicySource {
     pub route_default: Option<DefaultRoute>,
     pub artifacts: Vec<SourceArtifact>,
     pub evidence: EvaluationEvidence,
+    pub adapter_contract: AdapterContractV1,
     pub policy: PolicyContract,
     #[serde(skip)]
     policy_toml: String,
@@ -176,6 +187,295 @@ pub struct EvaluationEvidence {
     pub status: String,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "kebab-case")]
+pub enum RuntimeClass {
+    NativeSubagent,
+    ExternalRunner,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "kebab-case")]
+pub enum GuaranteeLevel {
+    Deterministic,
+    Advisory,
+    Unsupported,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct CapabilityGuarantee {
+    pub level: GuaranteeLevel,
+    pub reason: String,
+    pub evidence_required: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct RoutingIntentV1 {
+    pub schema_version: u32,
+    pub integration: Integration,
+    pub semantic_roles: Vec<String>,
+    pub role_requests: Vec<RoutingRoleIntentV1>,
+    pub required_guarantees: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct RoutingRoleIntentV1 {
+    pub semantic_role: String,
+    pub requested_model: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub requested_effort: Option<String>,
+    pub instructions: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct HostCapabilityV1 {
+    pub schema_version: u32,
+    pub host: String,
+    pub host_version_constraints: HostVersionConstraints,
+    pub runtime_class: RuntimeClass,
+    pub runtime_behavior: RuntimeBehaviorV1,
+    pub discovery_artifacts: Vec<String>,
+    pub dispatch_fields: Vec<String>,
+    pub model_control: ControlCapability,
+    pub effort_control: ControlCapability,
+    pub context_semantics: ContextSemantics,
+    pub nesting: NestingCapability,
+    pub parallelism: ParallelismCapability,
+    pub observability: ObservabilityCapability,
+    pub guarantees: BTreeMap<String, CapabilityGuarantee>,
+    pub known_limitations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct HostVersionConstraints {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub minimum: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub maximum: Option<String>,
+    pub evidence_max_age_seconds: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ControlCapability {
+    pub level: GuaranteeLevel,
+    pub field: String,
+    pub evidence_required: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ContextSemantics {
+    pub supports_fork_none: bool,
+    pub supports_fork_all: bool,
+    pub requires_bounded_context_for_overrides: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct NestingCapability {
+    pub max_depth: u32,
+    pub level: GuaranteeLevel,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ParallelismCapability {
+    pub max_parallel_children: u32,
+    pub level: GuaranteeLevel,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ObservabilityCapability {
+    pub requested_dispatch: GuaranteeLevel,
+    pub effective_identity: GuaranteeLevel,
+    pub effective_model: GuaranteeLevel,
+    pub raw_evidence_refs: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct RuntimeBehaviorV1 {
+    pub capability_version: String,
+    pub installed_host_version_source: String,
+    pub backend_selection_source: String,
+    pub trust_boundary: String,
+    pub discovery_behavior: String,
+    pub role_precedence: Vec<String>,
+    pub shared_filesystem: bool,
+    pub delegation_modes: DelegationModesV1,
+    pub source_references: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct DelegationModesV1 {
+    pub explicit_agent_type_dispatch: bool,
+    pub ultra_auto_delegation: bool,
+    pub automatic_delegation_requires_ultra: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct CodexV2RuntimeEvidence {
+    schema_version: u32,
+    evidence_id: String,
+    observed_at: String,
+    installed_version: CodexInstalledVersionEvidence,
+    runtime_class: RuntimeClass,
+    backend_selection_owner: String,
+    switchloom_ownership: Vec<String>,
+    codex_ownership: Vec<String>,
+    trust_and_discovery: CodexTrustDiscoveryEvidence,
+    parallelism: CodexParallelismEvidence,
+    role_precedence: Vec<String>,
+    shared_filesystem: bool,
+    delegation_modes: DelegationModesV1,
+    claim_provenance: BTreeMap<String, Vec<CodexClaimProvenance>>,
+    negative_contracts: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct CodexInstalledVersionEvidence {
+    command: String,
+    stdout: String,
+    stdout_sha256: String,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct CodexTrustDiscoveryEvidence {
+    trust_boundary: String,
+    discovery_behavior: String,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct CodexParallelismEvidence {
+    max_parallel_children: u32,
+    source: String,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct CodexClaimProvenance {
+    kind: String,
+    source: String,
+    observed_at: String,
+    codex_version: String,
+    observed_value: Value,
+    required_raw_fragments: Vec<String>,
+    #[serde(default)]
+    source_url: Option<String>,
+    #[serde(default)]
+    source_path: Option<String>,
+    #[serde(default)]
+    raw_output: Option<String>,
+    #[serde(default)]
+    raw_output_sha256: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct HostAdapterV1 {
+    pub schema_version: u32,
+    pub adapter_id: String,
+    pub adapter_version: String,
+    pub runtime_class: RuntimeClass,
+    pub accepts_intent_schema: String,
+    pub emitted_artifact_modes: Vec<String>,
+    pub dispatch_recipe: DispatchRecipeV1,
+    pub lifecycle_owner: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct DispatchRecipeV1 {
+    pub invocation: String,
+    pub required_fields: Vec<String>,
+    pub artifact_paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct DispatchEvidenceV1 {
+    pub schema_version: u32,
+    pub package_digest: String,
+    pub host_version: String,
+    pub requested_dispatch: RequestedDispatchEvidence,
+    pub child_identity: ChildIdentityEvidence,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effective_model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effective_effort: Option<String>,
+    pub nonce: String,
+    pub raw_evidence_refs: Vec<String>,
+    pub verdict: GuaranteeLevel,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct RequestedDispatchEvidence {
+    pub semantic_role: String,
+    pub profile: String,
+    pub model: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effort: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fork_turns: Option<ForkPolicy>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ChildIdentityEvidence {
+    pub host: String,
+    pub role: String,
+    pub agent_role: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub task_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct DispatchEvidenceContractV1 {
+    pub schema_version: u32,
+    pub required_verdicts: Vec<GuaranteeLevel>,
+    pub receipt_schema: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct PlanrHandoffV1 {
+    pub schema_version: u32,
+    pub switchloom_package: String,
+    pub semantic_role_contract: String,
+    pub required_consumer_behavior: Vec<String>,
+    pub forbidden_duplicate_ownership: Vec<String>,
+    pub certification_report_reference: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct AdapterContractV1 {
+    pub schema_version: u32,
+    pub routing_intent: RoutingIntentV1,
+    pub capability: HostCapabilityV1,
+    pub adapter: HostAdapterV1,
+    pub dispatch_evidence: DispatchEvidenceContractV1,
+    pub planr_handoff: PlanrHandoffV1,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct RoutingBundleV1 {
@@ -193,6 +493,8 @@ pub struct RoutingBundleV1 {
     pub route_default: Option<DefaultRoute>,
     pub artifacts: Vec<BundleArtifact>,
     pub evidence: EvaluationEvidence,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adapter_contract: Option<AdapterContractV1>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -397,7 +699,12 @@ struct HostBinding {
     id: String,
     version: String,
     host: String,
+    runtime_class: RuntimeClass,
     default_role: Option<String>,
+    #[serde(default)]
+    capability_evidence: Vec<String>,
+    #[serde(default)]
+    known_limitations: Vec<String>,
     capabilities: BindingCapabilities,
     profiles: BTreeMap<String, BindingProfile>,
     #[serde(default)]
@@ -437,6 +744,8 @@ struct BindingRoute {
 #[derive(Debug, Deserialize)]
 struct BindingVerification {
     id: String,
+    #[serde(default)]
+    max_age_seconds: Option<u64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -444,6 +753,16 @@ struct BindingArtifact {
     path: String,
     kind: String,
     content: String,
+}
+
+#[derive(Debug)]
+struct CompiledHostAdapter {
+    requirements: Vec<HostRequirement>,
+    profiles: BTreeMap<String, Profile>,
+    routes: Vec<Route>,
+    route_default: Option<DefaultRoute>,
+    artifacts: Vec<SourceArtifact>,
+    adapter_contract: AdapterContractV1,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -757,25 +1076,32 @@ pub fn apply_prepared_setup(
 }
 
 pub fn setup_contract_catalog_value() -> Result<Value> {
-    let hosts = ["codex", "claude-code", "cursor", "mixed-host"]
-        .into_iter()
-        .map(|host| {
-            let binding = binding_for_selector(host)?;
-            let runtime_host = setup_runtime_host(&binding);
-            Ok(json!({
-                "id": host,
-                "binding": binding.id,
-                "runtimeHost": runtime_host,
-                "supportsPlanrIntegration": true,
-                "models": setup_model_catalog(runtime_host).into_iter().map(|option| json!({
-                    "id": option.id,
-                    "efforts": option.efforts,
-                    "tier": option.tier,
-                })).collect::<Vec<_>>(),
-                "defaultSpec": setup_spec_for_policy("balanced", &binding.id, Integration::Standalone)?,
-            }))
-        })
-        .collect::<Result<Vec<_>>>()?;
+    let hosts = [
+        "codex",
+        "claude-code",
+        "cursor",
+        "opencode",
+        "pi",
+        "mixed-host",
+    ]
+    .into_iter()
+    .map(|host| {
+        let binding = binding_for_selector(host)?;
+        let runtime_host = setup_runtime_host(&binding);
+        Ok(json!({
+            "id": host,
+            "binding": binding.id,
+            "runtimeHost": runtime_host,
+            "supportsPlanrIntegration": true,
+            "models": setup_model_catalog(runtime_host).into_iter().map(|option| json!({
+                "id": option.id,
+                "efforts": option.efforts,
+                "tier": option.tier,
+            })).collect::<Vec<_>>(),
+            "defaultSpec": setup_spec_for_policy("balanced", &binding.id, Integration::Standalone)?,
+        }))
+    })
+    .collect::<Result<Vec<_>>>()?;
     Ok(json!({
         "schemaVersion": 1,
         "setupSpecVersion": 1,
@@ -818,6 +1144,7 @@ pub fn list_policies() -> Result<Vec<PolicySummary>> {
 }
 
 pub fn show_policy(policy: &str, host: &str) -> Result<PolicySource> {
+    let binding_id = canonical_binding_id(host);
     let policy_raw = POLICIES
         .iter()
         .find(|(id, _)| *id == policy)
@@ -825,103 +1152,34 @@ pub fn show_policy(policy: &str, host: &str) -> Result<PolicySource> {
         .ok_or_else(|| anyhow::anyhow!("unknown routing policy `{policy}`"))?;
     let binding_raw = BINDINGS
         .iter()
-        .find(|(id, _)| *id == host)
+        .find(|(id, _)| *id == binding_id)
         .map(|(_, raw)| *raw)
         .ok_or_else(|| anyhow::anyhow!("unknown routing host `{host}`"))?;
     let policy_contract: PolicyContract = toml::from_str(policy_raw)?;
     validate_policy_contract(&policy_contract)?;
     let binding: HostBinding = toml::from_str(binding_raw)?;
-
-    let profiles = binding
-        .profiles
-        .values()
-        .map(|profile| {
-            (
-                profile.profile.clone(),
-                Profile {
-                    client: profile.client.clone(),
-                    model: profile.model.clone(),
-                    agent_type: profile.agent_type.clone(),
-                    effort: profile.effort.clone(),
-                    cost_tier: profile.cost_tier.clone(),
-                    capabilities: Vec::new(),
-                    skill: None,
-                    notes: None,
-                    fork_turns: profile.fork_turns.clone(),
-                },
-            )
-        })
-        .collect::<BTreeMap<_, _>>();
-    let routes = binding
-        .routes
-        .iter()
-        .map(|route| {
-            Ok(Route {
-                selector: RouteSelector {
-                    work_type: Some(route.work_type.clone()),
-                    plan: None,
-                },
-                profile: binding_profile_id(&binding, &route.role)?.to_string(),
-                fallbacks: route
-                    .fallback_roles
-                    .iter()
-                    .map(|role| binding_profile_id(&binding, role).map(ToOwned::to_owned))
-                    .collect::<Result<Vec<_>>>()?,
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
-    let route_default = binding
-        .default_role
-        .as_deref()
-        .map(|role| -> Result<DefaultRoute> {
-            Ok(DefaultRoute {
-                profile: binding_profile_id(&binding, role)?.to_string(),
-                fallbacks: Vec::new(),
-            })
-        })
-        .transpose()?;
-    let artifacts = binding
-        .artifacts
-        .into_iter()
-        .map(|artifact| SourceArtifact {
-            media_type: media_type_for(&artifact.path, &artifact.kind),
-            path: artifact.path,
-            mode: "create".to_string(),
-            content: artifact.content,
-        })
-        .collect();
-    let mut capabilities = Vec::new();
-    if binding.capabilities.model_override {
-        capabilities.push("model_override".to_string());
-    }
-    if binding.capabilities.effort_override {
-        capabilities.push("reasoning_effort".to_string());
-    }
-    if binding.capabilities.fork_none {
-        capabilities.push("fork_none".to_string());
-    }
-    if binding.capabilities.fork_all {
-        capabilities.push("bounded_context_fork".to_string());
-    }
+    let adapter = compile_host_adapter(
+        policy_contract.id.as_str(),
+        &binding,
+        Integration::Standalone,
+    )?;
     Ok(PolicySource {
         policy_id: policy_contract.id.clone(),
         host: host.to_string(),
         policy_version: policy_contract.version.clone(),
-        binding_id: binding.id,
-        binding_version: binding.version,
+        binding_id: binding.id.clone(),
+        binding_version: binding.version.clone(),
         generated_at: GENERATED_AT.to_string(),
-        requirements: vec![HostRequirement {
-            host: binding.host,
-            capabilities,
-        }],
-        profiles,
-        routes,
-        route_default,
-        artifacts,
+        requirements: adapter.requirements,
+        profiles: adapter.profiles,
+        routes: adapter.routes,
+        route_default: adapter.route_default,
+        artifacts: adapter.artifacts,
         evidence: EvaluationEvidence {
-            evaluation_ids: vec![binding.verification.id],
+            evaluation_ids: vec![binding.verification.id.clone()],
             status: "experimental".to_string(),
         },
+        adapter_contract: adapter.adapter_contract,
         policy: policy_contract,
         policy_toml: policy_raw.to_string(),
     })
@@ -946,6 +1204,7 @@ fn compile_builtin_policy_direct(
 
 fn compile_source(source: PolicySource, integration: Integration) -> Result<RoutingBundleV1> {
     validate_source(&source)?;
+    let mut adapter_contract = adapter_contract_for_source(&source, integration)?;
     let mut artifacts = Vec::new();
     if integration == Integration::Planr {
         let registry = render_registry(&source)?;
@@ -974,6 +1233,17 @@ fn compile_source(source: PolicySource, integration: Integration) -> Result<Rout
     }
     artifacts.extend(host_artifacts.into_iter().map(bundle_artifact));
     artifacts.sort_by(|left, right| left.path.cmp(&right.path));
+    adapter_contract.adapter.emitted_artifact_modes = artifacts
+        .iter()
+        .map(|artifact| artifact.mode.clone())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    adapter_contract.adapter.dispatch_recipe.artifact_paths = artifacts
+        .iter()
+        .map(|artifact| artifact.path.clone())
+        .collect();
+    validate_adapter_contract(&adapter_contract)?;
 
     Ok(RoutingBundleV1 {
         schema_version: 1,
@@ -996,6 +1266,7 @@ fn compile_source(source: PolicySource, integration: Integration) -> Result<Rout
         route_default: source.route_default,
         artifacts,
         evidence: source.evidence,
+        adapter_contract: Some(adapter_contract),
     })
 }
 
@@ -1026,6 +1297,8 @@ pub fn probe_host(host: &str, command_override: Option<&str>) -> Result<ProbeRep
         "codex" => Some("codex"),
         "cursor" => Some("cursor-agent"),
         "claude-code" => Some("claude"),
+        "opencode" => Some("opencode"),
+        "pi" => Some("pi"),
         "mixed-host" => None,
         _ => None,
     };
@@ -1327,6 +1600,9 @@ pub fn validate_bundle(bundle: &RoutingBundleV1) -> Result<()> {
         if artifact.sha256 != expected {
             bail!("artifact `{}` sha256 mismatch", artifact.path);
         }
+    }
+    if let Some(contract) = &bundle.adapter_contract {
+        validate_adapter_contract(contract)?;
     }
     Ok(())
 }
@@ -2633,6 +2909,8 @@ fn allowed_repository_target(path: &str) -> bool {
         ".codex/agents/",
         ".claude/agents/",
         ".cursor/agents/",
+        ".opencode/agents/",
+        ".pi/workflows/",
         ".planr/",
     ]
     .iter()
@@ -2812,6 +3090,7 @@ fn validate_raw_bundle_shape(value: &Value) -> Result<()> {
         "route_default",
         "artifacts",
         "evidence",
+        "adapter_contract",
     ]);
     for key in object.keys() {
         if !allowed_root.contains(key.as_str()) {
@@ -2902,8 +3181,1273 @@ fn validate_source(source: &PolicySource) -> Result<()> {
     for profile in source.profiles.values() {
         validate_profile_fork_policy(profile)?;
     }
+    validate_adapter_contract(&source.adapter_contract)?;
     validate_policy_contract(&source.policy)?;
     Ok(())
+}
+
+fn compile_host_adapter(
+    policy_id: &str,
+    binding: &HostBinding,
+    integration: Integration,
+) -> Result<CompiledHostAdapter> {
+    validate_host_adapter(binding)?;
+    Ok(CompiledHostAdapter {
+        requirements: vec![HostRequirement {
+            host: binding.host.clone(),
+            capabilities: requirement_capabilities_for_binding(binding),
+        }],
+        profiles: profiles_for_binding(binding),
+        routes: routes_for_binding(binding)?,
+        route_default: default_route_for_binding(binding)?,
+        artifacts: artifacts_for_binding(binding),
+        adapter_contract: adapter_contract_for_binding(policy_id, binding, integration)?,
+    })
+}
+
+fn validate_host_adapter(binding: &HostBinding) -> Result<()> {
+    if binding.id.trim().is_empty()
+        || binding.version.trim().is_empty()
+        || binding.host.trim().is_empty()
+    {
+        bail!("host adapter id, version, and host must not be blank");
+    }
+    if binding.profiles.is_empty() {
+        bail!("host adapter `{}` must declare profiles", binding.id);
+    }
+    if binding.default_role.is_none() && binding.routes.is_empty() {
+        bail!(
+            "host adapter `{}` must declare routes or a default role",
+            binding.id
+        );
+    }
+    if let Some(default_role) = &binding.default_role {
+        binding_profile_id(binding, default_role)?;
+    }
+    let mut profile_ids = BTreeMap::<String, String>::new();
+    for (role, profile) in &binding.profiles {
+        validate_setup_identifier("binding role", role)?;
+        if profile.profile.trim().is_empty()
+            || profile.client.trim().is_empty()
+            || profile.model.trim().is_empty()
+        {
+            bail!(
+                "host adapter `{}` profile `{role}` has blank identity fields",
+                binding.id
+            );
+        }
+        if let Some(existing) = profile_ids.insert(profile.profile.clone(), role.clone()) {
+            bail!(
+                "host adapter `{}` roles `{existing}` and `{role}` both normalize to profile `{}`",
+                binding.id,
+                profile.profile
+            );
+        }
+        if profile.client == "codex" && profile.agent_type.is_none() {
+            bail!(
+                "host adapter `{}` Codex profile `{role}` must declare agent_type",
+                binding.id
+            );
+        }
+        validate_profile_fork_policy(&profile_from_binding_profile(profile))?;
+    }
+    for route in &binding.routes {
+        if route.work_type.trim().is_empty() {
+            bail!(
+                "host adapter `{}` route work_type must not be blank",
+                binding.id
+            );
+        }
+        binding_profile_id(binding, &route.role)?;
+        for fallback in &route.fallback_roles {
+            binding_profile_id(binding, fallback)?;
+        }
+    }
+    let mut artifact_paths = BTreeMap::<String, String>::new();
+    let mut codex_agent_types = BTreeMap::<String, String>::new();
+    for artifact in &binding.artifacts {
+        if artifact.path.trim().is_empty() || artifact.kind.trim().is_empty() {
+            bail!(
+                "host adapter `{}` artifacts must declare path and kind",
+                binding.id
+            );
+        }
+        if let Some(existing) = artifact_paths.insert(artifact.path.clone(), artifact.kind.clone())
+        {
+            bail!(
+                "host adapter `{}` artifacts `{existing}` and `{}` both emit path `{}`",
+                binding.id,
+                artifact.kind,
+                artifact.path
+            );
+        }
+        if artifact.content.trim().is_empty() {
+            bail!(
+                "host adapter `{}` artifact `{}` must not be empty",
+                binding.id,
+                artifact.path
+            );
+        }
+        if artifact.path.starts_with(".codex/agents/") {
+            let parsed: toml::Value = toml::from_str(&artifact.content).with_context(|| {
+                format!(
+                    "host adapter `{}` artifact `{}` must be TOML",
+                    binding.id, artifact.path
+                )
+            })?;
+            let agent_type = parsed
+                .get("name")
+                .and_then(toml::Value::as_str)
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "host adapter `{}` artifact `{}` must declare name",
+                        binding.id,
+                        artifact.path
+                    )
+                })?;
+            if let Some(existing) =
+                codex_agent_types.insert(agent_type.to_string(), artifact.path.clone())
+            {
+                bail!(
+                    "host adapter `{}` artifacts `{existing}` and `{}` both declare Codex agent_type `{agent_type}`",
+                    binding.id,
+                    artifact.path
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+fn requirement_capabilities_for_binding(binding: &HostBinding) -> Vec<String> {
+    let mut capabilities = Vec::new();
+    if binding.capabilities.model_override {
+        capabilities.push("model_override".to_string());
+    }
+    if binding.capabilities.effort_override {
+        capabilities.push("reasoning_effort".to_string());
+    }
+    if binding.capabilities.fork_none {
+        capabilities.push("fork_none".to_string());
+    }
+    if binding.capabilities.fork_all {
+        capabilities.push("bounded_context_fork".to_string());
+    }
+    capabilities
+}
+
+fn profiles_for_binding(binding: &HostBinding) -> BTreeMap<String, Profile> {
+    binding
+        .profiles
+        .values()
+        .map(|profile| {
+            (
+                profile.profile.clone(),
+                profile_from_binding_profile(profile),
+            )
+        })
+        .collect()
+}
+
+fn routes_for_binding(binding: &HostBinding) -> Result<Vec<Route>> {
+    binding
+        .routes
+        .iter()
+        .map(|route| {
+            Ok(Route {
+                selector: RouteSelector {
+                    work_type: Some(route.work_type.clone()),
+                    plan: None,
+                },
+                profile: binding_profile_id(binding, &route.role)?.to_string(),
+                fallbacks: route
+                    .fallback_roles
+                    .iter()
+                    .map(|role| binding_profile_id(binding, role).map(ToOwned::to_owned))
+                    .collect::<Result<Vec<_>>>()?,
+            })
+        })
+        .collect()
+}
+
+fn default_route_for_binding(binding: &HostBinding) -> Result<Option<DefaultRoute>> {
+    binding
+        .default_role
+        .as_deref()
+        .map(|role| -> Result<DefaultRoute> {
+            Ok(DefaultRoute {
+                profile: binding_profile_id(binding, role)?.to_string(),
+                fallbacks: Vec::new(),
+            })
+        })
+        .transpose()
+}
+
+fn artifacts_for_binding(binding: &HostBinding) -> Vec<SourceArtifact> {
+    binding
+        .artifacts
+        .iter()
+        .map(|artifact| SourceArtifact {
+            media_type: media_type_for(&artifact.path, &artifact.kind),
+            path: artifact.path.clone(),
+            mode: "create".to_string(),
+            content: artifact.content.clone(),
+        })
+        .collect()
+}
+
+fn adapter_contract_for_binding(
+    policy_id: &str,
+    binding: &HostBinding,
+    integration: Integration,
+) -> Result<AdapterContractV1> {
+    let runtime_class = binding.runtime_class;
+    let semantic_roles = binding.profiles.keys().cloned().collect::<Vec<_>>();
+    let artifact_modes = if binding.artifacts.is_empty() {
+        Vec::new()
+    } else {
+        vec!["create".to_string(), "replace".to_string()]
+    };
+    let dispatch_fields = dispatch_fields_for_binding(binding);
+    let artifact_paths = binding
+        .artifacts
+        .iter()
+        .map(|artifact| artifact.path.clone())
+        .collect::<Vec<_>>();
+    Ok(AdapterContractV1 {
+        schema_version: 1,
+        routing_intent: RoutingIntentV1 {
+            schema_version: 1,
+            integration,
+            semantic_roles,
+            role_requests: role_intents_for_binding(binding),
+            required_guarantees: vec![
+                "artifact_lifecycle".to_string(),
+                "dispatch_identity".to_string(),
+            ],
+        },
+        capability: HostCapabilityV1 {
+            schema_version: 1,
+            host: binding.host.clone(),
+            host_version_constraints: host_version_constraints_for_binding(binding)?,
+            runtime_class,
+            runtime_behavior: runtime_behavior_for_binding(binding)?,
+            discovery_artifacts: binding.capability_evidence.clone(),
+            dispatch_fields: dispatch_fields.clone(),
+            model_control: ControlCapability {
+                level: control_level(binding.capabilities.model_override, binding.host == "codex"),
+                field: "model".to_string(),
+                evidence_required: binding.capabilities.model_override,
+            },
+            effort_control: ControlCapability {
+                level: control_level(binding.capabilities.effort_override, binding.host == "codex"),
+                field: "effort".to_string(),
+                evidence_required: binding.capabilities.effort_override,
+            },
+            context_semantics: ContextSemantics {
+                supports_fork_none: binding.capabilities.fork_none,
+                supports_fork_all: binding.capabilities.fork_all,
+                requires_bounded_context_for_overrides: binding.host == "codex",
+            },
+            nesting: NestingCapability {
+                max_depth: 1,
+                level: if binding.capabilities.fork_none {
+                    GuaranteeLevel::Deterministic
+                } else {
+                    GuaranteeLevel::Unsupported
+                },
+            },
+            parallelism: ParallelismCapability {
+                max_parallel_children: max_parallel_children_for_binding(binding)?,
+                level: GuaranteeLevel::Advisory,
+            },
+            observability: ObservabilityCapability {
+                requested_dispatch: GuaranteeLevel::Deterministic,
+                effective_identity: if binding.host == "codex" {
+                    GuaranteeLevel::Deterministic
+                } else {
+                    GuaranteeLevel::Advisory
+                },
+                effective_model: if binding.host == "codex" {
+                    GuaranteeLevel::Deterministic
+                } else {
+                    GuaranteeLevel::Advisory
+                },
+                raw_evidence_refs: binding.capability_evidence.clone(),
+            },
+            guarantees: capability_guarantees_for_binding(binding),
+            known_limitations: binding.known_limitations.clone(),
+        },
+        adapter: HostAdapterV1 {
+            schema_version: 1,
+            adapter_id: binding.id.clone(),
+            adapter_version: binding.version.clone(),
+            runtime_class,
+            accepts_intent_schema: "RoutingIntentV1".to_string(),
+            emitted_artifact_modes: artifact_modes,
+            dispatch_recipe: DispatchRecipeV1 {
+                invocation: match runtime_class {
+                    RuntimeClass::NativeSubagent => "host-native-subagent".to_string(),
+                    RuntimeClass::ExternalRunner => "external-runner-process".to_string(),
+                },
+                required_fields: dispatch_fields,
+                artifact_paths,
+            },
+            lifecycle_owner: "switchloom-managed".to_string(),
+        },
+        dispatch_evidence: DispatchEvidenceContractV1 {
+            schema_version: 1,
+            required_verdicts: vec![
+                GuaranteeLevel::Deterministic,
+                GuaranteeLevel::Advisory,
+                GuaranteeLevel::Unsupported,
+            ],
+            receipt_schema: "DispatchEvidenceV1".to_string(),
+        },
+        planr_handoff: PlanrHandoffV1 {
+            schema_version: 1,
+            switchloom_package: npm_package_identity()?,
+            semantic_role_contract: format!(
+                "Planr supplies usage policy `{policy_id}`, work_type routes, and semantic roles; Switchloom owns the selected host binding, model, effort, fork/context policy, and generated dispatch artifacts."
+            ),
+            required_consumer_behavior: vec![
+                "Consume RoutingIntentV1 as the only source for semantic_role, work_type, selected profile, model, effort, agent_type, and fork_turns inputs.".to_string(),
+                "Use the CLI lifecycle or SetupSpecV1 recipe commands to preview, apply, update, status, rollback, and uninstall repository-local artifacts.".to_string(),
+                "Record Switchloom package version, package digest, bundle_id, host version, requested dispatch, effective child identity, nonce, and receipt paths before claiming certification.".to_string(),
+                "Treat advisory or unsupported guarantees as uncertified until nonce-bearing live host evidence upgrades them.".to_string(),
+                "For the available-host release gate, Codex may be certified from deterministic effective-routing evidence; Cursor profiles may only claim advisory nonce-correlated requested-routing evidence unless the host exposes authenticated effective role/model telemetry. Claude Code, OpenCode, and Pi remain unavailable or unverified until authentic receipts exist.".to_string(),
+            ],
+            forbidden_duplicate_ownership: vec![
+                "Do not maintain a Planr-side model catalog, effort catalog, preset compiler, host adapter, or fork policy normalizer for Switchloom-owned inputs.".to_string(),
+                "Do not re-normalize Switchloom model, effort, role, agent_type, profile, or fork policy identifiers in Planr.".to_string(),
+                "Do not overwrite Switchloom-managed artifacts outside preview/apply/update/rollback/uninstall.".to_string(),
+                "Do not mark Claude Code, OpenCode, Pi, or any advisory receipt as certified without live nonce-bearing child evidence.".to_string(),
+            ],
+            certification_report_reference:
+                "reports/native-host-certification/<host>/<timestamp>/workdir/dispatch-evidence.json plus the matching bundle.json, invocation receipt, package digest, and validator stdout".to_string(),
+        },
+    })
+}
+
+fn npm_package_identity() -> Result<String> {
+    let package: Value = serde_json::from_str(NPM_PACKAGE_JSON)?;
+    let name = package
+        .get("name")
+        .and_then(Value::as_str)
+        .context("package.json must declare string name")?;
+    let version = package
+        .get("version")
+        .and_then(Value::as_str)
+        .context("package.json must declare string version")?;
+    Ok(format!("{name}@{version}"))
+}
+
+fn adapter_contract_for_source(
+    source: &PolicySource,
+    integration: Integration,
+) -> Result<AdapterContractV1> {
+    let mut contract = source.adapter_contract.clone();
+    contract.routing_intent.integration = integration;
+    contract.adapter.emitted_artifact_modes = source
+        .artifacts
+        .iter()
+        .map(|artifact| artifact.mode.clone())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    validate_adapter_contract(&contract)?;
+    Ok(contract)
+}
+
+fn role_intents_for_binding(binding: &HostBinding) -> Vec<RoutingRoleIntentV1> {
+    binding
+        .profiles
+        .iter()
+        .map(|(role, profile)| RoutingRoleIntentV1 {
+            semantic_role: role.clone(),
+            requested_model: profile.model.clone(),
+            requested_effort: profile.effort.clone(),
+            instructions: format!("Route `{role}` through `{}`.", profile.profile),
+        })
+        .collect()
+}
+
+fn role_intents_for_profiles(profiles: &BTreeMap<String, Profile>) -> Vec<RoutingRoleIntentV1> {
+    profiles
+        .iter()
+        .map(|(role, profile)| RoutingRoleIntentV1 {
+            semantic_role: role.clone(),
+            requested_model: profile.model.clone(),
+            requested_effort: profile.effort.clone(),
+            instructions: format!("Route `{role}` through `{}`.", profile.client),
+        })
+        .collect()
+}
+
+fn control_level(supported: bool, deterministic: bool) -> GuaranteeLevel {
+    match (supported, deterministic) {
+        (true, true) => GuaranteeLevel::Deterministic,
+        (true, false) => GuaranteeLevel::Advisory,
+        (false, _) => GuaranteeLevel::Unsupported,
+    }
+}
+
+fn codex_v2_runtime_evidence() -> Result<CodexV2RuntimeEvidence> {
+    let evidence: CodexV2RuntimeEvidence = serde_json::from_str(CODEX_V2_RUNTIME_EVIDENCE_JSON)
+        .context("Codex V2 runtime evidence must be valid JSON")?;
+    validate_codex_v2_runtime_evidence(&evidence)?;
+    Ok(evidence)
+}
+
+fn validate_codex_v2_runtime_evidence(evidence: &CodexV2RuntimeEvidence) -> Result<()> {
+    if evidence.schema_version != 1 {
+        bail!("unsupported Codex V2 runtime evidence schema_version");
+    }
+    if evidence.evidence_id.trim().is_empty()
+        || evidence.observed_at.trim().is_empty()
+        || evidence.installed_version.command != "codex --version"
+        || evidence.installed_version.stdout.trim().is_empty()
+        || evidence.backend_selection_owner.trim().is_empty()
+        || evidence
+            .trust_and_discovery
+            .trust_boundary
+            .trim()
+            .is_empty()
+        || evidence
+            .trust_and_discovery
+            .discovery_behavior
+            .trim()
+            .is_empty()
+        || evidence.parallelism.source.trim().is_empty()
+    {
+        bail!("Codex V2 runtime evidence fields must not be blank");
+    }
+    if evidence.installed_version.stdout_sha256
+        != sha256(format!("{}\n", evidence.installed_version.stdout).as_bytes())
+    {
+        bail!("Codex V2 runtime evidence installed_version stdout digest mismatch");
+    }
+    if evidence.runtime_class != RuntimeClass::NativeSubagent {
+        bail!("Codex V2 runtime evidence must describe native-subagent");
+    }
+    if evidence.parallelism.max_parallel_children != 3 {
+        bail!("Codex V2 runtime evidence must record three parallel child slots");
+    }
+    if !evidence.shared_filesystem
+        || !evidence.delegation_modes.explicit_agent_type_dispatch
+        || !evidence.delegation_modes.ultra_auto_delegation
+        || !evidence
+            .delegation_modes
+            .automatic_delegation_requires_ultra
+    {
+        bail!("Codex V2 runtime evidence must record filesystem and delegation guarantees");
+    }
+    for (field, values) in [
+        ("switchloom_ownership", &evidence.switchloom_ownership),
+        ("codex_ownership", &evidence.codex_ownership),
+        ("role_precedence", &evidence.role_precedence),
+        ("negative_contracts", &evidence.negative_contracts),
+    ] {
+        if values.is_empty() || values.iter().any(|value| value.trim().is_empty()) {
+            bail!("Codex V2 runtime evidence must record {field}");
+        }
+    }
+    for claim in [
+        "installed_version",
+        "backend_selection_owner",
+        "trust_and_discovery",
+        "parallelism",
+        "role_precedence",
+        "shared_filesystem",
+        "delegation_modes",
+    ] {
+        let Some(records) = evidence.claim_provenance.get(claim) else {
+            bail!("Codex V2 runtime evidence missing provenance for {claim}");
+        };
+        if records.is_empty() {
+            bail!("Codex V2 runtime evidence has incomplete provenance for {claim}");
+        }
+        for record in records {
+            validate_codex_claim_provenance_record(evidence, claim, record)?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_codex_claim_provenance_record(
+    evidence: &CodexV2RuntimeEvidence,
+    claim: &str,
+    record: &CodexClaimProvenance,
+) -> Result<()> {
+    if record.kind.trim().is_empty()
+        || record.source.trim().is_empty()
+        || record.observed_at.trim().is_empty()
+        || record.codex_version != evidence.installed_version.stdout
+    {
+        bail!("Codex V2 runtime evidence has incomplete provenance for {claim}");
+    }
+    if record.source_url.as_deref().unwrap_or("").trim().is_empty()
+        && record
+            .source_path
+            .as_deref()
+            .unwrap_or("")
+            .trim()
+            .is_empty()
+    {
+        bail!(
+            "Codex V2 runtime evidence provenance for {claim} must include source_url or source_path"
+        );
+    }
+    let Some(raw_output) = record.raw_output.as_deref() else {
+        bail!("Codex V2 runtime evidence provenance for {claim} must include raw output");
+    };
+    let Some(raw_output_sha256) = record.raw_output_sha256.as_deref() else {
+        bail!("Codex V2 runtime evidence provenance for {claim} must include raw output digest");
+    };
+    if raw_output_sha256 != sha256(raw_output.as_bytes()) {
+        bail!("Codex V2 runtime evidence provenance raw output digest mismatch for {claim}");
+    }
+    let expected_value = codex_claim_observed_value(evidence, claim)?;
+    if record.observed_value != expected_value {
+        bail!("Codex V2 runtime evidence provenance observed value mismatch for {claim}");
+    }
+    if record.required_raw_fragments.is_empty()
+        || record
+            .required_raw_fragments
+            .iter()
+            .any(|fragment| fragment.trim().is_empty())
+    {
+        bail!("Codex V2 runtime evidence provenance for {claim} must bind raw fragments");
+    }
+    for fragment in codex_claim_required_raw_fragments(evidence, claim)? {
+        if !record
+            .required_raw_fragments
+            .iter()
+            .any(|recorded| recorded == &fragment)
+        {
+            bail!("Codex V2 runtime evidence provenance for {claim} missing required raw fragment");
+        }
+        if !raw_output.contains(&fragment) {
+            bail!("Codex V2 runtime evidence raw capture does not support {claim}");
+        }
+    }
+    for fragment in &record.required_raw_fragments {
+        if !raw_output.contains(fragment) {
+            bail!(
+                "Codex V2 runtime evidence raw capture does not contain declared fragment for {claim}"
+            );
+        }
+    }
+    match record.kind.as_str() {
+        "host-command" => {
+            if claim != "installed_version"
+                || record.source != evidence.installed_version.command
+                || raw_output != format!("{}\n", evidence.installed_version.stdout)
+                || raw_output_sha256 != evidence.installed_version.stdout_sha256
+            {
+                bail!("Codex V2 runtime evidence installed_version provenance mismatch");
+            }
+        }
+        "source-document" => {
+            if record.source_url.as_deref().unwrap_or("").trim().is_empty() {
+                bail!(
+                    "Codex V2 runtime evidence source-document provenance for {claim} must include source_url"
+                );
+            }
+        }
+        "session-runtime-contract" => {
+            if record
+                .source_path
+                .as_deref()
+                .unwrap_or("")
+                .trim()
+                .is_empty()
+            {
+                bail!(
+                    "Codex V2 runtime evidence session-runtime provenance for {claim} must include source_path"
+                );
+            }
+        }
+        other => {
+            bail!("Codex V2 runtime evidence unsupported provenance kind `{other}` for {claim}")
+        }
+    }
+    validate_codex_claim_source_identity(claim, record)?;
+    Ok(())
+}
+
+fn validate_codex_claim_source_identity(claim: &str, record: &CodexClaimProvenance) -> Result<()> {
+    let source_url = record.source_url.as_deref();
+    let source_path = record.source_path.as_deref();
+    let matches = match claim {
+        "installed_version" => {
+            record.kind == "host-command"
+                && record.source == "codex --version"
+                && source_path == Some("local-shell:codex --version")
+                && source_url.is_none()
+        }
+        "backend_selection_owner" => {
+            record.kind == "source-document"
+                && source_url == Some("https://developers.openai.com/codex/config-reference")
+                && source_path.is_none()
+        }
+        "trust_and_discovery" => {
+            record.kind == "source-document"
+                && source_url == Some("https://developers.openai.com/codex/config-reference")
+                && source_path == Some("https://developers.openai.com/codex/subagents")
+        }
+        "parallelism" => {
+            record.kind == "session-runtime-contract"
+                && source_path == Some("current-session:developer-collaboration-runtime")
+                && source_url.is_none()
+        }
+        "role_precedence" => {
+            record.kind == "source-document"
+                && source_url == Some("https://developers.openai.com/codex/subagents")
+                && source_path.is_none()
+        }
+        "shared_filesystem" => {
+            record.kind == "session-runtime-contract"
+                && source_path == Some("current-session:developer-collaboration-runtime")
+                && source_url.is_none()
+        }
+        "delegation_modes" => {
+            record.kind == "source-document"
+                && source_url == Some("https://developers.openai.com/codex/subagents")
+                && source_path == Some("https://developers.openai.com/codex/models")
+        }
+        _ => false,
+    };
+    if !matches {
+        bail!("Codex V2 runtime evidence provenance source identity mismatch for {claim}");
+    }
+    Ok(())
+}
+
+fn codex_claim_observed_value(evidence: &CodexV2RuntimeEvidence, claim: &str) -> Result<Value> {
+    match claim {
+        "installed_version" => Ok(json!(evidence.installed_version.stdout)),
+        "backend_selection_owner" => Ok(json!(evidence.backend_selection_owner)),
+        "trust_and_discovery" => Ok(json!({
+            "trust_boundary": evidence.trust_and_discovery.trust_boundary,
+            "discovery_behavior": evidence.trust_and_discovery.discovery_behavior,
+        })),
+        "parallelism" => Ok(json!({
+            "max_parallel_children": evidence.parallelism.max_parallel_children,
+            "source": evidence.parallelism.source,
+        })),
+        "role_precedence" => Ok(json!(evidence.role_precedence)),
+        "shared_filesystem" => Ok(json!(evidence.shared_filesystem)),
+        "delegation_modes" => Ok(json!(evidence.delegation_modes)),
+        _ => bail!("Codex V2 runtime evidence unknown provenance claim `{claim}`"),
+    }
+}
+
+fn codex_claim_required_raw_fragments(
+    evidence: &CodexV2RuntimeEvidence,
+    claim: &str,
+) -> Result<Vec<String>> {
+    match claim {
+        "installed_version" => Ok(vec![evidence.installed_version.stdout.clone()]),
+        "backend_selection_owner" => Ok(vec![
+            "Project-scoped config cannot override machine-local provider, auth".to_string(),
+            "configuration profile selection".to_string(),
+        ]),
+        "trust_and_discovery" => Ok(vec![
+            "project-scoped config files only when you trust the project".to_string(),
+            "standalone TOML files under .codex/agents/".to_string(),
+        ]),
+        "parallelism" => Ok(vec![
+            "4 available concurrency slots".to_string(),
+            "including the root thread".to_string(),
+            "at most 3 parallel child agents".to_string(),
+        ]),
+        "role_precedence" => Ok(vec![
+            "reapplies the parent turn live runtime overrides".to_string(),
+            "sandbox and approval choices".to_string(),
+            "model_reasoning_effort inherit from the parent session when omitted".to_string(),
+        ]),
+        "shared_filesystem" => Ok(vec![
+            "All agents share the same container and filesystem".to_string(),
+            "edits made by one agent are immediately visible to all other agents".to_string(),
+        ]),
+        "delegation_modes" => Ok(vec![
+            "With Ultra, ChatGPT can proactively delegate work".to_string(),
+            "At most intelligence levels, ask for delegation explicitly".to_string(),
+        ]),
+        _ => bail!("Codex V2 runtime evidence unknown provenance claim `{claim}`"),
+    }
+}
+
+fn codex_v2_host_version(evidence: &CodexV2RuntimeEvidence) -> String {
+    evidence.installed_version.stdout.clone()
+}
+
+fn max_parallel_children_for_binding(binding: &HostBinding) -> Result<u32> {
+    if binding.host == "codex" {
+        Ok(codex_v2_runtime_evidence()?
+            .parallelism
+            .max_parallel_children)
+    } else {
+        Ok(1)
+    }
+}
+
+fn host_version_constraints_for_binding(binding: &HostBinding) -> Result<HostVersionConstraints> {
+    if binding.host == "codex" {
+        let evidence = codex_v2_runtime_evidence()?;
+        let host_version = codex_v2_host_version(&evidence);
+        return Ok(HostVersionConstraints {
+            minimum: Some(host_version.clone()),
+            maximum: Some(host_version),
+            evidence_max_age_seconds: binding.verification.max_age_seconds.unwrap_or(0),
+        });
+    }
+    Ok(HostVersionConstraints {
+        minimum: None,
+        maximum: None,
+        evidence_max_age_seconds: binding.verification.max_age_seconds.unwrap_or(0),
+    })
+}
+
+fn codex_v2_runtime_evidence_reference() -> String {
+    format!(
+        "docs/codex-v2-runtime-evidence.json#sha256:{}",
+        sha256(CODEX_V2_RUNTIME_EVIDENCE_JSON.as_bytes())
+    )
+}
+
+fn runtime_behavior_for_binding(binding: &HostBinding) -> Result<RuntimeBehaviorV1> {
+    if binding.host == "codex" {
+        let evidence = codex_v2_runtime_evidence()?;
+        return Ok(RuntimeBehaviorV1 {
+            capability_version: evidence.evidence_id,
+            installed_host_version_source: format!(
+                "{} via {}",
+                evidence.installed_version.stdout, evidence.installed_version.command
+            ),
+            backend_selection_source: evidence.backend_selection_owner,
+            trust_boundary: evidence.trust_and_discovery.trust_boundary,
+            discovery_behavior: evidence.trust_and_discovery.discovery_behavior,
+            role_precedence: evidence.role_precedence,
+            shared_filesystem: evidence.shared_filesystem,
+            delegation_modes: evidence.delegation_modes,
+            source_references: vec![codex_v2_runtime_evidence_reference()],
+        });
+    }
+
+    let source_references = if binding.capability_evidence.is_empty() {
+        vec![format!("host-binding:{}", binding.id)]
+    } else {
+        binding.capability_evidence.clone()
+    };
+
+    Ok(RuntimeBehaviorV1 {
+        capability_version: binding.verification.id.clone(),
+        installed_host_version_source: format!("{} --version", binding.host),
+        backend_selection_source: "host account, workspace, provider, or runner configuration outside Switchloom ownership".to_string(),
+        trust_boundary: "repository-local generated artifacts are Switchloom-managed; host authentication, account policy, and execution state are host-owned".to_string(),
+        discovery_behavior: "host-specific project artifact discovery".to_string(),
+        role_precedence: vec![
+            "Switchloom declares requested semantic role, profile, model, effort, and artifacts".to_string(),
+            "the host runtime remains the authority for effective execution".to_string(),
+        ],
+        shared_filesystem: binding.runtime_class == RuntimeClass::NativeSubagent,
+        delegation_modes: DelegationModesV1 {
+            explicit_agent_type_dispatch: binding.capabilities.fork_none,
+            ultra_auto_delegation: false,
+            automatic_delegation_requires_ultra: false,
+        },
+        source_references,
+    })
+}
+
+fn dispatch_fields_for_binding(binding: &HostBinding) -> Vec<String> {
+    let mut fields = vec!["profile".to_string(), "model".to_string()];
+    if binding.runtime_class == RuntimeClass::ExternalRunner {
+        fields.push("provider".to_string());
+    }
+    if binding.capabilities.effort_override {
+        fields.push("effort".to_string());
+    }
+    if binding
+        .profiles
+        .values()
+        .any(|profile| profile.agent_type.is_some())
+    {
+        fields.push("agent_type".to_string());
+    }
+    if binding.capabilities.fork_none || binding.capabilities.fork_all {
+        fields.push("fork_turns".to_string());
+    }
+    if binding.runtime_class == RuntimeClass::ExternalRunner {
+        fields.push("isolation".to_string());
+        fields.push("task".to_string());
+    }
+    fields
+}
+
+fn capability_guarantees_for_binding(
+    binding: &HostBinding,
+) -> BTreeMap<String, CapabilityGuarantee> {
+    BTreeMap::from([
+        (
+            "artifact_lifecycle".to_string(),
+            CapabilityGuarantee {
+                level: GuaranteeLevel::Deterministic,
+                reason: "Switchloom owns preview/apply/update/rollback/uninstall for managed artifacts.".to_string(),
+                evidence_required: false,
+            },
+        ),
+        (
+            "dispatch_identity".to_string(),
+            CapabilityGuarantee {
+                level: if binding.capabilities.fork_none {
+                    GuaranteeLevel::Deterministic
+                } else {
+                    GuaranteeLevel::Unsupported
+                },
+                reason: if binding.capabilities.fork_none {
+                    "Adapter can emit explicit local child identity and non-all context policy.".to_string()
+                } else {
+                    "Host binding has no explicit non-all child dispatch contract.".to_string()
+                },
+                evidence_required: binding.capabilities.fork_none,
+            },
+        ),
+        (
+            "model_selection".to_string(),
+            CapabilityGuarantee {
+                level: if binding.capabilities.model_override && binding.host == "codex" {
+                    GuaranteeLevel::Deterministic
+                } else if binding.capabilities.model_override {
+                    GuaranteeLevel::Advisory
+                } else {
+                    GuaranteeLevel::Unsupported
+                },
+                reason: if binding.capabilities.model_override && binding.host == "codex" {
+                    "Codex project agent files declare the child model; live evidence is still required for certification.".to_string()
+                } else if binding.capabilities.model_override {
+                    "Host accepts a requested model but may apply account, workspace, or runtime precedence.".to_string()
+                } else {
+                    "Host binding exposes no model override control.".to_string()
+                },
+                evidence_required: binding.capabilities.model_override,
+            },
+        ),
+        (
+            "effort_selection".to_string(),
+            CapabilityGuarantee {
+                level: if binding.capabilities.effort_override && binding.host == "codex" {
+                    GuaranteeLevel::Deterministic
+                } else if binding.capabilities.effort_override {
+                    GuaranteeLevel::Advisory
+                } else {
+                    GuaranteeLevel::Unsupported
+                },
+                reason: if binding.capabilities.effort_override && binding.host == "codex" {
+                    "Codex project agent files declare model_reasoning_effort for role-local child dispatch.".to_string()
+                } else if binding.capabilities.effort_override {
+                    "Host accepts an effort-like field but effective precedence must be proven separately.".to_string()
+                } else {
+                    "Host binding exposes no effort override control.".to_string()
+                },
+                evidence_required: binding.capabilities.effort_override,
+            },
+        ),
+        (
+            "effective_runtime_evidence".to_string(),
+            CapabilityGuarantee {
+                level: GuaranteeLevel::Advisory,
+                reason: "Generated bundles declare requested routing; certification must persist requested-versus-effective host evidence.".to_string(),
+                evidence_required: true,
+            },
+        ),
+    ])
+}
+
+fn validate_adapter_contract(contract: &AdapterContractV1) -> Result<()> {
+    if contract.schema_version != 1
+        || contract.routing_intent.schema_version != 1
+        || contract.capability.schema_version != 1
+        || contract.adapter.schema_version != 1
+        || contract.dispatch_evidence.schema_version != 1
+        || contract.planr_handoff.schema_version != 1
+    {
+        bail!("unsupported adapter contract schema_version");
+    }
+    if contract.routing_intent.semantic_roles.is_empty() {
+        bail!("adapter contract must declare semantic roles");
+    }
+    if contract.routing_intent.role_requests.is_empty() {
+        bail!("adapter contract must declare role requests");
+    }
+    let semantic_roles = contract
+        .routing_intent
+        .semantic_roles
+        .iter()
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    for request in &contract.routing_intent.role_requests {
+        if !semantic_roles.contains(&request.semantic_role) {
+            bail!(
+                "adapter contract role request references unknown semantic role `{}`",
+                request.semantic_role
+            );
+        }
+        if request.requested_model.trim().is_empty() || request.instructions.trim().is_empty() {
+            bail!("adapter contract role requests must include model and instructions");
+        }
+    }
+    if contract.capability.host.trim().is_empty() || contract.adapter.adapter_id.trim().is_empty() {
+        bail!("adapter contract host and adapter_id must not be blank");
+    }
+    if contract.capability.runtime_class != contract.adapter.runtime_class {
+        bail!("adapter contract runtime_class mismatch");
+    }
+    validate_runtime_behavior(&contract.capability)?;
+    if contract.adapter.accepts_intent_schema != "RoutingIntentV1" {
+        bail!("adapter contract must accept RoutingIntentV1");
+    }
+    if contract.capability.model_control.field.trim().is_empty()
+        || contract.capability.effort_control.field.trim().is_empty()
+    {
+        bail!("adapter contract control fields must not be blank");
+    }
+    if contract
+        .adapter
+        .dispatch_recipe
+        .invocation
+        .trim()
+        .is_empty()
+    {
+        bail!("adapter contract dispatch recipe invocation must not be blank");
+    }
+    if contract.adapter.dispatch_recipe.required_fields.is_empty() {
+        bail!("adapter contract dispatch recipe must declare required fields");
+    }
+    for required in &contract.routing_intent.required_guarantees {
+        let Some(guarantee) = contract.capability.guarantees.get(required) else {
+            bail!("adapter contract requires undeclared guarantee `{required}`");
+        };
+        if guarantee.level == GuaranteeLevel::Unsupported {
+            bail!("adapter contract required guarantee `{required}` is unsupported");
+        }
+    }
+    for (name, guarantee) in &contract.capability.guarantees {
+        if name.trim().is_empty() || guarantee.reason.trim().is_empty() {
+            bail!("adapter contract guarantee names and reasons must not be blank");
+        }
+    }
+    let verdicts = contract
+        .dispatch_evidence
+        .required_verdicts
+        .iter()
+        .copied()
+        .collect::<BTreeSet<_>>();
+    for verdict in [
+        GuaranteeLevel::Deterministic,
+        GuaranteeLevel::Advisory,
+        GuaranteeLevel::Unsupported,
+    ] {
+        if !verdicts.contains(&verdict) {
+            bail!("adapter contract dispatch evidence must enumerate all guarantee verdicts");
+        }
+    }
+    if contract.dispatch_evidence.receipt_schema != "DispatchEvidenceV1" {
+        bail!("adapter contract dispatch evidence must reference DispatchEvidenceV1");
+    }
+    Ok(())
+}
+
+fn validate_runtime_behavior(capability: &HostCapabilityV1) -> Result<()> {
+    let behavior = &capability.runtime_behavior;
+    if behavior.capability_version.trim().is_empty()
+        || behavior.installed_host_version_source.trim().is_empty()
+        || behavior.backend_selection_source.trim().is_empty()
+        || behavior.trust_boundary.trim().is_empty()
+        || behavior.discovery_behavior.trim().is_empty()
+    {
+        bail!("adapter contract runtime behavior fields must not be blank");
+    }
+    if behavior.role_precedence.is_empty()
+        || behavior
+            .role_precedence
+            .iter()
+            .any(|entry| entry.trim().is_empty())
+    {
+        bail!("adapter contract runtime behavior must declare role precedence");
+    }
+    if behavior.source_references.is_empty()
+        || behavior
+            .source_references
+            .iter()
+            .any(|entry| entry.trim().is_empty())
+    {
+        bail!("adapter contract runtime behavior must declare source references");
+    }
+    if capability.host == "codex" {
+        let evidence = codex_v2_runtime_evidence()?;
+        let expected_source_reference = codex_v2_runtime_evidence_reference();
+        let expected_host_version = codex_v2_host_version(&evidence);
+        if behavior.capability_version != evidence.evidence_id {
+            bail!("Codex V2 runtime capability_version must match parsed evidence_id");
+        }
+        if behavior.installed_host_version_source
+            != format!(
+                "{} via {}",
+                evidence.installed_version.stdout, evidence.installed_version.command
+            )
+        {
+            bail!(
+                "Codex V2 runtime installed host version must match parsed evidence command output"
+            );
+        }
+        if capability.host_version_constraints.minimum.as_deref()
+            != Some(expected_host_version.as_str())
+            || capability.host_version_constraints.maximum.as_deref()
+                != Some(expected_host_version.as_str())
+        {
+            bail!("Codex V2 host_version_constraints must freeze the parsed evidence version");
+        }
+        if !capability
+            .discovery_artifacts
+            .iter()
+            .any(|artifact| artifact == &evidence.evidence_id)
+        {
+            bail!("Codex V2 discovery artifacts must include the parsed evidence id");
+        }
+        if behavior.source_references != vec![expected_source_reference] {
+            bail!(
+                "Codex V2 runtime source reference must match the digest-bound evidence artifact"
+            );
+        }
+        if capability.parallelism.max_parallel_children
+            != evidence.parallelism.max_parallel_children
+        {
+            bail!("Codex V2 runtime must declare exactly the parsed evidence child slots");
+        }
+        if behavior.backend_selection_source != evidence.backend_selection_owner {
+            bail!("Codex V2 backend selection source must match parsed evidence");
+        }
+        if behavior.trust_boundary != evidence.trust_and_discovery.trust_boundary
+            || behavior.discovery_behavior != evidence.trust_and_discovery.discovery_behavior
+        {
+            bail!("Codex V2 trust and discovery behavior must match parsed evidence");
+        }
+        if behavior.role_precedence != evidence.role_precedence {
+            bail!("Codex V2 role precedence must match parsed evidence");
+        }
+        if behavior.shared_filesystem != evidence.shared_filesystem {
+            bail!("Codex V2 shared filesystem flag must match parsed evidence");
+        }
+        if behavior.delegation_modes != evidence.delegation_modes {
+            bail!("Codex V2 delegation modes must match parsed evidence");
+        }
+        if !evidence
+            .codex_ownership
+            .iter()
+            .any(|owner| owner.contains("execution timing and orchestration"))
+            || !evidence
+                .switchloom_ownership
+                .iter()
+                .any(|owner| owner.contains("semantic role compilation"))
+        {
+            bail!("Codex V2 ownership boundaries must be recorded in parsed evidence");
+        }
+        if capability.runtime_class != RuntimeClass::NativeSubagent {
+            bail!("Codex V2 runtime must be a native-subagent contract");
+        }
+        if !behavior.shared_filesystem {
+            bail!("Codex V2 runtime must declare shared filesystem behavior");
+        }
+        if !behavior.delegation_modes.explicit_agent_type_dispatch {
+            bail!("Codex V2 runtime must declare explicit agent_type dispatch");
+        }
+        if !behavior.delegation_modes.ultra_auto_delegation
+            || !behavior
+                .delegation_modes
+                .automatic_delegation_requires_ultra
+        {
+            bail!("Codex V2 runtime must declare Ultra automatic delegation boundaries");
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_dispatch_evidence(evidence: &DispatchEvidenceV1) -> Result<()> {
+    if evidence.schema_version != 1 {
+        bail!("unsupported dispatch evidence schema_version");
+    }
+    if evidence.package_digest.trim().is_empty()
+        || evidence.host_version.trim().is_empty()
+        || evidence.nonce.trim().is_empty()
+    {
+        bail!("dispatch evidence package_digest, host_version, and nonce must not be blank");
+    }
+    if evidence.requested_dispatch.semantic_role.trim().is_empty()
+        || evidence.requested_dispatch.profile.trim().is_empty()
+        || evidence.requested_dispatch.model.trim().is_empty()
+    {
+        bail!("dispatch evidence requested dispatch must name role, profile, and model");
+    }
+    if evidence.child_identity.host.trim().is_empty()
+        || evidence.child_identity.role.trim().is_empty()
+        || evidence.child_identity.agent_role.trim().is_empty()
+    {
+        bail!("dispatch evidence child identity must name host, role, and agent_role");
+    }
+    if evidence.raw_evidence_refs.is_empty()
+        || evidence
+            .raw_evidence_refs
+            .iter()
+            .any(|reference| reference.trim().is_empty())
+    {
+        bail!("dispatch evidence must include raw evidence references");
+    }
+    if evidence.verdict == GuaranteeLevel::Deterministic {
+        let effective_model = evidence.effective_model.as_deref().ok_or_else(|| {
+            anyhow::anyhow!("deterministic dispatch evidence must include observed effective_model")
+        })?;
+        if effective_model != evidence.requested_dispatch.model {
+            bail!(
+                "deterministic dispatch evidence effective_model `{effective_model}` does not match requested model `{}`",
+                evidence.requested_dispatch.model
+            );
+        }
+        if let Some(requested_effort) = evidence.requested_dispatch.effort.as_deref() {
+            let effective_effort = evidence.effective_effort.as_deref().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "deterministic dispatch evidence must include observed effective_effort"
+                )
+            })?;
+            if effective_effort != requested_effort {
+                bail!(
+                    "deterministic dispatch evidence effective_effort `{effective_effort}` does not match requested effort `{requested_effort}`"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_dispatch_evidence_for_adapter(
+    evidence: &DispatchEvidenceV1,
+    contract: &AdapterContractV1,
+) -> Result<()> {
+    validate_adapter_contract(contract)?;
+    validate_dispatch_evidence(evidence)?;
+    if evidence.child_identity.host != contract.capability.host {
+        bail!(
+            "dispatch evidence host `{}` does not match adapter host `{}`",
+            evidence.child_identity.host,
+            contract.capability.host
+        );
+    }
+    if !contract
+        .dispatch_evidence
+        .required_verdicts
+        .contains(&evidence.verdict)
+    {
+        bail!("dispatch evidence verdict is not allowed by adapter contract");
+    }
+    let request = contract
+        .routing_intent
+        .role_requests
+        .iter()
+        .find(|request| request.semantic_role == evidence.requested_dispatch.semantic_role)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "dispatch evidence role `{}` is not declared by adapter contract",
+                evidence.requested_dispatch.semantic_role
+            )
+        })?;
+    if evidence.child_identity.role != evidence.requested_dispatch.semantic_role {
+        bail!(
+            "dispatch evidence child role `{}` does not match requested semantic role `{}`",
+            evidence.child_identity.role,
+            evidence.requested_dispatch.semantic_role
+        );
+    }
+    if evidence.requested_dispatch.model != request.requested_model {
+        bail!(
+            "dispatch evidence requested model `{}` does not match adapter role request `{}`",
+            evidence.requested_dispatch.model,
+            request.requested_model
+        );
+    }
+    if evidence.requested_dispatch.effort != request.requested_effort {
+        bail!("dispatch evidence requested effort does not match adapter role request");
+    }
+    if evidence.verdict == GuaranteeLevel::Deterministic {
+        require_deterministic_observation(evidence, contract)?;
+        require_live_nonce_observation(evidence, contract)?;
+    }
+    Ok(())
+}
+
+fn require_deterministic_observation(
+    evidence: &DispatchEvidenceV1,
+    contract: &AdapterContractV1,
+) -> Result<()> {
+    if contract.capability.observability.effective_model != GuaranteeLevel::Deterministic {
+        bail!(
+            "deterministic dispatch evidence for adapter `{}` is not allowed because effective model observability is {:?}",
+            contract.adapter.adapter_id,
+            contract.capability.observability.effective_model
+        );
+    }
+    if evidence.requested_dispatch.effort.is_some()
+        && contract.capability.effort_control.level != GuaranteeLevel::Deterministic
+    {
+        bail!(
+            "deterministic dispatch evidence for adapter `{}` is not allowed because effective effort control is {:?}",
+            contract.adapter.adapter_id,
+            contract.capability.effort_control.level
+        );
+    }
+    Ok(())
+}
+
+fn require_live_nonce_observation(
+    evidence: &DispatchEvidenceV1,
+    contract: &AdapterContractV1,
+) -> Result<()> {
+    if contract.capability.observability.effective_model == GuaranteeLevel::Deterministic
+        && !evidence.raw_evidence_refs.iter().any(|reference| {
+            reference.starts_with("host-output:") || reference.starts_with("codex-session:")
+        })
+    {
+        bail!(
+            "deterministic dispatch evidence for adapter `{}` requires a live host output reference",
+            contract.adapter.adapter_id
+        );
+    }
+    if evidence
+        .raw_evidence_refs
+        .iter()
+        .any(|reference| reference.contains("status:not-run"))
+    {
+        bail!(
+            "dispatch evidence for adapter `{}` cannot cite a not-run host output",
+            contract.adapter.adapter_id
+        );
+    }
+    Ok(())
+}
+
+pub fn validate_dispatch_evidence_json_for_bundle(
+    evidence_json: &str,
+    bundle_json: &str,
+) -> Result<()> {
+    let bundle: RoutingBundleV1 = serde_json::from_str(bundle_json)?;
+    validate_bundle(&bundle)?;
+    let contract = bundle
+        .adapter_contract
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("bundle is missing adapter_contract"))?;
+    let evidence: DispatchEvidenceV1 = serde_json::from_str(evidence_json)?;
+    validate_dispatch_evidence_for_adapter(&evidence, contract)
 }
 
 fn source_from_setup_spec(spec: &SetupSpecV1) -> Result<PolicySource> {
@@ -2913,10 +4457,72 @@ fn source_from_setup_spec(spec: &SetupSpecV1) -> Result<PolicySource> {
     if setup_matches_binding(spec, &binding)? {
         return Ok(source);
     }
-    let runtime_host = setup_runtime_host(&binding);
+    let adapter =
+        compile_setup_adapter(source.policy_id.as_str(), &binding, spec, &source.artifacts)?;
+    source.requirements = adapter.requirements;
+    source.profiles = adapter.profiles;
+    source.routes = adapter.routes;
+    source.route_default = adapter.route_default;
+    source.artifacts = adapter.artifacts;
+    source.adapter_contract = adapter.adapter_contract;
+    source.evidence = EvaluationEvidence {
+        evaluation_ids: Vec::new(),
+        status: "custom-unverified".to_string(),
+    };
+    Ok(source)
+}
+
+fn compile_setup_adapter(
+    policy_id: &str,
+    binding: &HostBinding,
+    spec: &SetupSpecV1,
+    binding_artifacts: &[SourceArtifact],
+) -> Result<CompiledHostAdapter> {
+    validate_host_adapter(binding)?;
+    let runtime_host = setup_runtime_host(binding);
+    let profiles = setup_profiles_from_intent(spec, binding)?;
+    let routes = setup_routes_from_intent(spec);
+    let route_default = setup_default_route_from_intent(spec);
+    let artifacts = setup_artifacts_from_intent(
+        runtime_host,
+        &spec.selected_roles,
+        binding,
+        binding_artifacts,
+    )?;
+    let mut adapter_contract = adapter_contract_for_binding(policy_id, binding, spec.integration)?;
+    adapter_contract.routing_intent.semantic_roles = profiles.keys().cloned().collect();
+    adapter_contract.routing_intent.role_requests = role_intents_for_profiles(&profiles);
+    adapter_contract.adapter.emitted_artifact_modes = artifacts
+        .iter()
+        .map(|artifact| artifact.mode.clone())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    adapter_contract.adapter.dispatch_recipe.artifact_paths = artifacts
+        .iter()
+        .map(|artifact| artifact.path.clone())
+        .collect();
+    validate_adapter_contract(&adapter_contract)?;
+    Ok(CompiledHostAdapter {
+        requirements: vec![HostRequirement {
+            host: binding.host.clone(),
+            capabilities: requirement_capabilities_for_binding(binding),
+        }],
+        profiles,
+        routes,
+        route_default,
+        artifacts,
+        adapter_contract,
+    })
+}
+
+fn setup_profiles_from_intent(
+    spec: &SetupSpecV1,
+    binding: &HostBinding,
+) -> Result<BTreeMap<String, Profile>> {
+    let runtime_host = setup_runtime_host(binding);
     let model_catalog = setup_model_catalog(runtime_host);
-    let profiles = spec
-        .selected_roles
+    spec.selected_roles
         .iter()
         .map(|(role, selection)| {
             let option = model_catalog
@@ -2931,7 +4537,7 @@ fn source_from_setup_spec(spec: &SetupSpecV1) -> Result<PolicySource> {
                 })?;
             if runtime_host == "codex"
                 && selection.spawn.is_none()
-                && selection_matches_binding_profile(role, selection, &binding)
+                && selection_matches_binding_profile(role, selection, binding)
             {
                 return Ok((
                     role.clone(),
@@ -2972,9 +4578,11 @@ fn source_from_setup_spec(spec: &SetupSpecV1) -> Result<PolicySource> {
                 },
             ))
         })
-        .collect::<Result<BTreeMap<_, _>>>()?;
-    let routes = spec
-        .routes
+        .collect()
+}
+
+fn setup_routes_from_intent(spec: &SetupSpecV1) -> Vec<Route> {
+    spec.routes
         .iter()
         .map(|route| Route {
             selector: RouteSelector {
@@ -2984,25 +4592,14 @@ fn source_from_setup_spec(spec: &SetupSpecV1) -> Result<PolicySource> {
             profile: route.role.clone(),
             fallbacks: route.fallbacks.clone(),
         })
-        .collect();
-    let route_default = spec.route_default.as_ref().map(|default| DefaultRoute {
+        .collect()
+}
+
+fn setup_default_route_from_intent(spec: &SetupSpecV1) -> Option<DefaultRoute> {
+    spec.route_default.as_ref().map(|default| DefaultRoute {
         profile: default.role.clone(),
         fallbacks: default.fallbacks.clone(),
-    });
-    source.profiles = profiles;
-    source.routes = routes;
-    source.route_default = route_default;
-    source.artifacts = render_setup_artifacts(
-        runtime_host,
-        &spec.selected_roles,
-        &binding,
-        &source.artifacts,
-    )?;
-    source.evidence = EvaluationEvidence {
-        evaluation_ids: Vec::new(),
-        status: "custom-unverified".to_string(),
-    };
-    Ok(source)
+    })
 }
 
 fn setup_matches_binding(spec: &SetupSpecV1, binding: &HostBinding) -> Result<bool> {
@@ -3048,7 +4645,7 @@ fn setup_matches_binding(spec: &SetupSpecV1, binding: &HostBinding) -> Result<bo
     })
 }
 
-fn render_setup_artifacts(
+fn setup_artifacts_from_intent(
     runtime_host: &str,
     roles: &BTreeMap<String, SetupRoleSelection>,
     binding: &HostBinding,
@@ -3101,6 +4698,39 @@ fn render_setup_artifacts(
                         "cursor_agent",
                         format!(
                             "---\nname: switchloom-{file_role}\nmodel: {}\n---\nFollow the repository-local Switchloom setup role `{role}` and preserve routing evidence.\n",
+                            selection.model
+                        ),
+                    )
+                }
+                "opencode" => {
+                    let effort = selection
+                        .effort
+                        .clone()
+                        .unwrap_or_else(|| "medium".to_string());
+                    (
+                        "opencode_agent",
+                        format!(
+                            "---\ndescription: Switchloom custom {role} role.\nmode: subagent\nmodel: {}\nvariant: {effort}\npermission:\n  edit: allow\n  bash: ask\n  task:\n    \"*\": deny\n---\nFollow the repository-local Switchloom setup role `{role}` and preserve routing evidence.\n",
+                            selection.model
+                        ),
+                    )
+                }
+                "pi" => {
+                    let effort = selection
+                        .effort
+                        .clone()
+                        .unwrap_or_else(|| "medium".to_string());
+                    let (provider, model) = selection.model.split_once('/').ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "setup role `{role}` Pi model `{}` must use provider/model form",
+                            selection.model
+                        )
+                    })?;
+                    let agent_type = format!("switchloom-pi-{file_role}");
+                    (
+                        "pi_workflow",
+                        format!(
+                            "{{\n  \"schema_version\": 1,\n  \"workflow\": \"switchloom-{file_role}\",\n  \"runner\": \"pi\",\n  \"runtime_class\": \"external-runner\",\n  \"arguments\": {{\n    \"agent_type\": \"{agent_type}\",\n    \"provider_model\": \"{}\",\n    \"thinking\": \"{effort}\",\n    \"isolation\": {{\n      \"session\": \"none\",\n      \"tools\": \"none\",\n      \"extensions\": \"none\",\n      \"skills\": \"none\",\n      \"agent_dir\": \"report-workdir/.pi-agent\"\n    }},\n    \"task\": {{\n      \"semantic_role\": \"{role}\",\n      \"profile\": \"{agent_type}\",\n      \"returns\": \"nonce-only\"\n    }}\n  }},\n  \"process\": {{\n    \"argv\": [\"pi\", \"--print\", \"--no-session\", \"--no-tools\", \"--no-extensions\", \"--no-skills\", \"--provider\", \"{provider}\", \"--model\", \"{model}\", \"--thinking\", \"{effort}\"],\n    \"state_boundary\": \"PI_CODING_AGENT_DIR is set to a report-local directory for every certification run\"\n  }},\n  \"security\": {{\n    \"filesystem_tools\": \"disabled\",\n    \"session_persistence\": \"disabled\",\n    \"native_subagents\": \"not used\",\n    \"certification_requirement\": \"A persisted workflow receipt must include the dynamic nonce returned by a live Pi child process before advisory runtime evidence is accepted.\"\n  }}\n}}\n",
                             selection.model
                         ),
                     )
@@ -3247,6 +4877,8 @@ fn canonical_binding_id(selector: &str) -> &str {
         "codex" => "codex-openai",
         "claude-code" => "claude-native",
         "cursor" => "cursor-openai",
+        "opencode" => "opencode-native",
+        "pi" => "pi-external",
         other => other,
     }
 }
@@ -3333,6 +4965,40 @@ fn setup_model_catalog(host: &str) -> Vec<SetupModelOption> {
                 id: "sonnet",
                 efforts: &["medium", "high"],
                 tier: "standard",
+            },
+        ],
+        "opencode" => vec![
+            SetupModelOption {
+                id: "opencode/gpt-5-nano",
+                efforts: &["low", "medium", "high", "max"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "anthropic/claude-sonnet-4-5",
+                efforts: &["low", "medium", "high"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "anthropic/claude-opus-4-5",
+                efforts: &["high", "max"],
+                tier: "premium",
+            },
+        ],
+        "pi" => vec![
+            SetupModelOption {
+                id: "openai/gpt-4o-mini",
+                efforts: &["low", "medium", "high", "xhigh"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "google/gemini-2.5-flash",
+                efforts: &["low", "medium", "high", "xhigh"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "anthropic/claude-sonnet-4-5",
+                efforts: &["low", "medium", "high", "xhigh"],
+                tier: "premium",
             },
         ],
         "mixed-host" => vec![
@@ -3609,6 +5275,8 @@ fn setup_artifact_path(
         }
         "claude-code" => format!(".claude/agents/switchloom-{file_role}.md"),
         "cursor" => format!(".cursor/agents/switchloom-{file_role}.md"),
+        "opencode" => format!(".opencode/agents/switchloom-{file_role}.md"),
+        "pi" => format!(".pi/workflows/switchloom-{file_role}.json"),
         "mixed-host" => format!(".model-routing/roles/{file_role}.toml"),
         other => bail!("unsupported setup runtime host `{other}`"),
     })
@@ -3764,7 +5432,9 @@ fn render_planr_native_role(artifact: &SourceArtifact) -> String {
     let Some((protocol_name, instructions)) = protocol else {
         return artifact.content.clone();
     };
-    if artifact.path.starts_with(".codex/agents/") {
+    if artifact.path.starts_with(".pi/workflows/") {
+        rewrite_json_workflow_protocol_preload(&artifact.content, protocol_name, instructions)
+    } else if artifact.path.starts_with(".codex/agents/") {
         rewrite_codex_developer_instructions(&artifact.content, protocol_name, instructions)
     } else {
         rewrite_markdown_agent_body(&artifact.content, protocol_name, instructions)
@@ -3775,6 +5445,7 @@ fn is_worker_role(artifact: &SourceArtifact) -> bool {
     artifact.path.contains("terra-high")
         || artifact.path.contains("luna-xhigh")
         || artifact.path.contains("preset-worker")
+        || artifact.path.starts_with(".pi/workflows/")
         || artifact.path.contains("implementer")
         || artifact.content.contains("Normal implementation")
         || artifact.content.contains("Bounded checklist")
@@ -3825,6 +5496,28 @@ fn rewrite_markdown_agent_body(content: &str, protocol_name: &str, instructions:
         }
     }
     format!("Protocol preload: {protocol_name}\n\n{instructions}\n")
+}
+
+fn rewrite_json_workflow_protocol_preload(
+    content: &str,
+    protocol_name: &str,
+    instructions: &str,
+) -> String {
+    let mut value: Value = serde_json::from_str(content).unwrap_or_else(|_| json!({}));
+    if let Some(object) = value.as_object_mut() {
+        object.insert(
+            "protocol_preload".to_string(),
+            json!({
+                "marker": format!("Protocol preload: {protocol_name}"),
+                "instructions": instructions
+            }),
+        );
+    }
+    let mut output = serde_json::to_string_pretty(&value).unwrap_or_else(|_| {
+        format!("{content}\n\nProtocol preload: {protocol_name}\n{instructions}\n")
+    });
+    output.push('\n');
+    output
 }
 
 fn render_registry(source: &PolicySource) -> Result<String> {
@@ -4033,7 +5726,7 @@ mod tests {
     #[test]
     fn complete_policy_binding_pool_compiles_deterministically() {
         let summaries = list_policies().unwrap();
-        assert_eq!(summaries.len(), 20);
+        assert_eq!(summaries.len(), 28);
         for summary in summaries {
             let first =
                 compile_json(&summary.policy_id, &summary.host, Integration::Standalone).unwrap();
@@ -4052,6 +5745,686 @@ mod tests {
         assert!(!standalone.contains(".planr/agents.toml"));
         assert!(planr.contains(".planr/agents.toml"));
         assert!(planr.contains(".planr/policy.toml"));
+    }
+
+    #[test]
+    fn compiled_bundle_carries_typed_adapter_contract() {
+        let bundle = compile_policy("balanced", "codex-openai", Integration::Planr).unwrap();
+        let contract = bundle.adapter_contract.as_ref().unwrap();
+        assert_eq!(contract.schema_version, 1);
+        assert_eq!(
+            contract.capability.runtime_class,
+            RuntimeClass::NativeSubagent
+        );
+        assert_eq!(contract.adapter.runtime_class, RuntimeClass::NativeSubagent);
+        assert_eq!(contract.routing_intent.integration, Integration::Planr);
+        assert!(
+            contract
+                .routing_intent
+                .semantic_roles
+                .contains(&"worker".to_string())
+        );
+        assert!(
+            !contract
+                .routing_intent
+                .semantic_roles
+                .contains(&"codex-terra-high".to_string())
+        );
+        assert_eq!(
+            contract
+                .capability
+                .guarantees
+                .get("model_selection")
+                .unwrap()
+                .level,
+            GuaranteeLevel::Deterministic
+        );
+        assert!(
+            contract
+                .capability
+                .guarantees
+                .values()
+                .any(|guarantee| guarantee.level == GuaranteeLevel::Advisory)
+        );
+        assert!(
+            contract
+                .dispatch_evidence
+                .required_verdicts
+                .contains(&GuaranteeLevel::Unsupported)
+        );
+        assert_eq!(
+            contract.dispatch_evidence.receipt_schema,
+            "DispatchEvidenceV1"
+        );
+        assert!(
+            contract
+                .routing_intent
+                .role_requests
+                .iter()
+                .any(|request| request.semantic_role == "worker"
+                    && request.requested_model == "gpt-5.6-terra"
+                    && request.requested_effort.as_deref() == Some("high"))
+        );
+        assert_eq!(
+            contract.adapter.dispatch_recipe.invocation,
+            "host-native-subagent"
+        );
+        assert_eq!(
+            contract.capability.runtime_behavior.capability_version,
+            codex_v2_runtime_evidence().unwrap().evidence_id
+        );
+        assert_eq!(
+            contract
+                .capability
+                .runtime_behavior
+                .installed_host_version_source,
+            "codex-cli 0.144.5 via codex --version"
+        );
+        assert_eq!(
+            contract
+                .capability
+                .host_version_constraints
+                .minimum
+                .as_deref(),
+            Some(codex_v2_host_version(&codex_v2_runtime_evidence().unwrap()).as_str())
+        );
+        assert_eq!(
+            contract
+                .capability
+                .host_version_constraints
+                .maximum
+                .as_deref(),
+            Some(codex_v2_host_version(&codex_v2_runtime_evidence().unwrap()).as_str())
+        );
+        assert!(
+            contract
+                .capability
+                .runtime_behavior
+                .backend_selection_source
+                .contains("authenticated host account")
+        );
+        assert!(
+            contract
+                .capability
+                .runtime_behavior
+                .discovery_behavior
+                .contains(".codex/config.toml")
+        );
+        assert!(
+            contract
+                .capability
+                .runtime_behavior
+                .role_precedence
+                .iter()
+                .any(|entry| entry.contains("agent file"))
+        );
+        assert!(contract.capability.runtime_behavior.shared_filesystem);
+        assert_eq!(contract.capability.parallelism.max_parallel_children, 3);
+        assert!(
+            contract
+                .capability
+                .runtime_behavior
+                .delegation_modes
+                .explicit_agent_type_dispatch
+        );
+        assert!(
+            contract
+                .capability
+                .runtime_behavior
+                .delegation_modes
+                .ultra_auto_delegation
+        );
+        assert!(
+            contract
+                .capability
+                .runtime_behavior
+                .source_references
+                .contains(&codex_v2_runtime_evidence_reference())
+        );
+    }
+
+    #[test]
+    fn codex_runtime_evidence_fixtures_fail_for_named_provenance_reasons() {
+        for (fixture, expected) in [
+            (
+                include_str!(
+                    "../fixtures/codex-v2-runtime-evidence/invalid-prose-only-provenance.json"
+                ),
+                "must include raw output",
+            ),
+            (
+                include_str!(
+                    "../fixtures/codex-v2-runtime-evidence/invalid-arbitrary-prose-provenance.json"
+                ),
+                "raw capture does not support",
+            ),
+            (
+                include_str!(
+                    "../fixtures/codex-v2-runtime-evidence/invalid-tampered-raw-digest.json"
+                ),
+                "raw output digest mismatch",
+            ),
+            (
+                include_str!(
+                    "../fixtures/codex-v2-runtime-evidence/invalid-unsupported-provenance-kind.json"
+                ),
+                "unsupported provenance kind",
+            ),
+        ] {
+            let evidence: CodexV2RuntimeEvidence = serde_json::from_str(fixture).unwrap();
+            let error = validate_codex_v2_runtime_evidence(&evidence)
+                .unwrap_err()
+                .to_string();
+            assert!(
+                error.contains(expected),
+                "expected `{expected}` in `{error}`"
+            );
+        }
+    }
+
+    #[test]
+    fn adapter_contract_distinguishes_external_runner_runtime_class() {
+        let binding = HostBinding {
+            id: "pi-runner".to_string(),
+            version: "1.0.0".to_string(),
+            host: "pi".to_string(),
+            runtime_class: RuntimeClass::ExternalRunner,
+            default_role: Some("worker".to_string()),
+            capability_evidence: vec!["pi-runner-contract".to_string()],
+            known_limitations: vec!["process isolation is runner-owned".to_string()],
+            capabilities: BindingCapabilities {
+                model_override: true,
+                effort_override: true,
+                fork_none: true,
+                fork_all: false,
+            },
+            profiles: BTreeMap::from([(
+                "worker".to_string(),
+                BindingProfile {
+                    profile: "pi-worker".to_string(),
+                    client: "pi".to_string(),
+                    model: "gpt-5.6-terra".to_string(),
+                    agent_type: None,
+                    effort: Some("high".to_string()),
+                    cost_tier: Some("standard".to_string()),
+                    fork_turns: Some(ForkPolicy {
+                        mode: "none".to_string(),
+                        turns: None,
+                    }),
+                },
+            )]),
+            routes: Vec::new(),
+            verification: BindingVerification {
+                id: "pi-smoke-v1".to_string(),
+                max_age_seconds: Some(60),
+            },
+            artifacts: Vec::new(),
+        };
+        let contract =
+            adapter_contract_for_binding("balanced", &binding, Integration::Standalone).unwrap();
+        assert_eq!(
+            contract.capability.runtime_class,
+            RuntimeClass::ExternalRunner
+        );
+        assert_eq!(contract.adapter.runtime_class, RuntimeClass::ExternalRunner);
+        assert_eq!(
+            contract.adapter.dispatch_recipe.invocation,
+            "external-runner-process"
+        );
+    }
+
+    #[test]
+    fn adapter_contract_handoff_names_planr_consumer_boundaries() {
+        let binding = binding_for_selector("codex-openai").unwrap();
+        let contract =
+            adapter_contract_for_binding("balanced", &binding, Integration::Planr).unwrap();
+        let handoff = &contract.planr_handoff;
+        let package_json: Value = serde_json::from_str(NPM_PACKAGE_JSON).unwrap();
+        let expected_package = format!(
+            "{}@{}",
+            package_json["name"].as_str().unwrap(),
+            package_json["version"].as_str().unwrap()
+        );
+        assert_eq!(handoff.switchloom_package, expected_package);
+        assert_ne!(
+            handoff.switchloom_package,
+            format!("{}@{PACKAGE_VERSION}", env!("CARGO_PKG_NAME"))
+        );
+        assert!(
+            handoff
+                .semantic_role_contract
+                .contains("usage policy `balanced`")
+        );
+        assert!(
+            handoff
+                .required_consumer_behavior
+                .iter()
+                .any(|behavior| behavior.contains("RoutingIntentV1"))
+        );
+        assert!(
+            handoff
+                .required_consumer_behavior
+                .iter()
+                .any(|behavior| behavior.contains("package digest"))
+        );
+        assert!(
+            handoff
+                .forbidden_duplicate_ownership
+                .iter()
+                .any(|behavior| behavior.contains("model catalog"))
+        );
+        assert!(
+            handoff
+                .certification_report_reference
+                .contains("reports/native-host-certification")
+        );
+    }
+
+    #[test]
+    fn pi_external_adapter_declares_typed_runner_contract() {
+        let bundle = compile_policy("balanced", "pi-external", Integration::Standalone).unwrap();
+        let contract = bundle.adapter_contract.as_ref().unwrap();
+        assert_eq!(
+            contract.capability.runtime_class,
+            RuntimeClass::ExternalRunner
+        );
+        assert_eq!(contract.adapter.runtime_class, RuntimeClass::ExternalRunner);
+        assert_eq!(
+            contract.adapter.dispatch_recipe.invocation,
+            "external-runner-process"
+        );
+        for field in [
+            "agent_type",
+            "provider",
+            "model",
+            "effort",
+            "fork_turns",
+            "isolation",
+            "task",
+        ] {
+            assert!(
+                contract
+                    .adapter
+                    .dispatch_recipe
+                    .required_fields
+                    .contains(&field.to_string()),
+                "Pi dispatch recipe should require {field}"
+            );
+        }
+        assert_eq!(
+            contract.capability.observability.effective_model,
+            GuaranteeLevel::Advisory
+        );
+        assert!(
+            contract
+                .capability
+                .known_limitations
+                .iter()
+                .any(|limitation| limitation.contains("process-isolated"))
+        );
+
+        let workflow = bundle
+            .artifacts
+            .iter()
+            .find(|artifact| artifact.path == ".pi/workflows/model-routing-preset-runner.json")
+            .unwrap();
+        assert!(
+            workflow
+                .content
+                .contains("\"runtime_class\": \"external-runner\"")
+        );
+        assert!(
+            workflow
+                .content
+                .contains("\"agent_type\": \"switchloom-pi-worker\"")
+        );
+        assert!(
+            workflow
+                .content
+                .contains("\"provider_model\": \"openai/gpt-4o-mini\"")
+        );
+        assert!(workflow.content.contains("\"thinking\": \"low\""));
+        assert!(workflow.content.contains("\"session\": \"none\""));
+        assert!(workflow.content.contains("\"task\""));
+    }
+
+    #[test]
+    fn host_binding_runtime_class_is_required_and_explicit() {
+        let missing_runtime_class = r#"
+id = "pi-runner"
+version = "1.0.0"
+host = "pi"
+default_role = "worker"
+
+[capabilities]
+model_override = true
+effort_override = true
+fork_none = true
+fork_all = false
+
+[profiles.worker]
+profile = "pi-worker"
+client = "pi"
+model = "gpt-5.6-terra"
+
+[verification]
+id = "pi-smoke-v1"
+"#;
+        let error = toml::from_str::<HostBinding>(missing_runtime_class)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("runtime_class"));
+    }
+
+    #[test]
+    fn adapter_contract_rejects_unsupported_required_guarantees() {
+        let mut contract = compile_policy("balanced", "cursor-openai", Integration::Standalone)
+            .unwrap()
+            .adapter_contract
+            .unwrap();
+        contract
+            .routing_intent
+            .required_guarantees
+            .push("effort_selection".to_string());
+        let error = validate_adapter_contract(&contract)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("unsupported"));
+    }
+
+    #[test]
+    fn shared_adapter_validation_rejects_invalid_routes_before_rendering() {
+        let binding = HostBinding {
+            id: "cursor-test".to_string(),
+            version: "1.0.0".to_string(),
+            host: "cursor".to_string(),
+            runtime_class: RuntimeClass::NativeSubagent,
+            default_role: None,
+            capability_evidence: Vec::new(),
+            known_limitations: Vec::new(),
+            capabilities: BindingCapabilities {
+                model_override: true,
+                effort_override: false,
+                fork_none: true,
+                fork_all: false,
+            },
+            profiles: BTreeMap::from([(
+                "worker".to_string(),
+                BindingProfile {
+                    profile: "cursor-worker".to_string(),
+                    client: "cursor".to_string(),
+                    model: "gpt-5.4-mini".to_string(),
+                    agent_type: None,
+                    effort: None,
+                    cost_tier: Some("standard".to_string()),
+                    fork_turns: Some(ForkPolicy {
+                        mode: "none".to_string(),
+                        turns: None,
+                    }),
+                },
+            )]),
+            routes: vec![BindingRoute {
+                work_type: "code".to_string(),
+                role: "missing".to_string(),
+                fallback_roles: Vec::new(),
+            }],
+            verification: BindingVerification {
+                id: "cursor-test-v1".to_string(),
+                max_age_seconds: Some(60),
+            },
+            artifacts: Vec::new(),
+        };
+        let error = compile_host_adapter("balanced", &binding, Integration::Standalone)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("unknown role `missing`"));
+    }
+
+    #[test]
+    fn shared_adapter_validation_rejects_duplicate_profile_ids_before_rendering() {
+        let binding = HostBinding {
+            id: "cursor-test".to_string(),
+            version: "1.0.0".to_string(),
+            host: "cursor".to_string(),
+            runtime_class: RuntimeClass::NativeSubagent,
+            default_role: Some("first".to_string()),
+            capability_evidence: Vec::new(),
+            known_limitations: Vec::new(),
+            capabilities: BindingCapabilities {
+                model_override: true,
+                effort_override: false,
+                fork_none: true,
+                fork_all: false,
+            },
+            profiles: BTreeMap::from([
+                (
+                    "first".to_string(),
+                    BindingProfile {
+                        profile: "cursor-worker".to_string(),
+                        client: "cursor".to_string(),
+                        model: "gpt-5.4-mini".to_string(),
+                        agent_type: None,
+                        effort: None,
+                        cost_tier: Some("standard".to_string()),
+                        fork_turns: Some(ForkPolicy {
+                            mode: "none".to_string(),
+                            turns: None,
+                        }),
+                    },
+                ),
+                (
+                    "second".to_string(),
+                    BindingProfile {
+                        profile: "cursor-worker".to_string(),
+                        client: "cursor".to_string(),
+                        model: "gpt-5.5".to_string(),
+                        agent_type: None,
+                        effort: None,
+                        cost_tier: Some("premium".to_string()),
+                        fork_turns: Some(ForkPolicy {
+                            mode: "none".to_string(),
+                            turns: None,
+                        }),
+                    },
+                ),
+            ]),
+            routes: vec![BindingRoute {
+                work_type: "code".to_string(),
+                role: "first".to_string(),
+                fallback_roles: vec!["second".to_string()],
+            }],
+            verification: BindingVerification {
+                id: "cursor-test-v1".to_string(),
+                max_age_seconds: Some(60),
+            },
+            artifacts: Vec::new(),
+        };
+        let error = compile_host_adapter("balanced", &binding, Integration::Standalone)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("both normalize to profile `cursor-worker`"));
+    }
+
+    #[test]
+    fn dispatch_recipe_artifact_paths_match_final_bundle_artifacts() {
+        let bundle = compile_policy("balanced", "mixed-host", Integration::Planr).unwrap();
+        let contract_paths = bundle
+            .adapter_contract
+            .as_ref()
+            .unwrap()
+            .adapter
+            .dispatch_recipe
+            .artifact_paths
+            .iter()
+            .cloned()
+            .collect::<BTreeSet<_>>();
+        let artifact_paths = bundle
+            .artifacts
+            .iter()
+            .map(|artifact| artifact.path.clone())
+            .collect::<BTreeSet<_>>();
+        assert_eq!(contract_paths, artifact_paths);
+        assert!(
+            !contract_paths
+                .iter()
+                .any(|path| path.contains("model-routing-native-routing"))
+        );
+    }
+
+    #[test]
+    fn dispatch_evidence_requires_persisted_requested_and_effective_receipt_fields() {
+        let mut valid = DispatchEvidenceV1 {
+            schema_version: 1,
+            package_digest: "sha256:abc".to_string(),
+            host_version: "codex 0.144.0".to_string(),
+            requested_dispatch: RequestedDispatchEvidence {
+                semantic_role: "worker".to_string(),
+                profile: "codex-terra-high".to_string(),
+                model: "gpt-5.6-terra".to_string(),
+                effort: Some("high".to_string()),
+                agent_type: Some("model_routing_terra_high".to_string()),
+                fork_turns: Some(ForkPolicy {
+                    mode: "none".to_string(),
+                    turns: None,
+                }),
+            },
+            child_identity: ChildIdentityEvidence {
+                host: "codex".to_string(),
+                role: "worker".to_string(),
+                agent_role: "model_routing_terra_high".to_string(),
+                agent_type: Some("model_routing_terra_high".to_string()),
+                task_name: Some("worker".to_string()),
+            },
+            effective_model: Some("gpt-5.6-terra".to_string()),
+            effective_effort: Some("high".to_string()),
+            nonce: "nonce-123".to_string(),
+            raw_evidence_refs: vec!["receipt.json".to_string()],
+            verdict: GuaranteeLevel::Deterministic,
+        };
+        let encoded = serde_json::to_string(&valid).unwrap();
+        let decoded: DispatchEvidenceV1 = serde_json::from_str(&encoded).unwrap();
+        validate_dispatch_evidence(&decoded).unwrap();
+
+        let missing_nonce = r#"{
+  "schema_version": 1,
+  "package_digest": "sha256:abc",
+  "host_version": "codex 0.144.0",
+  "requested_dispatch": {
+    "semantic_role": "worker",
+    "profile": "codex-terra-high",
+    "model": "gpt-5.6-terra"
+  },
+  "child_identity": {
+    "host": "codex",
+    "role": "worker",
+    "agent_role": "model_routing_terra_high"
+  },
+  "raw_evidence_refs": ["receipt.json"],
+  "verdict": "deterministic"
+}"#;
+        let error = serde_json::from_str::<DispatchEvidenceV1>(missing_nonce)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("nonce"));
+
+        valid.effective_model = None;
+        let error = validate_dispatch_evidence(&valid).unwrap_err().to_string();
+        assert!(error.contains("effective_model"));
+
+        valid.effective_model = Some("gpt-5.6-sol".to_string());
+        let error = validate_dispatch_evidence(&valid).unwrap_err().to_string();
+        assert!(error.contains("does not match requested model"));
+
+        valid.effective_model = Some("gpt-5.6-terra".to_string());
+        valid.effective_effort = Some("medium".to_string());
+        let error = validate_dispatch_evidence(&valid).unwrap_err().to_string();
+        assert!(error.contains("does not match requested effort"));
+
+        valid.effective_effort = None;
+        valid.verdict = GuaranteeLevel::Advisory;
+        validate_dispatch_evidence(&valid).unwrap();
+    }
+
+    #[test]
+    fn adapter_validation_blocks_unproven_deterministic_claude_and_cursor_evidence() {
+        for (host, role, profile, model, effort) in [
+            (
+                "claude-native",
+                "worker",
+                "claude-native-worker",
+                "sonnet",
+                Some("medium"),
+            ),
+            (
+                "cursor-openai",
+                "worker",
+                "cursor-openai-worker",
+                "gpt-5.4-mini",
+                None,
+            ),
+        ] {
+            let contract = compile_policy("balanced", host, Integration::Standalone)
+                .unwrap()
+                .adapter_contract
+                .unwrap();
+            let mut evidence = DispatchEvidenceV1 {
+                schema_version: 1,
+                package_digest: "sha256:abc".to_string(),
+                host_version: format!("{} cli 1.0.0", contract.capability.host),
+                requested_dispatch: RequestedDispatchEvidence {
+                    semantic_role: role.to_string(),
+                    profile: profile.to_string(),
+                    model: model.to_string(),
+                    effort: effort.map(str::to_string),
+                    agent_type: None,
+                    fork_turns: Some(ForkPolicy {
+                        mode: "none".to_string(),
+                        turns: None,
+                    }),
+                },
+                child_identity: ChildIdentityEvidence {
+                    host: contract.capability.host.clone(),
+                    role: role.to_string(),
+                    agent_role: "model-routing-preset-worker".to_string(),
+                    agent_type: None,
+                    task_name: Some("model-routing-preset-worker".to_string()),
+                },
+                effective_model: Some(model.to_string()),
+                effective_effort: effort.map(str::to_string),
+                nonce: "nonce-456".to_string(),
+                raw_evidence_refs: vec!["host-output.json".to_string()],
+                verdict: GuaranteeLevel::Deterministic,
+            };
+            let error = validate_dispatch_evidence_for_adapter(&evidence, &contract)
+                .unwrap_err()
+                .to_string();
+            assert!(
+                error.contains("effective model observability is Advisory"),
+                "{host}: {error}"
+            );
+
+            evidence.verdict = GuaranteeLevel::Advisory;
+            validate_dispatch_evidence_for_adapter(&evidence, &contract).unwrap();
+
+            evidence.verdict = GuaranteeLevel::Deterministic;
+            evidence.raw_evidence_refs.push(format!(
+                "host-authenticated-effective-model:{}:host-output.json#model",
+                contract.capability.host
+            ));
+            if effort.is_some() {
+                evidence.raw_evidence_refs.push(format!(
+                    "host-authenticated-effective-effort:{}:host-output.json#effort",
+                    contract.capability.host
+                ));
+            }
+            let error = validate_dispatch_evidence_for_adapter(&evidence, &contract)
+                .unwrap_err()
+                .to_string();
+            assert!(
+                error.contains("effective model observability is Advisory"),
+                "forged refs should not upgrade {host}: {error}"
+            );
+        }
     }
 
     #[test]
@@ -4271,9 +6644,30 @@ mod tests {
         assert_eq!(bundle.source.integration, Integration::Standalone);
         assert_eq!(bundle.evidence.status, "custom-unverified");
         assert!(bundle.profiles.contains_key("implementer"));
+        assert_eq!(
+            bundle.profiles.get("implementer").unwrap().model,
+            "gpt-5.6-terra"
+        );
         assert!(bundle.artifacts.iter().any(|artifact| artifact.path
             == ".codex/agents/switchloom_implementer.toml"
             && artifact.content.contains("model = \"gpt-5.6-terra\"")));
+        let adapter_contract = bundle.adapter_contract.as_ref().unwrap();
+        assert!(
+            adapter_contract
+                .routing_intent
+                .role_requests
+                .iter()
+                .any(|request| request.semantic_role == "implementer"
+                    && request.requested_model == "gpt-5.6-terra"
+                    && request.requested_effort.as_deref() == Some("high"))
+        );
+        assert!(
+            adapter_contract
+                .adapter
+                .dispatch_recipe
+                .artifact_paths
+                .contains(&".codex/agents/switchloom_implementer.toml".to_string())
+        );
         assert!(bundle.artifacts.iter().any(|artifact| {
             artifact.content.contains("task_name `implementer`")
                 && !artifact.content.contains("sandbox_mode")
@@ -4460,6 +6854,12 @@ mod tests {
         for (host, role, model, effort) in [
             ("claude-code", "implementer", "sonnet", Some("medium")),
             ("cursor", "implementer", "composer-2.5", None),
+            (
+                "opencode",
+                "implementer",
+                "opencode/gpt-5-nano",
+                Some("medium"),
+            ),
             ("mixed-host", "implementer", "sonnet", Some("medium")),
         ] {
             let spec = SetupSpecV1 {
@@ -4485,6 +6885,33 @@ mod tests {
             let bundle = compile_setup_spec(&spec).unwrap();
             validate_bundle(&bundle).unwrap();
             assert_eq!(bundle.evidence.status, "custom-unverified");
+            assert_eq!(bundle.profiles.get(role).unwrap().model, model);
+            let artifact_path = match host {
+                "claude-code" => ".claude/agents/switchloom-implementer.md",
+                "cursor" => ".cursor/agents/switchloom-implementer.md",
+                "opencode" => ".opencode/agents/switchloom-implementer.md",
+                "mixed-host" => ".model-routing/roles/implementer.toml",
+                _ => unreachable!(),
+            };
+            assert!(
+                bundle
+                    .artifacts
+                    .iter()
+                    .any(|artifact| artifact.path == artifact_path)
+            );
+            let contract = bundle.adapter_contract.as_ref().unwrap();
+            assert!(contract.routing_intent.role_requests.iter().any(
+                |request| request.semantic_role == role
+                    && request.requested_model == model
+                    && request.requested_effort.as_deref() == effort
+            ));
+            assert!(
+                contract
+                    .adapter
+                    .dispatch_recipe
+                    .artifact_paths
+                    .contains(&artifact_path.to_string())
+            );
         }
     }
 
@@ -4811,6 +7238,15 @@ mod tests {
                     .iter()
                     .any(|model| model["id"] == "gpt-5.6-sol")
         }));
+        assert!(catalog["hosts"].as_array().unwrap().iter().any(|host| {
+            host["id"] == "opencode"
+                && host["binding"] == "opencode-native"
+                && host["models"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|model| model["id"] == "opencode/gpt-5-nano")
+        }));
     }
 
     #[test]
@@ -4844,7 +7280,8 @@ mod tests {
             let worker_protocol = bundle.artifacts.iter().any(|artifact| {
                 (artifact.path.contains("terra-high")
                     || artifact.path.contains("luna-xhigh")
-                    || artifact.path.contains("preset-worker"))
+                    || artifact.path.contains("preset-worker")
+                    || artifact.path.starts_with(".pi/workflows/"))
                     && artifact.content.contains("Protocol preload: $planr-work")
             });
             assert!(worker_protocol, "missing Planr worker preload for {host}");
@@ -4930,6 +7367,36 @@ mod tests {
                 include_str!("../fixtures/routing-bundle-v1/invalid-unknown-profile-field.json"),
                 "unknown field `unexpected`",
             ),
+            (
+                include_str!(
+                    "../fixtures/routing-bundle-v1/invalid-runtime-missing-source-reference.json"
+                ),
+                "runtime behavior must declare source references",
+            ),
+            (
+                include_str!(
+                    "../fixtures/routing-bundle-v1/invalid-runtime-bogus-source-reference.json"
+                ),
+                "source reference must match the digest-bound evidence artifact",
+            ),
+            (
+                include_str!(
+                    "../fixtures/routing-bundle-v1/invalid-runtime-capability-mismatch.json"
+                ),
+                "capability_version must match parsed evidence_id",
+            ),
+            (
+                include_str!("../fixtures/routing-bundle-v1/invalid-runtime-slot-count.json"),
+                "exactly the parsed evidence child slots",
+            ),
+            (
+                include_str!("../fixtures/routing-bundle-v1/invalid-runtime-version-drift.json"),
+                "installed host version must match parsed evidence command output",
+            ),
+            (
+                include_str!("../fixtures/routing-bundle-v1/invalid-runtime-ultra-delegation.json"),
+                "delegation modes must match parsed evidence",
+            ),
         ] {
             let error = inspect_bundle_json(fixture).unwrap_err().to_string();
             assert!(
@@ -4989,6 +7456,115 @@ mod tests {
     }
 
     #[test]
+    fn built_in_codex_presets_do_not_route_to_ultra() {
+        for policy in ["low-usage", "balanced", "max-quality"] {
+            let bundle = compile_policy(policy, "codex-openai", Integration::Standalone).unwrap();
+            assert_ne!(
+                bundle.route_default.as_ref().unwrap().profile,
+                "codex-sol-ultra",
+                "{policy} must not default to Ultra"
+            );
+            assert!(
+                bundle
+                    .routes
+                    .iter()
+                    .all(|route| route.profile != "codex-sol-ultra"),
+                "{policy} must not route any default work type to Ultra"
+            );
+            assert!(
+                bundle.profiles.contains_key("codex-sol-ultra"),
+                "{policy} keeps Ultra available as an explicit manual profile"
+            );
+            assert!(
+                bundle
+                    .artifacts
+                    .iter()
+                    .any(|artifact| artifact.path == ".codex/agents/model-routing-sol-ultra.toml"),
+                "{policy} keeps the manual Ultra role artifact"
+            );
+        }
+    }
+
+    #[test]
+    fn claude_and_cursor_native_adapters_emit_artifacts_with_advisory_effective_routing() {
+        for (host, expected_path, requested_model) in [
+            (
+                "claude-native",
+                ".claude/agents/model-routing-preset-worker.md",
+                "sonnet",
+            ),
+            (
+                "cursor-openai",
+                ".cursor/agents/model-routing-preset-worker.md",
+                "gpt-5.4-mini",
+            ),
+            (
+                "cursor-fable-grok",
+                ".cursor/agents/model-routing-preset-worker.md",
+                "cursor-grok-4.5-medium",
+            ),
+            (
+                "opencode-native",
+                ".opencode/agents/model-routing-preset-worker.md",
+                "opencode/gpt-5-nano",
+            ),
+        ] {
+            let bundle = compile_policy("balanced", host, Integration::Standalone).unwrap();
+            let contract = bundle.adapter_contract.as_ref().unwrap();
+            assert_eq!(
+                contract.capability.runtime_class,
+                RuntimeClass::NativeSubagent
+            );
+            assert_eq!(contract.adapter.runtime_class, RuntimeClass::NativeSubagent);
+            assert_eq!(
+                contract.capability.observability.effective_model,
+                GuaranteeLevel::Advisory
+            );
+            assert_eq!(
+                contract
+                    .capability
+                    .guarantees
+                    .get("model_selection")
+                    .unwrap()
+                    .level,
+                GuaranteeLevel::Advisory
+            );
+            assert!(
+                contract
+                    .capability
+                    .known_limitations
+                    .iter()
+                    .any(|limitation| limitation.contains("override"))
+                    || contract
+                        .capability
+                        .known_limitations
+                        .iter()
+                        .any(|limitation| limitation.contains("preempt"))
+                    || contract
+                        .capability
+                        .known_limitations
+                        .iter()
+                        .any(|limitation| limitation.contains("provider"))
+            );
+            assert!(
+                contract
+                    .adapter
+                    .dispatch_recipe
+                    .artifact_paths
+                    .contains(&expected_path.to_string())
+            );
+
+            let artifact = bundle
+                .artifacts
+                .iter()
+                .find(|artifact| artifact.path == expected_path)
+                .unwrap();
+            assert!(artifact.content.contains(requested_model));
+            assert!(artifact.content.contains("preserve routing evidence"));
+        }
+    }
+
+    #[test]
     fn codex_child_overrides_require_bounded_fork_policy() {
         let mut profile = Profile {
             client: "codex".to_string(),
@@ -5030,6 +7606,15 @@ mod tests {
     fn lifecycle_preview_apply_status_and_uninstall_are_repository_safe() {
         let repository = temp_repo("lifecycle");
         let bundle = compile_policy("balanced", "codex-openai", Integration::Standalone).unwrap();
+        assert!(bundle.artifacts.iter().all(|artifact| {
+            artifact.path == CODEX_CONFIG_PATH || artifact.path.starts_with(".codex/agents/")
+        }));
+        assert!(
+            bundle
+                .artifacts
+                .iter()
+                .all(|artifact| !artifact.content.contains("codex exec"))
+        );
         let preview = preview_bundle(&repository, &bundle).unwrap();
         assert_eq!(preview.action, "preview");
         assert_eq!(preview.artifacts.len(), 7);
@@ -5052,6 +7637,21 @@ mod tests {
         assert!(
             repository
                 .join(".codex/agents/model-routing-sol-medium.toml")
+                .exists()
+        );
+        let codex_config = fs::read_to_string(repository.join(".codex/config.toml")).unwrap();
+        assert!(codex_config.contains("[agents.model_routing_terra_high]"));
+        assert!(codex_config.contains("config_file = \"./agents/model-routing-terra-high.toml\""));
+        assert!(codex_config.contains("[agents.model_routing_sol_high]"));
+        assert!(codex_config.contains("config_file = \"./agents/model-routing-sol-high.toml\""));
+        assert!(
+            repository
+                .join(".codex/agents/model-routing-terra-high.toml")
+                .exists()
+        );
+        assert!(
+            repository
+                .join(".codex/agents/model-routing-sol-high.toml")
                 .exists()
         );
 
@@ -5078,6 +7678,65 @@ mod tests {
                 .join(".codex/agents/model-routing-sol-medium.toml")
                 .exists()
         );
+    }
+
+    #[test]
+    fn opencode_native_lifecycle_manages_project_agents() {
+        let repository = temp_repo("opencode-lifecycle");
+        let bundle =
+            compile_policy("balanced", "opencode-native", Integration::Standalone).unwrap();
+        let preview = preview_bundle(&repository, &bundle).unwrap();
+        assert!(preview.artifacts.iter().any(|artifact| {
+            artifact.path == ".opencode/agents/model-routing-preset-worker.md"
+                && artifact.status == "create"
+        }));
+
+        apply_bundle_file_with_bundle(&repository, &bundle).unwrap();
+        let worker = repository.join(".opencode/agents/model-routing-preset-worker.md");
+        let driver = repository.join(".opencode/agents/model-routing-preset-driver.md");
+        assert!(worker.exists());
+        assert!(driver.exists());
+        let driver_content = fs::read_to_string(&driver).unwrap();
+        assert!(driver_content.contains("permission:"));
+        assert!(driver_content.contains("model-routing-preset-worker: allow"));
+
+        let status = status_repository(&repository).unwrap();
+        assert!(status.artifacts.iter().any(|artifact| {
+            artifact.path == ".opencode/agents/model-routing-preset-worker.md"
+                && artifact.status == "managed"
+        }));
+        uninstall_repository(&repository).unwrap();
+        assert!(!worker.exists());
+        assert!(!driver.exists());
+        assert!(!repository.join(MANIFEST_PATH).exists());
+    }
+
+    #[test]
+    fn pi_external_lifecycle_manages_workflow_artifacts() {
+        let repository = temp_repo("pi-external-lifecycle");
+        let bundle = compile_policy("balanced", "pi-external", Integration::Standalone).unwrap();
+        let preview = preview_bundle(&repository, &bundle).unwrap();
+        assert!(preview.artifacts.iter().any(|artifact| {
+            artifact.path == ".pi/workflows/model-routing-preset-runner.json"
+                && artifact.status == "create"
+        }));
+
+        apply_bundle_file_with_bundle(&repository, &bundle).unwrap();
+        let workflow = repository.join(".pi/workflows/model-routing-preset-runner.json");
+        assert!(workflow.exists());
+        let workflow_content = fs::read_to_string(&workflow).unwrap();
+        assert!(workflow_content.contains("\"external-runner\""));
+        assert!(workflow_content.contains("\"--no-tools\""));
+        assert!(workflow_content.contains("\"PI_CODING_AGENT_DIR"));
+
+        let status = status_repository(&repository).unwrap();
+        assert!(status.artifacts.iter().any(|artifact| {
+            artifact.path == ".pi/workflows/model-routing-preset-runner.json"
+                && artifact.status == "managed"
+        }));
+        uninstall_repository(&repository).unwrap();
+        assert!(!workflow.exists());
+        assert!(!repository.join(MANIFEST_PATH).exists());
     }
 
     #[test]
@@ -5177,12 +7836,24 @@ mod tests {
     #[test]
     fn lifecycle_codex_config_merges_unrelated_entries_update_rollback_and_uninstall() {
         let repository = temp_repo("codex-config-ownership");
-        fs::create_dir_all(repository.join(".codex")).unwrap();
+        fs::create_dir_all(repository.join(".codex/agents")).unwrap();
         fs::write(
             repository.join(CODEX_CONFIG_PATH),
             "[agents.local_reviewer]\nconfig_file = \"./agents/local-reviewer.toml\"\n\n[features]\nlocal = true\n",
         )
         .unwrap();
+        fs::write(
+            repository.join(".codex/agents/local-reviewer.toml"),
+            "name = \"local_reviewer\"\n",
+        )
+        .unwrap();
+        let global_codex_home = temp_repo("global-codex-home");
+        fs::write(
+            global_codex_home.join("config.toml"),
+            "[agents.global_reviewer]\nconfig_file = \"./agents/global-reviewer.toml\"\n",
+        )
+        .unwrap();
+        let global_config_before = fs::read(global_codex_home.join("config.toml")).unwrap();
 
         let codex = compile_policy("balanced", "codex-openai", Integration::Standalone).unwrap();
         let applied = apply_bundle_file_with_bundle(&repository, &codex).unwrap();
@@ -5266,6 +7937,14 @@ mod tests {
         assert_no_codex_config_entry(&config_after_uninstall, "model_routing_terra_high");
         assert_no_codex_config_entry(&config_after_uninstall, "model_routing_sol_high");
         assert!(config_after_uninstall.contains("[features]"));
+        assert_eq!(
+            fs::read_to_string(repository.join(".codex/agents/local-reviewer.toml")).unwrap(),
+            "name = \"local_reviewer\"\n"
+        );
+        assert_eq!(
+            fs::read(global_codex_home.join("config.toml")).unwrap(),
+            global_config_before
+        );
         assert!(!repository.join(MANIFEST_PATH).exists());
     }
 
@@ -5650,6 +8329,19 @@ mod tests {
     #[test]
     fn codex_agent_types_match_registered_toml_names() {
         for host in ["codex-openai", "mixed-host"] {
+            let source = show_policy("balanced", host).unwrap();
+            assert!(
+                source
+                    .artifacts
+                    .iter()
+                    .all(|artifact| !artifact.path.starts_with(".codex/skills/"))
+            );
+            assert!(
+                source
+                    .artifacts
+                    .iter()
+                    .all(|artifact| !artifact.content.contains("model-routing-native-routing"))
+            );
             let bundle = compile_policy("balanced", host, Integration::Standalone).unwrap();
             let config = bundle
                 .artifacts
@@ -5692,6 +8384,15 @@ mod tests {
     fn fresh_repository_registers_codex_native_role_discovery_config() {
         let repository = temp_repo("codex-native-discovery-config");
         let bundle = compile_policy("balanced", "codex-openai", Integration::Standalone).unwrap();
+        assert!(bundle.artifacts.iter().all(|artifact| {
+            artifact.path == ".codex/config.toml" || artifact.path.starts_with(".codex/agents/")
+        }));
+        assert!(
+            bundle
+                .artifacts
+                .iter()
+                .all(|artifact| !artifact.path.starts_with(".codex/skills/"))
+        );
         apply_bundle_file_with_bundle(&repository, &bundle).unwrap();
 
         for role in ["model-routing-terra-high", "model-routing-sol-high"] {
@@ -5787,7 +8488,7 @@ mod tests {
         let second = catalog_json().unwrap();
         assert_eq!(first, second);
         let value: Value = serde_json::from_str(&first).unwrap();
-        assert_eq!(value["compositions"].as_array().unwrap().len(), 20);
+        assert_eq!(value["compositions"].as_array().unwrap().len(), 28);
         assert!(
             value["compositions"]
                 .as_array()

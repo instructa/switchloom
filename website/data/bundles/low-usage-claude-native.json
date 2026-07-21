@@ -6,7 +6,7 @@
   "generated_at": "2026-07-16T00:00:00Z",
   "source": {
     "package": "model-routing",
-    "package_version": "0.2.1",
+    "package_version": "0.2.2",
     "integration": "standalone"
   },
   "policy": {
@@ -124,8 +124,8 @@
       "path": ".claude/agents/model-routing-preset-worker.md",
       "media_type": "text/markdown",
       "mode": "create",
-      "content": "---\nname: model-routing-preset-worker\nmodel: sonnet\neffort: medium\n---\nFollow the generated role instructions and preserve routing evidence.\n",
-      "sha256": "f96b62406029051430e8365d622d141593fe72f56e20ed4a52f4f7f37ae5de1e"
+      "content": "---\nname: model-routing-preset-worker\nmodel: sonnet\neffort: medium\n---\nFollow the generated role instructions and preserve routing evidence. Treat the declared model and effort as requested values; only claim a verified verdict when a live Claude Code receipt exposes matching effective execution.\n",
+      "sha256": "d93832ed46f9d583a27a17e0a82d19a42a72519f21aa13b243619c01af4c928c"
     }
   ],
   "evidence": {
@@ -133,5 +133,184 @@
       "builtin-claude-native-v1"
     ],
     "status": "experimental"
+  },
+  "adapter_contract": {
+    "schema_version": 1,
+    "routing_intent": {
+      "schema_version": 1,
+      "integration": "standalone",
+      "semantic_roles": [
+        "driver",
+        "worker"
+      ],
+      "role_requests": [
+        {
+          "semantic_role": "driver",
+          "requested_model": "opus",
+          "requested_effort": "high",
+          "instructions": "Route `driver` through `claude-native-driver`."
+        },
+        {
+          "semantic_role": "worker",
+          "requested_model": "sonnet",
+          "requested_effort": "medium",
+          "instructions": "Route `worker` through `claude-native-worker`."
+        }
+      ],
+      "required_guarantees": [
+        "artifact_lifecycle",
+        "dispatch_identity"
+      ]
+    },
+    "capability": {
+      "schema_version": 1,
+      "host": "claude-code",
+      "host_version_constraints": {
+        "evidence_max_age_seconds": 31536000
+      },
+      "runtime_class": "native-subagent",
+      "runtime_behavior": {
+        "capability_version": "builtin-claude-native-v1",
+        "installed_host_version_source": "claude-code --version",
+        "backend_selection_source": "host account, workspace, provider, or runner configuration outside Switchloom ownership",
+        "trust_boundary": "repository-local generated artifacts are Switchloom-managed; host authentication, account policy, and execution state are host-owned",
+        "discovery_behavior": "host-specific project artifact discovery",
+        "role_precedence": [
+          "Switchloom declares requested semantic role, profile, model, effort, and artifacts",
+          "the host runtime remains the authority for effective execution"
+        ],
+        "shared_filesystem": true,
+        "delegation_modes": {
+          "explicit_agent_type_dispatch": true,
+          "ultra_auto_delegation": false,
+          "automatic_delegation_requires_ultra": false
+        },
+        "source_references": [
+          "builtin-claude-project-agent-contract"
+        ]
+      },
+      "discovery_artifacts": [
+        "builtin-claude-project-agent-contract"
+      ],
+      "dispatch_fields": [
+        "profile",
+        "model",
+        "effort",
+        "fork_turns"
+      ],
+      "model_control": {
+        "level": "advisory",
+        "field": "model",
+        "evidence_required": true
+      },
+      "effort_control": {
+        "level": "advisory",
+        "field": "effort",
+        "evidence_required": true
+      },
+      "context_semantics": {
+        "supports_fork_none": true,
+        "supports_fork_all": false,
+        "requires_bounded_context_for_overrides": false
+      },
+      "nesting": {
+        "max_depth": 1,
+        "level": "deterministic"
+      },
+      "parallelism": {
+        "max_parallel_children": 1,
+        "level": "advisory"
+      },
+      "observability": {
+        "requested_dispatch": "deterministic",
+        "effective_identity": "advisory",
+        "effective_model": "advisory",
+        "raw_evidence_refs": [
+          "builtin-claude-project-agent-contract"
+        ]
+      },
+      "guarantees": {
+        "artifact_lifecycle": {
+          "level": "deterministic",
+          "reason": "Switchloom owns preview/apply/update/rollback/uninstall for managed artifacts.",
+          "evidence_required": false
+        },
+        "dispatch_identity": {
+          "level": "deterministic",
+          "reason": "Adapter can emit explicit local child identity and non-all context policy.",
+          "evidence_required": true
+        },
+        "effective_runtime_evidence": {
+          "level": "advisory",
+          "reason": "Generated bundles declare requested routing; certification must persist requested-versus-effective host evidence.",
+          "evidence_required": true
+        },
+        "effort_selection": {
+          "level": "advisory",
+          "reason": "Host accepts an effort-like field but effective precedence must be proven separately.",
+          "evidence_required": true
+        },
+        "model_selection": {
+          "level": "advisory",
+          "reason": "Host accepts a requested model but may apply account, workspace, or runtime precedence.",
+          "evidence_required": true
+        }
+      },
+      "known_limitations": [
+        "session environment may preempt the requested subagent model",
+        "effective child model is advisory unless a live Claude Code receipt exposes the executed model"
+      ]
+    },
+    "adapter": {
+      "schema_version": 1,
+      "adapter_id": "claude-native",
+      "adapter_version": "1.0.0",
+      "runtime_class": "native-subagent",
+      "accepts_intent_schema": "RoutingIntentV1",
+      "emitted_artifact_modes": [
+        "create"
+      ],
+      "dispatch_recipe": {
+        "invocation": "host-native-subagent",
+        "required_fields": [
+          "profile",
+          "model",
+          "effort",
+          "fork_turns"
+        ],
+        "artifact_paths": [
+          ".claude/agents/model-routing-preset-worker.md"
+        ]
+      },
+      "lifecycle_owner": "switchloom-managed"
+    },
+    "dispatch_evidence": {
+      "schema_version": 1,
+      "required_verdicts": [
+        "deterministic",
+        "advisory",
+        "unsupported"
+      ],
+      "receipt_schema": "DispatchEvidenceV1"
+    },
+    "planr_handoff": {
+      "schema_version": 1,
+      "switchloom_package": "switchloom@0.2.2",
+      "semantic_role_contract": "Planr supplies usage policy `low-usage`, work_type routes, and semantic roles; Switchloom owns the selected host binding, model, effort, fork/context policy, and generated dispatch artifacts.",
+      "required_consumer_behavior": [
+        "Consume RoutingIntentV1 as the only source for semantic_role, work_type, selected profile, model, effort, agent_type, and fork_turns inputs.",
+        "Use the CLI lifecycle or SetupSpecV1 recipe commands to preview, apply, update, status, rollback, and uninstall repository-local artifacts.",
+        "Record Switchloom package version, package digest, bundle_id, host version, requested dispatch, effective child identity, nonce, and receipt paths before claiming certification.",
+        "Treat advisory or unsupported guarantees as uncertified until nonce-bearing live host evidence upgrades them.",
+        "For the available-host release gate, Codex may be certified from deterministic effective-routing evidence; Cursor profiles may only claim advisory nonce-correlated requested-routing evidence unless the host exposes authenticated effective role/model telemetry. Claude Code, OpenCode, and Pi remain unavailable or unverified until authentic receipts exist."
+      ],
+      "forbidden_duplicate_ownership": [
+        "Do not maintain a Planr-side model catalog, effort catalog, preset compiler, host adapter, or fork policy normalizer for Switchloom-owned inputs.",
+        "Do not re-normalize Switchloom model, effort, role, agent_type, profile, or fork policy identifiers in Planr.",
+        "Do not overwrite Switchloom-managed artifacts outside preview/apply/update/rollback/uninstall.",
+        "Do not mark Claude Code, OpenCode, Pi, or any advisory receipt as certified without live nonce-bearing child evidence."
+      ],
+      "certification_report_reference": "reports/native-host-certification/<host>/<timestamp>/workdir/dispatch-evidence.json plus the matching bundle.json, invocation receipt, package digest, and validator stdout"
+    }
   }
 }

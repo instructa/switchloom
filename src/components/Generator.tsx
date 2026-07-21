@@ -127,7 +127,7 @@ export default function Generator({ hostCatalog, setupTransport }: { hostCatalog
               Build your coding-agent team.
             </h1>
             <p className="max-w-2xl text-pretty text-sm leading-6 text-muted-foreground sm:text-base">
-              Pick your agent, choose up to four clear roles, then copy a CLI recipe or download the setup config. No preset maze.
+              Pick a runtime, choose up to four clear roles, then copy a CLI recipe or download the setup config. Codex V2 threads, native subagents, app tasks, and external runners stay separate.
             </p>
           </section>
 
@@ -141,15 +141,15 @@ export default function Generator({ hostCatalog, setupTransport }: { hostCatalog
               <CardContent>
                 <FieldGroup>
                   <FieldSet>
-                    <FieldLegend>1. Which AI agent are you using?</FieldLegend>
-                    <FieldDescription>The generated files match that host's project conventions.</FieldDescription>
+                    <FieldLegend>1. Which runtime are you using?</FieldLegend>
+                    <FieldDescription>The generated files match that host's project conventions and evidence boundary.</FieldDescription>
                     <ToggleGroup
                       aria-label="AI agent"
                       value={[config.host]}
                       onValueChange={(values) => values[0] && selectHost(values[0] as HostId)}
                       variant="outline"
                       spacing={0}
-                      className="grid w-full grid-cols-1 sm:grid-cols-3"
+                      className="grid w-full grid-cols-1 sm:grid-cols-5"
                     >
                       {HOST_IDS.map((id) => (
                         <ToggleGroupItem key={id} value={id} className="w-full gap-2">
@@ -161,7 +161,9 @@ export default function Generator({ hostCatalog, setupTransport }: { hostCatalog
                     <Alert>
                       <ShieldCheckIcon aria-hidden="true" />
                       <AlertTitle>{host.label} output</AlertTitle>
-                      <AlertDescription>{host.note}</AlertDescription>
+                      <AlertDescription>
+                        {host.runtime}: {host.note}
+                      </AlertDescription>
                     </Alert>
                   </FieldSet>
 
@@ -188,7 +190,7 @@ export default function Generator({ hostCatalog, setupTransport }: { hostCatalog
                       <AlertTitle>{config.integration === "planr" ? "Planr integration" : "Standalone setup"}</AlertTitle>
                       <AlertDescription>
                         {config.integration === "planr"
-                          ? "Use this only when the target repository has Planr. Switchloom remains the CLI transport; Planr consumes the additional generated policy files."
+                          ? "Use this only when the target repository has Planr. Switchloom remains the CLI transport; Planr consumes semantic roles, agent_type, fork_turns, and policy files without owning model/provider catalogs."
                           : "No Planr dependency is required. The CLI expands the setup into repository-local files for the selected host."}
                       </AlertDescription>
                     </Alert>
@@ -324,7 +326,7 @@ export default function Generator({ hostCatalog, setupTransport }: { hostCatalog
                   Download .switchloom/config.toml
                 </Button>
                 <p className="pt-1 text-center text-[0.7rem] leading-5 text-muted-foreground">
-                  Custom setup specs are not verified recommendations. Preview before apply; the selected host remains model and execution authority.
+                  Preview before apply, run doctor before certification, and keep advisory receipts distinct from deterministic effective-routing proof.
                 </p>
               </CardFooter>
             </Card>

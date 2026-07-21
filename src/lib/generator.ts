@@ -1,5 +1,5 @@
 export const ROLE_IDS = ["orchestrator", "implementer", "reviewer", "verifier"] as const;
-export const HOST_IDS = ["codex", "cursor", "claude-code"] as const;
+export const HOST_IDS = ["codex", "cursor", "claude-code", "opencode", "pi"] as const;
 export const PRESET_IDS = ["light", "balanced", "high"] as const;
 
 export type RoleId = (typeof ROLE_IDS)[number];
@@ -55,12 +55,14 @@ export const ROLES: Record<RoleId, { label: string; short: string; instructions:
 export const HOSTS: Record<HostId, {
   label: string;
   note: string;
+  runtime: string;
   effortLabel: string | null;
   defaults: Record<RoleId, RoleAssignment>;
 }> = {
   codex: {
     label: "Codex",
-    note: "Native project agents with per-role model and reasoning effort.",
+    note: "Internal V2 child threads using project-local .codex roles; Codex remains orchestration and billing authority.",
+    runtime: "V2 thread tree",
     effortLabel: "Reasoning",
     defaults: {
       orchestrator: { model: "gpt-5.6-sol", effort: "medium" },
@@ -71,7 +73,8 @@ export const HOSTS: Record<HostId, {
   },
   cursor: {
     label: "Cursor",
-    note: "Project agents with current frontier models and per-role reasoning effort; Cursor remains model authority.",
+    note: "Native Cursor project agents with live nonce-correlated requested-routing evidence; effective model claims stay advisory unless Cursor exposes them.",
+    runtime: "native subagent",
     effortLabel: "Reasoning",
     defaults: {
       orchestrator: { model: "fable-5", effort: "high" },
@@ -82,13 +85,38 @@ export const HOSTS: Record<HostId, {
   },
   "claude-code": {
     label: "Claude Code",
-    note: "Native subagents using Claude model aliases and role prompts.",
+    note: "Native subagents using Claude model aliases and role prompts; this release keeps Claude unavailable/unverified until live host receipts exist.",
+    runtime: "native subagent",
     effortLabel: "Effort",
     defaults: {
       orchestrator: { model: "opus", effort: "high" },
       implementer: { model: "sonnet", effort: "medium" },
       reviewer: { model: "opus", effort: "high" },
       verifier: { model: "sonnet", effort: "medium" },
+    },
+  },
+  opencode: {
+    label: "OpenCode",
+    note: "Project-local OpenCode agents with Task permissions and provider-qualified models; not part of the current live release gate.",
+    runtime: "native subagent",
+    effortLabel: "Variant",
+    defaults: {
+      orchestrator: { model: "opencode/gpt-5-nano", effort: "medium" },
+      implementer: { model: "opencode/gpt-5-nano", effort: "low" },
+      reviewer: { model: "anthropic/claude-sonnet-4-5", effort: "medium" },
+      verifier: { model: "opencode/gpt-5-nano", effort: "low" },
+    },
+  },
+  pi: {
+    label: "Pi",
+    note: "External runner workflows using isolated print-mode process execution; separate from host-native child threads.",
+    runtime: "external runner",
+    effortLabel: "Thinking",
+    defaults: {
+      orchestrator: { model: "openai/gpt-4o-mini", effort: "medium" },
+      implementer: { model: "openai/gpt-4o-mini", effort: "low" },
+      reviewer: { model: "anthropic/claude-sonnet-4-5", effort: "high" },
+      verifier: { model: "google/gemini-2.5-flash", effort: "low" },
     },
   },
 };
@@ -151,6 +179,36 @@ const PRESET_ASSIGNMENTS: Record<HostId, Record<PresetId, Record<RoleId, RoleAss
       verifier: { model: "opus", effort: "high" },
     },
   },
+  opencode: {
+    light: {
+      orchestrator: { model: "opencode/gpt-5-nano", effort: "low" },
+      implementer: { model: "opencode/gpt-5-nano", effort: "low" },
+      reviewer: { model: "opencode/gpt-5-nano", effort: "low" },
+      verifier: { model: "opencode/gpt-5-nano", effort: "low" },
+    },
+    balanced: HOSTS.opencode.defaults,
+    high: {
+      orchestrator: { model: "anthropic/claude-opus-4-5", effort: "high" },
+      implementer: { model: "opencode/gpt-5-nano", effort: "high" },
+      reviewer: { model: "anthropic/claude-opus-4-5", effort: "max" },
+      verifier: { model: "opencode/gpt-5-nano", effort: "max" },
+    },
+  },
+  pi: {
+    light: {
+      orchestrator: { model: "google/gemini-2.5-flash", effort: "low" },
+      implementer: { model: "google/gemini-2.5-flash", effort: "low" },
+      reviewer: { model: "openai/gpt-4o-mini", effort: "low" },
+      verifier: { model: "google/gemini-2.5-flash", effort: "low" },
+    },
+    balanced: HOSTS.pi.defaults,
+    high: {
+      orchestrator: { model: "anthropic/claude-sonnet-4-5", effort: "high" },
+      implementer: { model: "openai/gpt-4o-mini", effort: "high" },
+      reviewer: { model: "anthropic/claude-sonnet-4-5", effort: "xhigh" },
+      verifier: { model: "openai/gpt-4o-mini", effort: "xhigh" },
+    },
+  },
 };
 
 function modelLabel(model: string) {
@@ -164,6 +222,11 @@ function modelLabel(model: string) {
     "claude-sonnet-5": "Sonnet 5",
     "grok-4.5": "Grok 4.5",
     "composer-2.5": "Composer 2.5",
+    "opencode/gpt-5-nano": "GPT 5 Nano",
+    "openai/gpt-4o-mini": "GPT 4o Mini",
+    "google/gemini-2.5-flash": "Gemini 2.5 Flash",
+    "anthropic/claude-sonnet-4-5": "Claude Sonnet 4.5",
+    "anthropic/claude-opus-4-5": "Claude Opus 4.5",
     opus: "Opus",
     sonnet: "Sonnet",
   };
@@ -172,6 +235,10 @@ function modelLabel(model: string) {
 
 function modelProvider(model: string) {
   if (model.startsWith("gpt-")) return "OpenAI";
+  if (model.startsWith("openai/")) return "OpenAI";
+  if (model.startsWith("google/")) return "Google";
+  if (model.startsWith("opencode/")) return "OpenCode";
+  if (model.startsWith("anthropic/")) return "Anthropic";
   if (model.startsWith("claude-") || model === "opus" || model === "sonnet" || model === "fable-5") return "Anthropic";
   if (model.startsWith("grok") || model.startsWith("composer")) return "Cursor";
   return undefined;
@@ -405,10 +472,14 @@ export function recipeApplyCommand(config: GeneratorConfig, catalog: HostCatalog
 
 export function lifecycleCommands(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_") {
   const recipe = shellQuote(setupRecipe(config, catalog, recipePrefix));
+  const host = config.host;
+  const report = `reports/native-host-certification/${catalog[config.host].binding}/<timestamp>/workdir`;
   return [
     "npm install -g switchloom",
     `switchloom preview --recipe ${recipe} --repository .`,
     `switchloom apply --recipe ${recipe} --repository .`,
+    `switchloom doctor ${host}`,
+    `switchloom certify ${report}/dispatch-evidence.json --bundle ${report}/bundle.json`,
     "switchloom update --repository .",
     "switchloom status --repository .",
     "switchloom rollback --repository .",

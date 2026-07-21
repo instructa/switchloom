@@ -37,6 +37,13 @@ require_regex() {
   fi
 }
 
+hash_file() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
+routing_bin_sha256="$(hash_file "$routing_bin")"
+codex_version="$(codex --version 2>&1 | rg '^codex(-cli)? ' | tail -n 1)"
+
 json="$workdir/website-planr-setup.json"
 cat > "$json" <<'JSON'
 {
@@ -157,10 +164,14 @@ TASKS
 
 test ! -e "$sentinel_hit"
 mkdir -p "$workdir/child-receipts"
-cat > "$workdir/expected-spawn-receipts.json" <<'JSON'
+cat > "$workdir/expected-spawn-receipts.json" <<JSON
 {
+  "package_digest": "sha256:$routing_bin_sha256",
+  "host_version": "$codex_version",
   "children": [
     {
+      "semantic_role": "implementer",
+      "profile": "switchloom_implementer",
       "agent_type": "switchloom_implementer",
       "task_name": "implementer",
       "canonical_task": "/root/implementer",
@@ -169,6 +180,8 @@ cat > "$workdir/expected-spawn-receipts.json" <<'JSON'
       "completion_contains": "SWITCHLOOM_IMPLEMENTER_CHILD_DONE"
     },
     {
+      "semantic_role": "reviewer",
+      "profile": "switchloom_reviewer",
       "agent_type": "switchloom_reviewer",
       "task_name": "reviewer",
       "canonical_task": "/root/reviewer",
@@ -214,6 +227,11 @@ node "$repo_root/scripts/validate-codex-spawn-state.mjs" \
   --workdir "$workdir" \
   --expect "$workdir/expected-spawn-receipts.json" \
   > "$workdir/codex-spawn-receipts.json"
+node "$repo_root/scripts/validate-codex-runtime-evidence.mjs" \
+  "$workdir/codex-spawn-receipts.json" \
+  --expect "$workdir/expected-spawn-receipts.json" \
+  > "$workdir/validate-codex-spawn-receipts.stdout" \
+  2> "$workdir/validate-codex-spawn-receipts.stderr"
 
 (
   cd "$workdir"
