@@ -538,6 +538,7 @@ PROMPT
 
 codex_exec_args=(
   --json
+  --ignore-user-config
   -C "$workdir"
   -s workspace-write
   -c 'approval_policy="never"'
