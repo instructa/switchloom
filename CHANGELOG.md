@@ -2,6 +2,16 @@
 
 All notable changes to Switchloom are recorded here.
 
+## [0.3.0] - 2026-07-21
+
+- Hard-cut maintainer-only live verification, catalog, registry, probe, and
+  evaluation commands from the public CLI.
+- Kept one owner for each internal operation: release catalog work in `xtask`,
+  and deterministic evaluation plus registry signing in the Rust library.
+- Made `doctor` the actionable public host availability/version check and
+  aligned README, migration, package, and website guidance with the v0.3.0
+  lifecycle.
+
 ## [0.2.2] - 2026-07-21
 
 - Prepared a superseding release candidate for Codex V2 primary routing and

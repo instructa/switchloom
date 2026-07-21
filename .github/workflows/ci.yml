@@ -28,13 +28,9 @@ jobs:
       - name: Migration manifest
         run: sh scripts/check-migration-manifest.sh
       - name: Package
-        run: cargo +1.85.0 package --workspace --allow-dirty --no-verify
-      - name: Package content audit
-        run: |
-          package="$(find target/package -maxdepth 1 -name 'model-routing-*.crate' | head -n 1)"
-          test -n "$package"
-          cargo +1.85.0 package --workspace --list --allow-dirty --no-verify > package-files.txt
-          ! grep -E '(^|/)(\.planr|planr\.sqlite|\.env|receipt|secret|credential)' package-files.txt
+        run: cargo +1.85.0 package --package model-routing --allow-dirty --no-verify
+      - name: Assert sole public Cargo inventory
+        run: cargo +1.85.0 run --quiet -p xtask -- release verify --inventory-only
 
   distribution:
     name: npm distribution
@@ -55,3 +51,5 @@ jobs:
         run: cargo +1.85.0 build --bins
       - name: Test npm wrapper
         run: node --test npm/*.test.mjs
+      - name: Audit npm package inventory
+        run: cargo +1.85.0 run --quiet -p xtask -- release verify --inventory-only

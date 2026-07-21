@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-21T15:55:00Z",
+  "claim": "The same deterministic fixture generators and input bytes were evaluated by the frozen legacy validators and the canonical Rust validators.",
+  "implementations": [
+    { "path": "retained-evidence/evidence-validator-parity/legacy/validate-codex-runtime-evidence.mjs", "sha256": "6120612503d08505984c6177185b373008db23ff52a4e55e1560ff6f0f9dc554", "owner": "frozen-legacy" },
+    { "path": "retained-evidence/evidence-validator-parity/legacy/validate-opencode-runtime-evidence.mjs", "sha256": "a89826177bcfd97c595f2a08dc32aa0664629c48df9156398954026202333d14", "owner": "frozen-legacy" },
+    { "path": "retained-evidence/evidence-validator-parity/legacy/validate-pi-runtime-evidence.mjs", "sha256": "ff42e19fe139bee3c329aaaa00dfbd2a92eef69bc985a758cc604eef63d6e909", "owner": "frozen-legacy" },
+    { "path": "xtask/src/certify/codex.rs", "sha256": "11c89f32acdbec66c2a428b76c1de552216286e7c3eabd57a1fe72ba900c9ddf", "owner": "canonical-rust" },
+    { "path": "xtask/src/certify/codex_spawn.rs", "sha256": "e1e31b0b1413a1520938a226cf8c658f474875d78d3d51c0a5e9c0786a13278c", "owner": "canonical-rust" },
+    { "path": "xtask/src/certify/opencode.rs", "sha256": "c08b2531418bea9610a47043f04ccbc10c4a3a60444095a4613bd9b7185a0c62", "owner": "canonical-rust" },
+    { "path": "xtask/src/certify/pi.rs", "sha256": "000b152e90377a7ef6f5074f1362ae1d8131429084d990b1e3e922d493b38e58", "owner": "canonical-rust" }
+  ],
+  "corpus": [
+    { "path": "retained-evidence/evidence-validator-parity/legacy/validate-codex-runtime-evidence.test.mjs", "sha256": "c770295b6dda3c9581fa78120e73631d0debea91a062832f68b5b63f24164ea0" },
+    { "path": "retained-evidence/evidence-validator-parity/legacy/validate-opencode-runtime-evidence.test.mjs", "sha256": "23bf2cbfd2ab166fbf764a7451c80fa89ddf4ee9bc1558d8dcf7fd712a5fd25e" },
+    { "path": "retained-evidence/evidence-validator-parity/legacy/validate-pi-runtime-evidence.test.mjs", "sha256": "0bfd07e8bffec000accdbd2f67233d6082e6bb5663994ef9d7d40250e69971b2" }
+  ],
+  "cases": [
+    { "name": "codex-valid-correlated", "expected": "accept", "error_class": "none" },
+    { "name": "codex-prose-or-incomplete", "expected": "reject", "error_class": "json-or-completion" },
+    { "name": "codex-missing-source-or-uncorrelated-state", "expected": "reject", "error_class": "source-correlation" },
+    { "name": "codex-inherited-sol-medium", "expected": "reject", "error_class": "effective-routing" },
+    { "name": "codex-missing-or-uncorrelated-dispatch", "expected": "reject", "error_class": "dispatch-correlation" },
+    { "name": "codex-placeholder-provenance", "expected": "reject", "error_class": "package-or-host-provenance" },
+    { "name": "codex-non-v2-override-or-task-mismatch", "expected": "reject", "error_class": "spawn-contract" },
+    { "name": "codex-missing-changed-or-oversized-input", "expected": "reject", "error_class": "bounded-input" },
+    { "name": "codex-uncorrelated-raw-refs", "expected": "reject", "error_class": "raw-reference-correlation" },
+    { "name": "codex-custom-explicit-roles", "expected": "accept", "error_class": "none" },
+    { "name": "opencode-valid-correlated-task", "expected": "accept", "error_class": "none" },
+    { "name": "opencode-driver-only-echo", "expected": "reject", "error_class": "missing-structured-task" },
+    { "name": "opencode-mismatched-child", "expected": "reject", "error_class": "child-identity" },
+    { "name": "opencode-input-echo", "expected": "reject", "error_class": "missing-correlated-result" },
+    { "name": "opencode-later-driver-echo", "expected": "reject", "error_class": "missing-correlated-result" },
+    { "name": "pi-valid-nonce-only", "expected": "accept", "error_class": "none" },
+    { "name": "pi-prose-output", "expected": "reject", "error_class": "nonce-only-output" },
+    { "name": "pi-tools-enabled", "expected": "reject", "error_class": "isolation" },
+    { "name": "pi-agent-type-mismatch", "expected": "reject", "error_class": "child-identity" },
+    { "name": "pi-non-nonce-task", "expected": "reject", "error_class": "task-contract" },
+    { "name": "pi-replayed-argv", "expected": "reject", "error_class": "invocation-correlation" },
+    { "name": "pi-missing-thinking", "expected": "reject", "error_class": "invocation-thinking" },
+    { "name": "pi-shared-agent-dir", "expected": "reject", "error_class": "state-boundary" },
+    { "name": "pi-unbound-prompt-hash", "expected": "reject", "error_class": "prompt-correlation" }
+  ],
+  "results": {
+    "legacy": { "harness_exit": 0, "passed": 24, "failed": 0 },
+    "rust": { "harness_exit": 0, "passed": 24, "failed": 0 },
+    "semantic_agreement": "24/24"
+  }
+}

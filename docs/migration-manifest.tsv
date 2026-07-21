@@ -96,23 +96,24 @@ planr-consumer	planr-045	docs/MCP_CONTRACT.md	replace	Planr Goal B	Remove or rew
 planr-consumer	planr-046	apps/docs/content/docs/reference/configuration-and-storage.mdx	replace	Planr Goal B	Replace Routing bundles write-behavior text with Switchloom-produced declaration consumption boundaries.
 planr-consumer	planr-047	apps/docs/redirects.mjs	keep	Planr docs app	Historical routing-bundles redirect-only record may remain if it only preserves old URL navigation.
 planr-consumer	planr-048	docs/documentation/INFORMATION_ARCHITECTURE.md	keep	Planr docs	Historical routing-bundles redirect inventory may remain if it only documents URL migration.
+planr-consumer	planr-049	apps/docs/wrangler.jsonc	keep	Planr docs	Docs deployment configuration remains Planr-owned; routing references are consumer-only compatibility metadata.
 cli-command	cmd-001	planr-routing policy list	move-generalize	model-routing policy list	List official policies.
 cli-command	cmd-002	planr-routing policy show <policy> --host <host>	move-generalize	model-routing policy show <policy> --host <host>	Show one policy.
 cli-command	cmd-003	planr-routing compile <policy> --host <host>	move-generalize	model-routing compile <policy> --host <host>	Compile bundle JSON.
-cli-command	cmd-004	planr-routing probe <host>	move-generalize	model-routing probe <host>	Probe host capabilities.
-cli-command	cmd-005	planr-routing evaluate <policy> --host <host>	move-generalize	model-routing evaluate <policy> --host <host>	Evaluate recommendation evidence.
-cli-command	cmd-006	planr-routing catalog build	move-generalize	model-routing catalog build	Build catalog JSON.
-cli-command	cmd-007	planr-routing catalog verify <file>	move-generalize	model-routing catalog verify <file>	Verify catalog JSON.
-cli-command	cmd-008	planr-routing registry sign <file> --signer <id> --private-key-file <path> --output <path>	move-generalize	model-routing registry sign <file> --signer <id> --private-key-file <path> --output <path>	Sign registry metadata.
-cli-command	cmd-009	planr-routing registry verify <file> --signature <path> --trusted-signer <id> --trusted-public-key-file <path>	move-generalize	model-routing registry verify <file> --signature <path> --trusted-signer <id> --trusted-public-key-file <path>	Verify registry signature.
+cli-command	cmd-004	planr-routing probe <host>	replace	model-routing doctor <host>	Public health check; the probe alias is removed.
+cli-command	cmd-005	planr-routing evaluate <policy> --host <host>	internalize	model-routing library evaluate_policy	Offline evaluation has one library owner and no public command.
+cli-command	cmd-006	planr-routing catalog build	internalize	xtask release prepare	Regenerate catalog JSON through maintainer tooling.
+cli-command	cmd-007	planr-routing catalog verify <file>	internalize	xtask release verify	Verify catalog JSON through maintainer tooling.
+cli-command	cmd-008	planr-routing registry sign <file> --signer <id> --private-key-file <path> --output <path>	internalize	model-routing library sign_registry	Sign registry metadata through the library API.
+cli-command	cmd-009	planr-routing registry verify <file> --signature <path> --trusted-signer <id> --trusted-public-key-file <path>	internalize	model-routing library verify_registry_signature	Verify registry signatures through the library API.
 generated-artifact	art-001	.planr/agents.toml	move-generalize	.planr/agents.toml	Optional Planr integration declaration only.
 generated-artifact	art-002	.planr/policy.toml	move-generalize	.planr/policy.toml	Optional Planr integration policy only.
-generated-artifact	art-011	.codex/config.toml	move-generalize	.codex/config.toml	Current v0.2.0 repository-local Codex role discovery config.
-generated-artifact	art-003	.codex/agents/model-routing-luna-xhigh.toml	move-generalize	.codex/agents/model-routing-luna-xhigh.toml	Current v0.2.0 Codex mechanical profile artifact.
-generated-artifact	art-004	.codex/agents/model-routing-sol-high.toml	move-generalize	.codex/agents/model-routing-sol-high.toml	Current v0.2.0 Codex reviewer profile artifact.
-generated-artifact	art-005	.codex/agents/model-routing-sol-medium.toml	move-generalize	.codex/agents/model-routing-sol-medium.toml	Current v0.2.0 Codex driver profile artifact.
-generated-artifact	art-006	.codex/agents/model-routing-sol-ultra.toml	move-generalize	.codex/agents/model-routing-sol-ultra.toml	Current v0.2.0 Codex moonshot profile artifact.
-generated-artifact	art-007	.codex/agents/model-routing-terra-high.toml	move-generalize	.codex/agents/model-routing-terra-high.toml	Current v0.2.0 Codex implementer profile artifact.
-generated-artifact	art-008	.codex/agents/model-routing-terra-medium.toml	move-generalize	.codex/agents/model-routing-terra-medium.toml	Current v0.2.0 Codex explorer profile artifact.
-generated-artifact	art-009	.claude/agents/model-routing-preset-worker.md	move-generalize	.claude/agents/model-routing-preset-worker.md	Current v0.2.0 Claude Code preset worker artifact.
-generated-artifact	art-010	.cursor/agents/model-routing-preset-worker.md	move-generalize	.cursor/agents/model-routing-preset-worker.md	Current v0.2.0 Cursor preset worker artifact.
+generated-artifact	art-011	.codex/config.toml	move-generalize	.codex/config.toml	Current v0.3.0 repository-local Codex role discovery config.
+generated-artifact	art-003	.codex/agents/model-routing-luna-xhigh.toml	move-generalize	.codex/agents/model-routing-luna-xhigh.toml	Current v0.3.0 Codex mechanical profile artifact.
+generated-artifact	art-004	.codex/agents/model-routing-sol-high.toml	move-generalize	.codex/agents/model-routing-sol-high.toml	Current v0.3.0 Codex reviewer profile artifact.
+generated-artifact	art-005	.codex/agents/model-routing-sol-medium.toml	move-generalize	.codex/agents/model-routing-sol-medium.toml	Current v0.3.0 Codex driver profile artifact.
+generated-artifact	art-006	.codex/agents/model-routing-sol-ultra.toml	move-generalize	.codex/agents/model-routing-sol-ultra.toml	Current v0.3.0 Codex moonshot profile artifact.
+generated-artifact	art-007	.codex/agents/model-routing-terra-high.toml	move-generalize	.codex/agents/model-routing-terra-high.toml	Current v0.3.0 Codex implementer profile artifact.
+generated-artifact	art-008	.codex/agents/model-routing-terra-medium.toml	move-generalize	.codex/agents/model-routing-terra-medium.toml	Current v0.3.0 Codex explorer profile artifact.
+generated-artifact	art-009	.claude/agents/model-routing-preset-worker.md	move-generalize	.claude/agents/model-routing-preset-worker.md	Current v0.3.0 Claude Code preset worker artifact.
+generated-artifact	art-010	.cursor/agents/model-routing-preset-worker.md	move-generalize	.cursor/agents/model-routing-preset-worker.md	Current v0.3.0 Cursor preset worker artifact.

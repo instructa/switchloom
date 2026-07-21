@@ -467,19 +467,17 @@ export function shellQuote(value: string) {
 }
 
 export function recipeApplyCommand(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_") {
-  return `npx switchloom@latest apply --recipe ${shellQuote(setupRecipe(config, catalog, recipePrefix))} --repository .`;
+  return `npx switchloom@0.3.0 apply --recipe ${shellQuote(setupRecipe(config, catalog, recipePrefix))} --repository .`;
 }
 
 export function lifecycleCommands(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_") {
   const recipe = shellQuote(setupRecipe(config, catalog, recipePrefix));
   const host = config.host;
-  const report = `reports/native-host-certification/${catalog[config.host].binding}/<timestamp>/workdir`;
   return [
-    "npm install -g switchloom",
+    "npm install -g switchloom@0.3.0",
     `switchloom preview --recipe ${recipe} --repository .`,
     `switchloom apply --recipe ${recipe} --repository .`,
     `switchloom doctor ${host}`,
-    `switchloom certify ${report}/dispatch-evidence.json --bundle ${report}/bundle.json`,
     "switchloom update --repository .",
     "switchloom status --repository .",
     "switchloom rollback --repository .",

@@ -1,0 +1,39 @@
+schema_version = 1
+
+[public_cli]
+owner = "model-routing"
+commands = [
+  "policy",
+  "compile",
+  "inspect",
+  "preview",
+  "apply",
+  "update",
+  "status",
+  "rollback",
+  "uninstall",
+  "doctor",
+]
+
+[internal_cli]
+owner = "xtask"
+state = "reserved-fail-closed"
+commands = [
+  "certify codex",
+  "certify cursor",
+  "certify opencode",
+  "certify pi",
+  "certify planr",
+  "verify offline",
+  "release prepare",
+  "release verify",
+  "release package",
+]
+
+[transfers]
+"certify" = "xtask certify; public compatibility is removed only after validator parity"
+"evidence validate" = "xtask certify; public compatibility is removed only after validator parity"
+"probe" = "model-routing doctor; the public probe alias is removed"
+"evaluate" = "model-routing library API; no standalone public CLI owner"
+"catalog" = "xtask release prepare/verify"
+"registry" = "model-routing library sign_registry/verify_registry_signature API"
