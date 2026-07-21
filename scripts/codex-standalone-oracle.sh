@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 workdir="$(mktemp -d /private/tmp/model-routing-codex-standalone.XXXXXX)"
 git -C "$workdir" init -q
 codex_home_config_before_hash=""
+codex_home_config_before_path=""
 codex_auth_mode="${SWITCHLOOM_CODEX_AUTH_MODE:-current}"
 if [ "$codex_auth_mode" = "current" ]; then
   codex_home="${CODEX_HOME:-$HOME/.codex}"
@@ -114,14 +115,24 @@ restore_current_codex_home_config() {
   if [ "$codex_auth_mode" != "current" ]; then
     return
   fi
-  if [ ! -f "$codex_home_config_before_path" ] || [ ! -f "$codex_home/config.toml" ]; then
+  if [ ! -f "$codex_home_config_before_path" ]; then
     return
+  fi
+  if [ ! -f "$codex_home/config.toml" ]; then
+    printf 'current CODEX_HOME config disappeared after authenticated Codex run: %s\n' "$codex_home/config.toml" \
+      > "$workdir/codex-home-config-restore.txt"
+    return 1
   fi
 
   local stripped="$workdir/codex-home-config-after-stripped.toml"
   strip_codex_project_trust_entry "$codex_home/config.toml" "$stripped"
   if cmp -s "$codex_home_config_before_path" "$stripped"; then
     cp "$codex_home_config_before_path" "$codex_home/config.toml"
+    if ! cmp -s "$codex_home_config_before_path" "$codex_home/config.toml"; then
+      printf 'failed to restore current CODEX_HOME config snapshot: %s\n' "$codex_home/config.toml" \
+        > "$workdir/codex-home-config-restore.txt"
+      return 1
+    fi
     printf 'removed transient Codex trust entry for %s\n' "$workdir" \
       > "$workdir/codex-home-config-restore.txt"
   else
@@ -130,8 +141,97 @@ restore_current_codex_home_config() {
       printf 'before: %s\n' "$codex_home_config_before_path"
       printf 'after stripped: %s\n' "$stripped"
     } > "$workdir/codex-home-config-restore.txt"
+    return 1
   fi
 }
+
+cleanup_current_codex_home_config_on_exit() {
+  local status=$?
+  if ! restore_current_codex_home_config; then
+    if [ "$status" -eq 0 ]; then
+      status=1
+    fi
+  fi
+  exit "$status"
+}
+
+run_restore_current_codex_home_config_trap_child() {
+  codex_auth_mode="current"
+  codex_home="${SWITCHLOOM_CODEX_ORACLE_TEST_CHILD_HOME:?}"
+  codex_home_config_before_path="${SWITCHLOOM_CODEX_ORACLE_TEST_CHILD_BEFORE:?}"
+  trap cleanup_current_codex_home_config_on_exit EXIT
+  {
+    printf '[projects."%s"]\n' "$workdir"
+    printf 'trust_level = "trusted"\n'
+  } >> "$codex_home/config.toml"
+  exit 7
+}
+
+run_restore_current_codex_home_config_regression() {
+  local test_root="$workdir/restore-regression"
+  local trust_config="$test_root/trust-only/config.toml"
+  local mutation_config="$test_root/non-trust-mutation/config.toml"
+  local trap_config="$test_root/trap-failure/config.toml"
+  local trap_child_status
+  mkdir -p "$test_root/trust-only" "$test_root/non-trust-mutation" "$test_root/trap-failure"
+
+  codex_auth_mode="current"
+  codex_home="$test_root/trust-only"
+  codex_home_config_before_path="$test_root/trust-only-before.toml"
+  printf '[features]\nlocal = true\n' > "$codex_home_config_before_path"
+  cp "$codex_home_config_before_path" "$trust_config"
+  {
+    printf '[projects."%s"]\n' "$workdir"
+    printf 'trust_level = "trusted"\n'
+  } >> "$trust_config"
+  restore_current_codex_home_config
+  cmp -s "$codex_home_config_before_path" "$trust_config"
+
+  codex_home="$test_root/trap-failure"
+  codex_home_config_before_path="$test_root/trap-failure-before.toml"
+  printf '[features]\nlocal = true\n' > "$codex_home_config_before_path"
+  cp "$codex_home_config_before_path" "$trap_config"
+  set +e
+  SWITCHLOOM_CODEX_ORACLE_TEST_RESTORE_CHILD=1 \
+    SWITCHLOOM_CODEX_ORACLE_TEST_CHILD_HOME="$codex_home" \
+    SWITCHLOOM_CODEX_ORACLE_TEST_CHILD_BEFORE="$codex_home_config_before_path" \
+    bash "$repo_root/scripts/codex-standalone-oracle.sh" \
+    > "$test_root/trap-child.stdout" \
+    2> "$test_root/trap-child.stderr"
+  trap_child_status=$?
+  set -e
+  if [ "$trap_child_status" -ne 7 ]; then
+    printf 'restore trap regression preserved status %s, expected 7\n' "$trap_child_status" >&2
+    exit 1
+  fi
+  cmp -s "$codex_home_config_before_path" "$trap_config"
+
+  codex_home="$test_root/non-trust-mutation"
+  codex_home_config_before_path="$test_root/non-trust-mutation-before.toml"
+  printf '[features]\nlocal = true\n' > "$codex_home_config_before_path"
+  cp "$codex_home_config_before_path" "$mutation_config"
+  {
+    printf '[projects."%s"]\n' "$workdir"
+    printf 'trust_level = "trusted"\n'
+    printf '[profiles.default]\n'
+    printf 'model = "gpt-5.6-sol"\n'
+  } >> "$mutation_config"
+  if restore_current_codex_home_config; then
+    printf 'restore regression failed to reject non-trust mutation\n' >&2
+    exit 1
+  fi
+
+  printf 'restore regression passed\n'
+}
+
+if [ "${SWITCHLOOM_CODEX_ORACLE_TEST_RESTORE_CHILD:-0}" = "1" ]; then
+  run_restore_current_codex_home_config_trap_child
+fi
+
+if [ "${SWITCHLOOM_CODEX_ORACLE_TEST_RESTORE:-0}" = "1" ]; then
+  run_restore_current_codex_home_config_regression
+  exit 0
+fi
 
 record_lifecycle_codex_home_hash() {
   local phase="$1"
@@ -332,6 +432,7 @@ codex_home_config_before_hash="$(hash_optional_file "$codex_home/config.toml")"
 codex_home_config_before_path="$workdir/codex-home-config-before.toml"
 if [ "$codex_auth_mode" = "current" ] && [ -f "$codex_home/config.toml" ]; then
   cp "$codex_home/config.toml" "$codex_home_config_before_path"
+  trap cleanup_current_codex_home_config_on_exit EXIT
 fi
 {
   printf 'repository .codex/config.toml\n'
@@ -452,6 +553,7 @@ if [ "$codex_auth_mode" = "current" ]; then
 fi
 
 env CODEX_HOME="$codex_home" codex exec "${codex_exec_args[@]}" "$(cat "$workdir/oracle-prompt.md")" \
+  < /dev/null \
   > "$workdir/codex-events.jsonl" \
   2> "$workdir/codex.stderr"
 restore_current_codex_home_config
@@ -492,6 +594,7 @@ else
   printf 'global config after sha256: %s\n' "$codex_home_config_after_hash" >> "$workdir/agent-role-source.txt"
   if [ "$codex_home_config_after_hash" != "$codex_home_config_before_hash" ]; then
     printf 'global config sha256 changed during authenticated Codex run; no global Switchloom agent registrations were present before or after: %s -> %s\n' "$codex_home_config_before_hash" "$codex_home_config_after_hash" >> "$workdir/agent-role-source.txt"
+    exit 1
   else
     printf 'global config sha256 unchanged: %s\n' "$codex_home_config_after_hash" >> "$workdir/agent-role-source.txt"
   fi
