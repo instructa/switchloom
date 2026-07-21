@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "candidate_version": "0.3.0",
+  "source": {
+    "commit": "e936b90c81d8f944ba50657c10ef9a2a564c53c5",
+    "branch": "codex/switchloom-0.3.0-migration",
+    "dirty": false
+  },
+  "packages": {
+    "cargo_crate": {
+      "path": "target/package/model-routing-0.3.0.crate",
+      "sha256": "e4b4c5975311478dfef345804c44c13a4b627d6beeb5f3be5d5f9099e5ed16eb",
+      "vcs_commit": "e936b90c81d8f944ba50657c10ef9a2a564c53c5",
+      "dirty": false
+    },
+    "npm_tarball": {
+      "path": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/switchloom-0.3.0.tgz",
+      "sha256": "23666bc68b3a1e892b0613733a9a843e789b4c3ae75c5106a706f17c5460f64d",
+      "shasum": "bba3978727825c17d18661b202c6c7abcb66c234",
+      "integrity": "sha512-uztvYnNlk5Pq/BghE1+Bp0AAztGi0zqvQvMj+h20T5N7tsqWw+r3rdzcUFfObH56srywloY/3yTc17MC40KHCg=="
+    },
+    "darwin_arm64_native": {
+      "sha256": "b4dd82486d85f5b7a171cbc7b25836a99ad6c59d0fa0490acbfc18703f729c39",
+      "version_output": "model-routing 0.3.0"
+    },
+    "darwin_arm64_archive": {
+      "path": "dist/switchloom-darwin-arm64.tar.gz",
+      "sha256": "d4fabca7b0f6abb96435462519bb6ddc1005d553bfa1801e56b2f7ab7f1e141f"
+    },
+    "catalog_sha256": "eb405728b7a22436f3159774ce265ddbc604e12af7f59841a9e1a3dc26f630e0"
+  },
+  "gates": {
+    "release_verify": "passed",
+    "cargo_inventory": "156 files; forbidden-path scan empty",
+    "npm_inventory": "16 files; forbidden-path scan empty",
+    "shellcheck": "passed",
+    "betterleaks": "passed; no leaks",
+    "trivy": "passed; zero Cargo vulnerabilities, secrets, or repository misconfigurations",
+    "standalone_lifecycle": "passed from freshly installed npm bytes",
+    "planr_mode_lifecycle": "passed from freshly installed npm bytes"
+  },
+  "preservation": {
+    "standalone_unmanaged_sha256": "f6885ba9827675052bd56da1fcdcf82c8798444823583c461c84d8f0790ab696",
+    "planr_unmanaged_sha256": "f000713ad572d689efbce0c8b7257aa7d2e8d4b27405b228c2b1836c9837bad5",
+    "global_codex_config_sha256": "31d88604ab808d2bfec9264c379f4fd26e888eabc4a15cb2319d119c71e80606",
+    "protected_planr_commit": "bbc877d40191b2cbb289ed26df5e6fee25e4326d",
+    "protected_planr_status_sha256": "d6c56495c7e2a78aed2e641b0e928bc8a579bf31335db36456a9f05726827927"
+  },
+  "supported_hosts": [
+    "codex-openai",
+    "cursor-openai",
+    "cursor-fable-grok",
+    "claude-native",
+    "opencode-native",
+    "pi-external"
+  ],
+  "tested_hosts": [
+    {
+      "host": "codex-openai",
+      "host_version": "codex-cli 0.144.5",
+      "result": "structured live receipt passed",
+      "receipt": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/codex-openai/1784654270-96976-0"
+    },
+    {
+      "host": "cursor-openai",
+      "host_version": "2026.07.17-3e2a980",
+      "result": "structured live receipt passed; requested routing is advisory",
+      "receipt": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/cursor-openai/1784654493-22038-0"
+    },
+    {
+      "host": "cursor-fable-grok",
+      "host_version": "2026.07.17-3e2a980",
+      "result": "structured live receipt passed; requested routing is advisory",
+      "receipt": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/cursor-fable-grok/1784654511-23810-0"
+    }
+  ],
+  "skipped_hosts": [
+    {
+      "host": "claude-native",
+      "host_version": "2.1.133 (Claude Code)",
+      "reason": "Claude effective model and effort telemetry is not treated as live verified",
+      "receipt": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/claude-native/1784654534-22027-0"
+    },
+    {
+      "host": "opencode-native",
+      "reason": "not required by this candidate's live-host gate; deterministic validator coverage passed"
+    },
+    {
+      "host": "pi-external",
+      "reason": "not required by this candidate's live-host gate; deterministic validator coverage passed"
+    }
+  ],
+  "limitations": [
+    "Only darwin-arm64 native/npm bytes were built locally; the four-platform native matrix remains CI-owned.",
+    "Cursor receipts prove nonce-correlated requested routing but the host exposes no authenticated effective model/effort telemetry.",
+    "Claude Code remains explicitly not live verified for effective model/effort telemetry.",
+    "No publication, tag, push, or deployment was performed."
+  ]
+}

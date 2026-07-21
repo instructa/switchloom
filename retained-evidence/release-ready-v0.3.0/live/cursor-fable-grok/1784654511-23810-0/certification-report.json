@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "host": "cursor-fable-grok",
+  "success": true,
+  "live_verified": true,
+  "limitation": "Cursor ran live but did not expose deterministic effective-model telemetry",
+  "restoration": {
+    "status": "not_required"
+  },
+  "workdir": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/cursor-fable-grok/1784654511-23810-0/workdir",
+  "commands": [
+    {
+      "label": "compile",
+      "argv": [
+        "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/install/node_modules/switchloom/npm/native/darwin-arm64/model-routing",
+        "compile",
+        "balanced",
+        "--host",
+        "cursor-fable-grok",
+        "--output",
+        "bundle.json"
+      ],
+      "env_keys": [],
+      "stdout": "",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 56
+    },
+    {
+      "label": "apply",
+      "argv": [
+        "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/install/node_modules/switchloom/npm/native/darwin-arm64/model-routing",
+        "apply",
+        "bundle.json",
+        "--repository",
+        "."
+      ],
+      "env_keys": [],
+      "stdout": "{\n  \"action\": \"apply\",\n  \"bundle_id\": \"balanced-cursor-fable-grok@1.0.0+1.0.0\",\n  \"repository\": \"/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/cursor-fable-grok/1784654511-23810-0/workdir\",\n  \"artifacts\": [\n    {\n      \"path\": \".cursor/agents/model-routing-preset-worker.md\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"860be02449fecc58831944eec365caa1240bccc94366a02ec865c5178aea0d8c\"\n    }\n  ]\n}\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 92
+    },
+    {
+      "label": "cursor-version",
+      "argv": [
+        "cursor-agent",
+        "--version"
+      ],
+      "env_keys": [],
+      "stdout": "2026.07.17-3e2a980\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 3523
+    },
+    {
+      "label": "cursor-host",
+      "argv": [
+        "cursor-agent",
+        "--print",
+        "--output-format",
+        "json",
+        "--trust",
+        "--model",
+        "cursor-grok-4.5-medium",
+        "Return only this nonce and do not edit files: cursor-fc4820bb03cf0e4c29c70f8cc54a166d0f4f9175c086b4a076febc2497d27589"
+      ],
+      "env_keys": [],
+      "stdout": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":4151,\"duration_api_ms\":4151,\"result\":\"cursor-fc4820bb03cf0e4c29c70f8cc54a166d0f4f9175c086b4a076febc2497d27589\",\"session_id\":\"6e11c2e4-679d-488a-8b2e-806b9d619350\",\"request_id\":\"ffc46a6e-0d17-4da6-b317-48a537a92646\",\"usage\":{\"inputTokens\":13772,\"outputTokens\":72,\"cacheReadTokens\":5248,\"cacheWriteTokens\":0}}\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 18248
+    }
+  ]
+}

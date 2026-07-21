@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "cursor-agent",
+    "--print",
+    "--output-format",
+    "json",
+    "--trust",
+    "--model",
+    "gpt-5.4-mini"
+  ],
+  "artifact_path": ".cursor/agents/model-routing-preset-worker.md",
+  "host": "cursor",
+  "mode": "live",
+  "nonce": "cursor-ca900e62e38956c0534dbd4b4a22f4caef0be56da33acecae9df8afdf9f3e05f",
+  "prompt": "Return only this nonce and do not edit files: cursor-ca900e62e38956c0534dbd4b4a22f4caef0be56da33acecae9df8afdf9f3e05f"
+}

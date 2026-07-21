@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "package_digest": "sha256:b4dd82486d85f5b7a171cbc7b25836a99ad6c59d0fa0490acbfc18703f729c39",
+  "host_version": "2026.07.17-3e2a980",
+  "requested_dispatch": {
+    "semantic_role": "worker",
+    "profile": "cursor-openai-worker",
+    "model": "gpt-5.4-mini",
+    "agent_type": "model-routing-preset-worker",
+    "fork_turns": {
+      "mode": "none"
+    }
+  },
+  "child_identity": {
+    "host": "cursor",
+    "role": "worker",
+    "agent_role": "model-routing-preset-worker",
+    "agent_type": "model-routing-preset-worker",
+    "task_name": "model-routing-preset-worker"
+  },
+  "nonce": "cursor-ca900e62e38956c0534dbd4b4a22f4caef0be56da33acecae9df8afdf9f3e05f",
+  "raw_evidence_refs": [
+    "requested-invocation:requested-invocation.json#argv",
+    "host-output:host-output.json",
+    "host-stderr:host-output.stderr"
+  ],
+  "verdict": "advisory"
+}

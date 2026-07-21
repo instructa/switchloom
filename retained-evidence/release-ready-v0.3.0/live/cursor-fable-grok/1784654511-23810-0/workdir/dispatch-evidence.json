@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "package_digest": "sha256:b4dd82486d85f5b7a171cbc7b25836a99ad6c59d0fa0490acbfc18703f729c39",
+  "host_version": "2026.07.17-3e2a980",
+  "requested_dispatch": {
+    "semantic_role": "worker",
+    "profile": "cursor-grok-worker",
+    "model": "cursor-grok-4.5-medium",
+    "agent_type": "model-routing-preset-worker",
+    "fork_turns": {
+      "mode": "none"
+    }
+  },
+  "child_identity": {
+    "host": "cursor",
+    "role": "worker",
+    "agent_role": "model-routing-preset-worker",
+    "agent_type": "model-routing-preset-worker",
+    "task_name": "model-routing-preset-worker"
+  },
+  "nonce": "cursor-fc4820bb03cf0e4c29c70f8cc54a166d0f4f9175c086b4a076febc2497d27589",
+  "raw_evidence_refs": [
+    "requested-invocation:requested-invocation.json#argv",
+    "host-output:host-output.json",
+    "host-stderr:host-output.stderr"
+  ],
+  "verdict": "advisory"
+}

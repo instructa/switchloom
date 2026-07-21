@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "cursor-agent",
+    "--print",
+    "--output-format",
+    "json",
+    "--trust",
+    "--model",
+    "cursor-grok-4.5-medium"
+  ],
+  "artifact_path": ".cursor/agents/model-routing-preset-worker.md",
+  "host": "cursor",
+  "mode": "live",
+  "nonce": "cursor-fc4820bb03cf0e4c29c70f8cc54a166d0f4f9175c086b4a076febc2497d27589",
+  "prompt": "Return only this nonce and do not edit files: cursor-fc4820bb03cf0e4c29c70f8cc54a166d0f4f9175c086b4a076febc2497d27589"
+}
