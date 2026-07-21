@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "host": "codex-openai",
+  "success": true,
+  "live_verified": true,
+  "limitation": null,
+  "restoration": {
+    "status": "restored_explicitly"
+  },
+  "workdir": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/codex-openai/1784654270-96976-0/workdir",
+  "commands": [
+    {
+      "label": "compile",
+      "argv": [
+        "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/install/node_modules/switchloom/npm/native/darwin-arm64/model-routing",
+        "compile",
+        "balanced",
+        "--host",
+        "codex-openai",
+        "--output",
+        "bundle.json"
+      ],
+      "env_keys": [],
+      "stdout": "",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 14
+    },
+    {
+      "label": "apply",
+      "argv": [
+        "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/install/node_modules/switchloom/npm/native/darwin-arm64/model-routing",
+        "apply",
+        "bundle.json",
+        "--repository",
+        "."
+      ],
+      "env_keys": [],
+      "stdout": "{\n  \"action\": \"apply\",\n  \"bundle_id\": \"balanced-codex-openai@1.0.0+2.0.0\",\n  \"repository\": \"/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/codex-openai/1784654270-96976-0/workdir\",\n  \"artifacts\": [\n    {\n      \"path\": \".codex/agents/model-routing-luna-xhigh.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-sol-high.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-sol-medium.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"657975ea00e6363d52176969103234b2bfe119ee1fdc1d2a9c1332db7c3dbc35\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-sol-ultra.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"92597594c9f31ab54fc7a6fe66bce9618bbe47d88a0a430532e6a402ede4602e\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-terra-high.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-terra-medium.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464\"\n    },\n    {\n      \"path\": \".codex/config.toml\",\n      \"mode\": \"replace\",\n      \"status\": \"create\",\n      \"sha256\": \"38511fd94693a95ebcdb0d2ca65f414109b05835172729c35f91d70d20d3b60d\"\n    }\n  ]\n}\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 157
+    },
+    {
+      "label": "codex-version",
+      "argv": [
+        "codex",
+        "--version"
+      ],
+      "env_keys": [],
+      "stdout": "codex-cli 0.144.5\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 583
+    },
+    {
+      "label": "codex-host",
+      "argv": [
+        "codex",
+        "exec",
+        "--json",
+        "--ignore-user-config",
+        "-C",
+        "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/codex-openai/1784654270-96976-0/workdir",
+        "-s",
+        "workspace-write",
+        "-c",
+        "approval_policy=\"never\"",
+        "-c",
+        "projects.\"/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/codex-openai/1784654270-96976-0/workdir\".trust_level=\"trusted\"",
+        "-c",
+        "agents.model_routing_terra_high.config_file=\"/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/codex-openai/1784654270-96976-0/workdir/.codex/agents/model-routing-terra-high.toml\"",
+        "-c",
+        "agents.model_routing_sol_high.config_file=\"/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/codex-openai/1784654270-96976-0/workdir/.codex/agents/model-routing-sol-high.toml\"",
+        "-c",
+        "multi_agent_v2.hide_spawn_agent_metadata=false",
+        "-c",
+        "cli_auth_credentials_store=\"auto\"",
+        "-c",
+        "mcp_oauth_credentials_store=\"auto\"",
+        "Use the native collaboration spawn_agent tool exactly twice, then wait for both child agents to finish.\n\nYour first tool call must be spawn_agent with exactly these fields:\n- agent_type: model_routing_terra_high\n- task_name: standalone_implementer\n- fork_turns: none\n- message: Inspect the generated repository without editing files. End your final answer with SWITCHLOOM_STANDALONE_IMPLEMENTER_DONE.\n\nYour second tool call must be spawn_agent with exactly these fields:\n- agent_type: model_routing_sol_high\n- task_name: standalone_reviewer\n- fork_turns: none\n- message: Independently inspect the generated repository without editing files. End your final answer with SWITCHLOOM_STANDALONE_REVIEWER_DONE.\n\nDo not omit agent_type. Do not change either message. Do not pass model or reasoning_effort in either spawn call. Do not call wait_agent or answer before both spawn_agent calls have succeeded.\n\nAfter both children finish, return a short final answer containing:\nSWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE"
+      ],
+      "env_keys": [],
+      "stdout": "{\"type\":\"thread.started\",\"thread_id\":\"019f85af-1ba9-7080-b4fa-402fdce321b1\"}\n{\"type\":\"turn.started\"}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_0\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"019f85af-1ba9-7080-b4fa-402fdce321b1\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"019f85af-1ba9-7080-b4fa-402fdce321b1\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"completed\"}}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_1\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"019f85af-1ba9-7080-b4fa-402fdce321b1\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"019f85af-1ba9-7080-b4fa-402fdce321b1\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"completed\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_2\",\"type\":\"agent_message\",\"text\":\"SWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE\"}}\n{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":90823,\"cached_input_tokens\":73472,\"output_tokens\":279,\"reasoning_output_tokens\":80}}\n",
+      "stderr": "Reading additional input from stdin...\n2026-07-21T17:17:53.034251Z ERROR codex_models_manager::cache: failed to load models cache: missing field `supports_reasoning_summaries` at line 88 column 5\n2026-07-21T17:17:53.962500Z  WARN codex_core_plugins::remote::remote_installed_plugin_sync: failed to download remote installed plugin bundle remote_plugin_id=plugin_asdk_app_6a0faef988b48191b843bac5cd170a9e plugin=convex marketplace=openai-curated-remote error=plugin.json name `app-6a0faef988b48191b843bac5cd170a9e` does not match marketplace plugin name `convex`\n2026-07-21T17:18:05.789452Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:08.171932Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:08.696455Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:10.941249Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:15.187483Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:17.153718Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:20.662374Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:25.214347Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:34.390975Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:40.528177Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:46.011241Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:49.100460Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:51.357552Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:55.282036Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:55.282259Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:55.614156Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:18:58.386311Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\n2026-07-21T17:19:02.258933Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 88 column 5\n2026-07-21T17:19:07.601408Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 88 column 5\n2026-07-21T17:19:19.665365Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 88 column 5\n2026-07-21T17:19:55.317589Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 88 column 5\n2026-07-21T17:20:18.935268Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 88 column 5\n2026-07-21T17:20:49.220088Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 88 column 5\n",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 179007
+    }
+  ]
+}

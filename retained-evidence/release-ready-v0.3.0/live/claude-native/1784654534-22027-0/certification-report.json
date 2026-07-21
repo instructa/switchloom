@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "host": "claude-native",
+  "success": true,
+  "live_verified": false,
+  "limitation": "Claude effective model/effort telemetry is not treated as live verified",
+  "restoration": {
+    "status": "not_required"
+  },
+  "workdir": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/claude-native/1784654534-22027-0/workdir",
+  "commands": []
+}

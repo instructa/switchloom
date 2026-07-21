@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "host": "cursor-openai",
+  "success": true,
+  "live_verified": true,
+  "limitation": "Cursor ran live but did not expose deterministic effective-model telemetry",
+  "restoration": {
+    "status": "not_required"
+  },
+  "workdir": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/cursor-openai/1784654493-22038-0/workdir",
+  "commands": [
+    {
+      "label": "compile",
+      "argv": [
+        "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/install/node_modules/switchloom/npm/native/darwin-arm64/model-routing",
+        "compile",
+        "balanced",
+        "--host",
+        "cursor-openai",
+        "--output",
+        "bundle.json"
+      ],
+      "env_keys": [],
+      "stdout": "",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 27
+    },
+    {
+      "label": "apply",
+      "argv": [
+        "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/install/node_modules/switchloom/npm/native/darwin-arm64/model-routing",
+        "apply",
+        "bundle.json",
+        "--repository",
+        "."
+      ],
+      "env_keys": [],
+      "stdout": "{\n  \"action\": \"apply\",\n  \"bundle_id\": \"balanced-cursor-openai@1.0.0+1.0.0\",\n  \"repository\": \"/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/cursor-openai/1784654493-22038-0/workdir\",\n  \"artifacts\": [\n    {\n      \"path\": \".cursor/agents/model-routing-preset-worker.md\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"251cedbebfdaa13d3ce1a78fd4ca74e248b8a0822a1ad5684039881bb1e8eed9\"\n    }\n  ]\n}\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 70
+    },
+    {
+      "label": "cursor-version",
+      "argv": [
+        "cursor-agent",
+        "--version"
+      ],
+      "env_keys": [],
+      "stdout": "2026.07.17-3e2a980\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 1922
+    },
+    {
+      "label": "cursor-host",
+      "argv": [
+        "cursor-agent",
+        "--print",
+        "--output-format",
+        "json",
+        "--trust",
+        "--model",
+        "gpt-5.4-mini",
+        "Return only this nonce and do not edit files: cursor-ca900e62e38956c0534dbd4b4a22f4caef0be56da33acecae9df8afdf9f3e05f"
+      ],
+      "env_keys": [],
+      "stdout": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":4262,\"duration_api_ms\":4262,\"result\":\"cursor-ca900e62e38956c0534dbd4b4a22f4caef0be56da33acecae9df8afdf9f3e05f\",\"session_id\":\"ce45eb40-257f-42bc-b783-7949596cbb0e\",\"request_id\":\"9a41fbbf-23b6-414e-a773-d1d5723dfe3e\",\"usage\":{\"inputTokens\":20838,\"outputTokens\":63,\"cacheReadTokens\":0,\"cacheWriteTokens\":0}}\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 14165
+    }
+  ]
+}

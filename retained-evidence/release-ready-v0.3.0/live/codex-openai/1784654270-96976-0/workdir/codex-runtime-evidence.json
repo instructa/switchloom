@@ -1,0 +1,183 @@
+{
+  "children": [
+    {
+      "agent_type": "model_routing_terra_high",
+      "canonical_task": "/root/standalone_implementer",
+      "child_thread_id": "019f85af-49d0-7860-b948-44b5c34d6413",
+      "final_answer": {
+        "message_type": "FINAL_ANSWER"
+      },
+      "input": {
+        "max_message_bytes": 512,
+        "message_bytes": 292,
+        "message_encoding": "codex-encrypted",
+        "message_plaintext_intent_sha256": "b37a696922196d76cb089319e9bb15ea6d183ab597876b5dc95978fe64abcc49",
+        "message_plaintext_verdict": "unsupported",
+        "message_sha256": "e87673cb95c6a1e06ff875a281d5889831a05f1979a4b2e1003764e9ef3abee2"
+      },
+      "kind": "implementer",
+      "parent_thread_id": "019f85af-1ba9-7080-b4fa-402fdce321b1",
+      "profile": "codex-terra-high",
+      "session": {
+        "agent_path": "/root/standalone_implementer",
+        "agent_role": "model_routing_terra_high",
+        "parent_thread_id": "019f85af-1ba9-7080-b4fa-402fdce321b1",
+        "session_file": "rollout-2026-07-21T19-18-05-019f85af-49d0-7860-b948-44b5c34d6413.jsonl",
+        "thread_source": "subagent"
+      },
+      "spawn": {
+        "agent_type": "model_routing_terra_high",
+        "call_id": "call_CPMYdb9RLRqdYSF9VmtNrZx2",
+        "fork_turns": "none",
+        "surface": "collaboration.spawn_agent",
+        "task_name": "standalone_implementer"
+      },
+      "spawn_output": {
+        "agent_id": null,
+        "task_name": "/root/standalone_implementer"
+      },
+      "state": {
+        "agent_path": "/root/standalone_implementer",
+        "agent_role": "model_routing_terra_high",
+        "cwd": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/codex-openai/1784654270-96976-0/workdir",
+        "model": "gpt-5.6-terra",
+        "reasoning_effort": "high",
+        "thread_source": "subagent"
+      },
+      "task_name": "standalone_implementer"
+    },
+    {
+      "agent_type": "model_routing_sol_high",
+      "canonical_task": "/root/standalone_reviewer",
+      "child_thread_id": "019f85af-5594-7fa0-a9a3-ae6d27f399bc",
+      "final_answer": {
+        "message_type": "FINAL_ANSWER"
+      },
+      "input": {
+        "max_message_bytes": 512,
+        "message_bytes": 292,
+        "message_encoding": "codex-encrypted",
+        "message_plaintext_intent_sha256": "1a6366f6f1f0a5a35c5a2b0849df9370bdebbddad073fe445a18ae47f8bf3834",
+        "message_plaintext_verdict": "unsupported",
+        "message_sha256": "98122c81d559df61a4c8f1da3c81d57536f4e49dbcc962668d4c47cb576a1b00"
+      },
+      "kind": "reviewer",
+      "parent_thread_id": "019f85af-1ba9-7080-b4fa-402fdce321b1",
+      "profile": "codex-sol-high",
+      "session": {
+        "agent_path": "/root/standalone_reviewer",
+        "agent_role": "model_routing_sol_high",
+        "parent_thread_id": "019f85af-1ba9-7080-b4fa-402fdce321b1",
+        "session_file": "rollout-2026-07-21T19-18-08-019f85af-5594-7fa0-a9a3-ae6d27f399bc.jsonl",
+        "thread_source": "subagent"
+      },
+      "spawn": {
+        "agent_type": "model_routing_sol_high",
+        "call_id": "call_lRdM1G8hGMLyVqqYJsIhHHjt",
+        "fork_turns": "none",
+        "surface": "collaboration.spawn_agent",
+        "task_name": "standalone_reviewer"
+      },
+      "spawn_output": {
+        "agent_id": null,
+        "task_name": "/root/standalone_reviewer"
+      },
+      "state": {
+        "agent_path": "/root/standalone_reviewer",
+        "agent_role": "model_routing_sol_high",
+        "cwd": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/codex-openai/1784654270-96976-0/workdir",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "high",
+        "thread_source": "subagent"
+      },
+      "task_name": "standalone_reviewer"
+    }
+  ],
+  "dispatch_evidence": [
+    {
+      "child_identity": {
+        "agent_role": "model_routing_terra_high",
+        "agent_type": "model_routing_terra_high",
+        "host": "codex",
+        "role": "implementer",
+        "task_name": "standalone_implementer"
+      },
+      "effective_effort": "high",
+      "effective_model": "gpt-5.6-terra",
+      "host_version": "codex-cli 0.144.5",
+      "nonce": "019f85af-1ba9-7080-b4fa-402fdce321b1:019f85af-49d0-7860-b948-44b5c34d6413:call_CPMYdb9RLRqdYSF9VmtNrZx2",
+      "package_digest": "sha256:b4dd82486d85f5b7a171cbc7b25836a99ad6c59d0fa0490acbfc18703f729c39",
+      "raw_evidence_refs": [
+        "codex-session:rollout-2026-07-21T19-17-53-019f85af-1ba9-7080-b4fa-402fdce321b1.jsonl",
+        "codex-session:rollout-2026-07-21T19-18-05-019f85af-49d0-7860-b948-44b5c34d6413.jsonl",
+        "state_5.sqlite:thread_spawn_edges:019f85af-1ba9-7080-b4fa-402fdce321b1:019f85af-49d0-7860-b948-44b5c34d6413",
+        "spawn_call:call_CPMYdb9RLRqdYSF9VmtNrZx2"
+      ],
+      "requested_dispatch": {
+        "agent_type": "model_routing_terra_high",
+        "effort": "high",
+        "fork_turns": {
+          "mode": "none"
+        },
+        "max_message_bytes": 512,
+        "message_bytes": 292,
+        "message_encoding": "codex-encrypted",
+        "message_plaintext_intent_sha256": "b37a696922196d76cb089319e9bb15ea6d183ab597876b5dc95978fe64abcc49",
+        "message_plaintext_verdict": "unsupported",
+        "message_sha256": "e87673cb95c6a1e06ff875a281d5889831a05f1979a4b2e1003764e9ef3abee2",
+        "model": "gpt-5.6-terra",
+        "profile": "codex-terra-high",
+        "semantic_role": "implementer"
+      },
+      "schema_version": 1,
+      "verdict": "deterministic"
+    },
+    {
+      "child_identity": {
+        "agent_role": "model_routing_sol_high",
+        "agent_type": "model_routing_sol_high",
+        "host": "codex",
+        "role": "reviewer",
+        "task_name": "standalone_reviewer"
+      },
+      "effective_effort": "high",
+      "effective_model": "gpt-5.6-sol",
+      "host_version": "codex-cli 0.144.5",
+      "nonce": "019f85af-1ba9-7080-b4fa-402fdce321b1:019f85af-5594-7fa0-a9a3-ae6d27f399bc:call_lRdM1G8hGMLyVqqYJsIhHHjt",
+      "package_digest": "sha256:b4dd82486d85f5b7a171cbc7b25836a99ad6c59d0fa0490acbfc18703f729c39",
+      "raw_evidence_refs": [
+        "codex-session:rollout-2026-07-21T19-17-53-019f85af-1ba9-7080-b4fa-402fdce321b1.jsonl",
+        "codex-session:rollout-2026-07-21T19-18-08-019f85af-5594-7fa0-a9a3-ae6d27f399bc.jsonl",
+        "state_5.sqlite:thread_spawn_edges:019f85af-1ba9-7080-b4fa-402fdce321b1:019f85af-5594-7fa0-a9a3-ae6d27f399bc",
+        "spawn_call:call_lRdM1G8hGMLyVqqYJsIhHHjt"
+      ],
+      "requested_dispatch": {
+        "agent_type": "model_routing_sol_high",
+        "effort": "high",
+        "fork_turns": {
+          "mode": "none"
+        },
+        "max_message_bytes": 512,
+        "message_bytes": 292,
+        "message_encoding": "codex-encrypted",
+        "message_plaintext_intent_sha256": "1a6366f6f1f0a5a35c5a2b0849df9370bdebbddad073fe445a18ae47f8bf3834",
+        "message_plaintext_verdict": "unsupported",
+        "message_sha256": "98122c81d559df61a4c8f1da3c81d57536f4e49dbcc962668d4c47cb576a1b00",
+        "model": "gpt-5.6-sol",
+        "profile": "codex-sol-high",
+        "semantic_role": "reviewer"
+      },
+      "schema_version": 1,
+      "verdict": "deterministic"
+    }
+  ],
+  "run": {
+    "complete_marker": "SWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE",
+    "evidence_source": "codex_persisted_spawn_state",
+    "parent_session": "rollout-2026-07-21T19-17-53-019f85af-1ba9-7080-b4fa-402fdce321b1.jsonl",
+    "parent_thread_id": "019f85af-1ba9-7080-b4fa-402fdce321b1",
+    "status": "complete",
+    "workdir": "/private/tmp/switchloom-v0.3.0-candidate.hASKiy/live/codex-openai/1784654270-96976-0/workdir"
+  },
+  "schema_version": "switchloom.codex_runtime_evidence.v1"
+}
