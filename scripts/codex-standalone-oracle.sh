@@ -543,6 +543,8 @@ codex_exec_args=(
   -s workspace-write
   -c 'approval_policy="never"'
   -c "projects.\"$workdir\".trust_level=\"trusted\""
+  -c "agents.model_routing_terra_high.config_file=\"$workdir/.codex/agents/model-routing-terra-high.toml\""
+  -c "agents.model_routing_sol_high.config_file=\"$workdir/.codex/agents/model-routing-sol-high.toml\""
   -c multi_agent_v2.hide_spawn_agent_metadata=false
   -o "$workdir/codex-last-message.txt"
 )
