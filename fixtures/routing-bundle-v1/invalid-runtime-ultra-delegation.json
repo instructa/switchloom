@@ -1,0 +1,491 @@
+{
+  "schema_version": 1,
+  "bundle_id": "balanced-codex-openai@1.0.0+2.0.0",
+  "policy_id": "balanced",
+  "policy_version": "1.0.0",
+  "generated_at": "2026-07-16T00:00:00Z",
+  "source": {
+    "package": "model-routing",
+    "package_version": "0.2.1",
+    "integration": "planr"
+  },
+  "policy": {
+    "schema_version": 1,
+    "id": "balanced",
+    "version": "1.0.0",
+    "usage": {
+      "max_active_agents": 3,
+      "max_parallel_readers": 2,
+      "max_parallel_writers": 1,
+      "max_depth": 1,
+      "max_attempts": 4,
+      "max_wall_time_seconds": 3600,
+      "max_tool_calls": 120,
+      "review_reserve_percent": 20,
+      "budget_exhaustion": "stop",
+      "metering": "estimated"
+    },
+    "transitions": {
+      "retry": {
+        "max_same_route_retries": 1
+      },
+      "availability_fallback": {
+        "max_fallbacks": 1,
+        "require_same_capability_class": true
+      },
+      "quality_escalation": {
+        "max_escalations": 1,
+        "require_verification_evidence": true
+      },
+      "quota_downgrade": {
+        "enabled": false,
+        "max_downgrades": 0,
+        "noncritical_only": true
+      },
+      "safety_stop": {
+        "enabled": true
+      }
+    },
+    "materiality": {
+      "changed_files_threshold": 10,
+      "changed_lines_threshold": 500
+    },
+    "execution": {
+      "max_read_scope_entries": 8,
+      "max_write_scope_entries": 4,
+      "roles": {
+        "worker": {
+          "tools": [
+            "cargo",
+            "git",
+            "rg"
+          ],
+          "filesystem": {
+            "read_roots": [
+              "src",
+              "tests",
+              "docs"
+            ],
+            "write_roots": [
+              "src",
+              "tests",
+              "docs"
+            ],
+            "allow_overwrite": false
+          }
+        }
+      }
+    }
+  },
+  "requirements": [
+    {
+      "host": "codex",
+      "capabilities": [
+        "model_override",
+        "reasoning_effort",
+        "fork_none",
+        "bounded_context_fork"
+      ]
+    }
+  ],
+  "profiles": {
+    "codex-luna-xhigh": {
+      "client": "codex",
+      "model": "gpt-5.6-luna",
+      "agent_type": "model_routing_luna_xhigh",
+      "effort": "xhigh",
+      "cost_tier": "premium",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "codex-sol-high": {
+      "client": "codex",
+      "model": "gpt-5.6-sol",
+      "agent_type": "model_routing_sol_high",
+      "effort": "high",
+      "cost_tier": "premium",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "codex-sol-medium": {
+      "client": "codex",
+      "model": "gpt-5.6-sol",
+      "agent_type": "model_routing_sol_medium",
+      "effort": "medium",
+      "cost_tier": "standard"
+    },
+    "codex-sol-ultra": {
+      "client": "codex",
+      "model": "gpt-5.6-sol",
+      "agent_type": "model_routing_sol_ultra",
+      "effort": "ultra",
+      "cost_tier": "premium",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "codex-terra-high": {
+      "client": "codex",
+      "model": "gpt-5.6-terra",
+      "agent_type": "model_routing_terra_high",
+      "effort": "high",
+      "cost_tier": "standard",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "codex-terra-medium": {
+      "client": "codex",
+      "model": "gpt-5.6-terra",
+      "agent_type": "model_routing_terra_medium",
+      "effort": "medium",
+      "cost_tier": "standard",
+      "fork_turns": {
+        "mode": "none"
+      }
+    }
+  },
+  "routes": [
+    {
+      "match": {
+        "work_type": "exploration"
+      },
+      "profile": "codex-terra-medium",
+      "fallbacks": []
+    },
+    {
+      "match": {
+        "work_type": "research"
+      },
+      "profile": "codex-terra-medium",
+      "fallbacks": []
+    },
+    {
+      "match": {
+        "work_type": "code"
+      },
+      "profile": "codex-terra-high",
+      "fallbacks": []
+    },
+    {
+      "match": {
+        "work_type": "mechanical"
+      },
+      "profile": "codex-luna-xhigh",
+      "fallbacks": []
+    },
+    {
+      "match": {
+        "work_type": "review"
+      },
+      "profile": "codex-sol-high",
+      "fallbacks": []
+    },
+    {
+      "match": {
+        "work_type": "moonshot"
+      },
+      "profile": "codex-sol-ultra",
+      "fallbacks": []
+    }
+  ],
+  "route_default": {
+    "profile": "codex-sol-medium",
+    "fallbacks": []
+  },
+  "artifacts": [
+    {
+      "path": ".codex/agents/model-routing-luna-xhigh.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_luna_xhigh\"\ndescription = \"Bounded checklist-driven and mechanical implementation.\"\nmodel = \"gpt-5.6-luna\"\nmodel_reasoning_effort = \"xhigh\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nUse the existing Planr internal worker protocol for exactly one picked Planr item. Read the pick packet, implement only that item, log changed files and real verification commands, request review through Planr, and stop. Do not create or invoke any routing-specific, goal, or loop workflow skill. Planr users enter only through $planr-goal and $planr-loop.\n\nProtocol preload: $planr-work\n\"\"\"\n",
+      "sha256": "15302a8a8284a36902ac4c45f3ddfbb7f63ffd7360df2c1f992ff1bc5aa62643"
+    },
+    {
+      "path": ".codex/agents/model-routing-sol-high.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_sol_high\"\ndescription = \"Independent final review.\"\nmodel = \"gpt-5.6-sol\"\nmodel_reasoning_effort = \"high\"\nsandbox_mode = \"read-only\"\n\ndeveloper_instructions = \"\"\"\nUse the existing Planr internal review protocol for exactly one Planr review item. Read the pick packet, audit the target item and evidence, report findings first, and return the review verdict through Planr. Do not create or invoke any routing-specific, goal, or loop workflow skill. Planr users enter only through $planr-goal and $planr-loop.\n\nProtocol preload: $planr-review\n\"\"\"\n",
+      "sha256": "6a43d0847f8a4b55bcde6da8c5aca30ca8839b0d4d7abfb5f654453c744e1bcb"
+    },
+    {
+      "path": ".codex/agents/model-routing-sol-medium.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_sol_medium\"\ndescription = \"Normal Model Routing orchestration and synthesis.\"\nmodel = \"gpt-5.6-sol\"\nmodel_reasoning_effort = \"medium\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nOrchestrate the Model Routing workflow, delegate bounded work by agent type, and retain synthesis ownership.\n\"\"\"\n",
+      "sha256": "657975ea00e6363d52176969103234b2bfe119ee1fdc1d2a9c1332db7c3dbc35"
+    },
+    {
+      "path": ".codex/agents/model-routing-sol-ultra.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_sol_ultra\"\ndescription = \"Explicit moonshot planning only.\"\nmodel = \"gpt-5.6-sol\"\nmodel_reasoning_effort = \"ultra\"\nsandbox_mode = \"read-only\"\n\ndeveloper_instructions = \"\"\"\nWork only on an explicitly selected moonshot planning task; do not treat this role as the balanced default.\n\"\"\"\n",
+      "sha256": "92597594c9f31ab54fc7a6fe66bce9618bbe47d88a0a430532e6a402ede4602e"
+    },
+    {
+      "path": ".codex/agents/model-routing-terra-high.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_terra_high\"\ndescription = \"Normal implementation and testing.\"\nmodel = \"gpt-5.6-terra\"\nmodel_reasoning_effort = \"high\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nUse the existing Planr internal worker protocol for exactly one picked Planr item. Read the pick packet, implement only that item, log changed files and real verification commands, request review through Planr, and stop. Do not create or invoke any routing-specific, goal, or loop workflow skill. Planr users enter only through $planr-goal and $planr-loop.\n\nProtocol preload: $planr-work\n\"\"\"\n",
+      "sha256": "d19e92ab08073ebcab81f3ebbc75e4af61fae610bf6bf5002cb1d9ad21dfca26"
+    },
+    {
+      "path": ".codex/agents/model-routing-terra-medium.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_terra_medium\"\ndescription = \"Repository exploration and research.\"\nmodel = \"gpt-5.6-terra\"\nmodel_reasoning_effort = \"medium\"\nsandbox_mode = \"read-only\"\n\ndeveloper_instructions = \"\"\"\nExplore the assigned scope, report concrete evidence, and do not edit files.\n\"\"\"\n",
+      "sha256": "458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464"
+    },
+    {
+      "path": ".codex/config.toml",
+      "media_type": "application/toml",
+      "mode": "replace",
+      "content": "[agents.model_routing_luna_xhigh]\nconfig_file = \"./agents/model-routing-luna-xhigh.toml\"\n\n[agents.model_routing_sol_high]\nconfig_file = \"./agents/model-routing-sol-high.toml\"\n\n[agents.model_routing_sol_medium]\nconfig_file = \"./agents/model-routing-sol-medium.toml\"\n\n[agents.model_routing_sol_ultra]\nconfig_file = \"./agents/model-routing-sol-ultra.toml\"\n\n[agents.model_routing_terra_high]\nconfig_file = \"./agents/model-routing-terra-high.toml\"\n\n[agents.model_routing_terra_medium]\nconfig_file = \"./agents/model-routing-terra-medium.toml\"\n",
+      "sha256": "38511fd94693a95ebcdb0d2ca65f414109b05835172729c35f91d70d20d3b60d"
+    },
+    {
+      "path": ".planr/agents.toml",
+      "media_type": "application/toml",
+      "mode": "replace",
+      "content": "[profiles.model_routing_luna_xhigh]\nclient = \"codex\"\nmodel = \"gpt-5.6-luna\"\neffort = \"xhigh\"\ncost_tier = \"premium\"\nnotes = \"native_agent_type=model_routing_luna_xhigh\"\n\n[profiles.model_routing_sol_high]\nclient = \"codex\"\nmodel = \"gpt-5.6-sol\"\neffort = \"high\"\ncost_tier = \"premium\"\nnotes = \"native_agent_type=model_routing_sol_high\"\n\n[profiles.model_routing_sol_medium]\nclient = \"codex\"\nmodel = \"gpt-5.6-sol\"\neffort = \"medium\"\ncost_tier = \"standard\"\nnotes = \"native_agent_type=model_routing_sol_medium\"\n\n[profiles.model_routing_sol_ultra]\nclient = \"codex\"\nmodel = \"gpt-5.6-sol\"\neffort = \"ultra\"\ncost_tier = \"premium\"\nnotes = \"native_agent_type=model_routing_sol_ultra\"\n\n[profiles.model_routing_terra_high]\nclient = \"codex\"\nmodel = \"gpt-5.6-terra\"\neffort = \"high\"\ncost_tier = \"standard\"\nnotes = \"native_agent_type=model_routing_terra_high\"\n\n[profiles.model_routing_terra_medium]\nclient = \"codex\"\nmodel = \"gpt-5.6-terra\"\neffort = \"medium\"\ncost_tier = \"standard\"\nnotes = \"native_agent_type=model_routing_terra_medium\"\n\n[[routes]]\nprofile = \"model_routing_terra_medium\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"exploration\"\n\n[[routes]]\nprofile = \"model_routing_terra_medium\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"research\"\n\n[[routes]]\nprofile = \"model_routing_terra_high\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"code\"\n\n[[routes]]\nprofile = \"model_routing_luna_xhigh\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"mechanical\"\n\n[[routes]]\nprofile = \"model_routing_sol_high\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"review\"\n\n[[routes]]\nprofile = \"model_routing_sol_ultra\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"moonshot\"\n\n[route_default]\nprofile = \"model_routing_sol_medium\"\nfallbacks = []\n",
+      "sha256": "4c41234d5d9dfdcbb38384ee755b9785c8f69dccc3c6dfb9f399466001ec79cb"
+    },
+    {
+      "path": ".planr/policy.toml",
+      "media_type": "application/toml",
+      "mode": "replace",
+      "content": "schema_version = 1\nid = \"balanced\"\nversion = \"1.0.0\"\n\n[usage]\nmax_active_agents = 3\nmax_parallel_readers = 2\nmax_parallel_writers = 1\nmax_depth = 1\nmax_attempts = 4\nmax_wall_time_seconds = 3600\nmax_tool_calls = 120\nreview_reserve_percent = 20\nbudget_exhaustion = \"stop\"\nmetering = \"estimated\"\n\n[transitions.retry]\nmax_same_route_retries = 1\n\n[transitions.availability_fallback]\nmax_fallbacks = 1\nrequire_same_capability_class = true\n\n[transitions.quality_escalation]\nmax_escalations = 1\nrequire_verification_evidence = true\n\n[transitions.quota_downgrade]\nenabled = false\nmax_downgrades = 0\nnoncritical_only = true\n\n[transitions.safety_stop]\nenabled = true\n\n[materiality]\nchanged_files_threshold = 10\nchanged_lines_threshold = 500\n\n[execution]\nmax_read_scope_entries = 8\nmax_write_scope_entries = 4\n\n[execution.roles.worker]\ntools = [\"cargo\", \"git\", \"rg\"]\n\n[execution.roles.worker.filesystem]\nread_roots = [\"src\", \"tests\", \"docs\"]\nwrite_roots = [\"src\", \"tests\", \"docs\"]\nallow_overwrite = false\n",
+      "sha256": "827667b678224f6b09f7c3faab188ede4c7bad49cd2fc9fa8e46f01d61147080"
+    }
+  ],
+  "evidence": {
+    "evaluation_ids": [
+      "codex-cli-0.144.5-native-v2"
+    ],
+    "status": "experimental"
+  },
+  "adapter_contract": {
+    "schema_version": 1,
+    "routing_intent": {
+      "schema_version": 1,
+      "integration": "planr",
+      "semantic_roles": [
+        "driver",
+        "explorer",
+        "mechanical",
+        "moonshot",
+        "reviewer",
+        "worker"
+      ],
+      "role_requests": [
+        {
+          "semantic_role": "driver",
+          "requested_model": "gpt-5.6-sol",
+          "requested_effort": "medium",
+          "instructions": "Route `driver` through `codex-sol-medium`."
+        },
+        {
+          "semantic_role": "explorer",
+          "requested_model": "gpt-5.6-terra",
+          "requested_effort": "medium",
+          "instructions": "Route `explorer` through `codex-terra-medium`."
+        },
+        {
+          "semantic_role": "mechanical",
+          "requested_model": "gpt-5.6-luna",
+          "requested_effort": "xhigh",
+          "instructions": "Route `mechanical` through `codex-luna-xhigh`."
+        },
+        {
+          "semantic_role": "moonshot",
+          "requested_model": "gpt-5.6-sol",
+          "requested_effort": "ultra",
+          "instructions": "Route `moonshot` through `codex-sol-ultra`."
+        },
+        {
+          "semantic_role": "reviewer",
+          "requested_model": "gpt-5.6-sol",
+          "requested_effort": "high",
+          "instructions": "Route `reviewer` through `codex-sol-high`."
+        },
+        {
+          "semantic_role": "worker",
+          "requested_model": "gpt-5.6-terra",
+          "requested_effort": "high",
+          "instructions": "Route `worker` through `codex-terra-high`."
+        }
+      ],
+      "required_guarantees": [
+        "artifact_lifecycle",
+        "dispatch_identity"
+      ]
+    },
+    "capability": {
+      "schema_version": 1,
+      "host": "codex",
+      "host_version_constraints": {
+        "minimum": "codex-cli 0.144.5",
+        "maximum": "codex-cli 0.144.5",
+        "evidence_max_age_seconds": 31536000
+      },
+      "runtime_class": "native-subagent",
+      "runtime_behavior": {
+        "capability_version": "codex-cli-0.144.5-native-v2",
+        "installed_host_version_source": "codex-cli 0.144.5 via codex --version",
+        "backend_selection_source": "installed Codex backend selected by the authenticated host account and workspace; Switchloom only declares repository-local project agent model and effort requests",
+        "trust_boundary": "trusted project repository plus generated .codex/config.toml [agents.*] registrations; global Codex configuration is outside Switchloom ownership",
+        "discovery_behavior": "Codex discovers repository-local agent files through .codex/config.toml registration entries after project trust and host reload/restart",
+        "role_precedence": [
+          "spawn_agent agent_type selects the registered project agent file",
+          "the selected project agent file declares requested child model and model_reasoning_effort fields when present",
+          "optional custom-agent model and model_reasoning_effort inherit from the parent session when omitted",
+          "parent live sandbox and approval choices are reapplied when spawning a child",
+          "the live Codex backend remains the authority for effective model availability, billing, timing, and orchestration"
+        ],
+        "shared_filesystem": true,
+        "delegation_modes": {
+          "explicit_agent_type_dispatch": true,
+          "ultra_auto_delegation": false,
+          "automatic_delegation_requires_ultra": true
+        },
+        "source_references": [
+          "docs/codex-v2-runtime-evidence.json#sha256:e9962d316274b08e7bc422747e12a2f3a723c3647354243f06f3efb6b504a8e9"
+        ]
+      },
+      "discovery_artifacts": [
+        "codex-cli-0.144.5-native-v2"
+      ],
+      "dispatch_fields": [
+        "profile",
+        "model",
+        "effort",
+        "agent_type",
+        "fork_turns"
+      ],
+      "model_control": {
+        "level": "deterministic",
+        "field": "model",
+        "evidence_required": true
+      },
+      "effort_control": {
+        "level": "deterministic",
+        "field": "effort",
+        "evidence_required": true
+      },
+      "context_semantics": {
+        "supports_fork_none": true,
+        "supports_fork_all": true,
+        "requires_bounded_context_for_overrides": true
+      },
+      "nesting": {
+        "max_depth": 1,
+        "level": "deterministic"
+      },
+      "parallelism": {
+        "max_parallel_children": 3,
+        "level": "advisory"
+      },
+      "observability": {
+        "requested_dispatch": "deterministic",
+        "effective_identity": "deterministic",
+        "effective_model": "deterministic",
+        "raw_evidence_refs": [
+          "codex-cli-0.144.5-native-v2"
+        ]
+      },
+      "guarantees": {
+        "artifact_lifecycle": {
+          "level": "deterministic",
+          "reason": "Switchloom owns preview/apply/update/rollback/uninstall for managed artifacts.",
+          "evidence_required": false
+        },
+        "dispatch_identity": {
+          "level": "deterministic",
+          "reason": "Adapter can emit explicit local child identity and non-all context policy.",
+          "evidence_required": true
+        },
+        "effective_runtime_evidence": {
+          "level": "advisory",
+          "reason": "Generated bundles declare requested routing; certification must persist requested-versus-effective host evidence.",
+          "evidence_required": true
+        },
+        "effort_selection": {
+          "level": "deterministic",
+          "reason": "Codex project agent files declare model_reasoning_effort for role-local child dispatch.",
+          "evidence_required": true
+        },
+        "model_selection": {
+          "level": "deterministic",
+          "reason": "Codex project agent files declare the child model; live evidence is still required for certification.",
+          "evidence_required": true
+        }
+      },
+      "known_limitations": [
+        "native multi-agent v2 and the requested model must be active on the current Codex backend"
+      ]
+    },
+    "adapter": {
+      "schema_version": 1,
+      "adapter_id": "codex-openai",
+      "adapter_version": "2.0.0",
+      "runtime_class": "native-subagent",
+      "accepts_intent_schema": "RoutingIntentV1",
+      "emitted_artifact_modes": [
+        "create",
+        "replace"
+      ],
+      "dispatch_recipe": {
+        "invocation": "host-native-subagent",
+        "required_fields": [
+          "profile",
+          "model",
+          "effort",
+          "agent_type",
+          "fork_turns"
+        ],
+        "artifact_paths": [
+          ".codex/agents/model-routing-luna-xhigh.toml",
+          ".codex/agents/model-routing-sol-high.toml",
+          ".codex/agents/model-routing-sol-medium.toml",
+          ".codex/agents/model-routing-sol-ultra.toml",
+          ".codex/agents/model-routing-terra-high.toml",
+          ".codex/agents/model-routing-terra-medium.toml",
+          ".codex/config.toml",
+          ".planr/agents.toml",
+          ".planr/policy.toml"
+        ]
+      },
+      "lifecycle_owner": "switchloom-managed"
+    },
+    "dispatch_evidence": {
+      "schema_version": 1,
+      "required_verdicts": [
+        "deterministic",
+        "advisory",
+        "unsupported"
+      ],
+      "receipt_schema": "DispatchEvidenceV1"
+    },
+    "planr_handoff": {
+      "schema_version": 1,
+      "switchloom_package": "switchloom@0.2.1",
+      "semantic_role_contract": "Planr supplies usage policy `balanced`, work_type routes, and semantic roles; Switchloom owns the selected host binding, model, effort, fork/context policy, and generated dispatch artifacts.",
+      "required_consumer_behavior": [
+        "Consume RoutingIntentV1 as the only source for semantic_role, work_type, selected profile, model, effort, agent_type, and fork_turns inputs.",
+        "Use the CLI lifecycle or SetupSpecV1 recipe commands to preview, apply, update, status, rollback, and uninstall repository-local artifacts.",
+        "Record Switchloom package version, package digest, bundle_id, host version, requested dispatch, effective child identity, nonce, and receipt paths before claiming certification.",
+        "Treat advisory or unsupported guarantees as uncertified until nonce-bearing live host evidence upgrades them.",
+        "For the available-host release gate, Codex may be certified from deterministic effective-routing evidence; Cursor profiles may only claim advisory nonce-correlated requested-routing evidence unless the host exposes authenticated effective role/model telemetry. Claude Code, OpenCode, and Pi remain unavailable or unverified until authentic receipts exist."
+      ],
+      "forbidden_duplicate_ownership": [
+        "Do not maintain a Planr-side model catalog, effort catalog, preset compiler, host adapter, or fork policy normalizer for Switchloom-owned inputs.",
+        "Do not re-normalize Switchloom model, effort, role, agent_type, profile, or fork policy identifiers in Planr.",
+        "Do not overwrite Switchloom-managed artifacts outside preview/apply/update/rollback/uninstall.",
+        "Do not mark Claude Code, OpenCode, Pi, or any advisory receipt as certified without live nonce-bearing child evidence."
+      ],
+      "certification_report_reference": "reports/native-host-certification/<host>/<timestamp>/workdir/dispatch-evidence.json plus the matching bundle.json, invocation receipt, package digest, and validator stdout"
+    }
+  }
+}

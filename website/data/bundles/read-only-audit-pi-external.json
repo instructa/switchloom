@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "bundle_id": "read-only-audit-pi-external@1.0.0+1.0.0",
+  "policy_id": "read-only-audit",
+  "policy_version": "1.0.0",
+  "generated_at": "2026-07-16T00:00:00Z",
+  "source": {
+    "package": "model-routing",
+    "package_version": "0.2.2",
+    "integration": "standalone"
+  },
+  "policy": {
+    "schema_version": 1,
+    "id": "read-only-audit",
+    "version": "1.0.0",
+    "usage": {
+      "max_active_agents": 3,
+      "max_parallel_readers": 3,
+      "max_parallel_writers": 0,
+      "max_depth": 1,
+      "max_attempts": 2,
+      "max_wall_time_seconds": 1800,
+      "max_tool_calls": 80,
+      "review_reserve_percent": 20,
+      "budget_exhaustion": "stop",
+      "metering": "estimated"
+    },
+    "transitions": {
+      "retry": {
+        "max_same_route_retries": 0
+      },
+      "availability_fallback": {
+        "max_fallbacks": 1,
+        "require_same_capability_class": true
+      },
+      "quality_escalation": {
+        "max_escalations": 0,
+        "require_verification_evidence": true
+      },
+      "quota_downgrade": {
+        "enabled": false,
+        "max_downgrades": 0,
+        "noncritical_only": true
+      },
+      "safety_stop": {
+        "enabled": true
+      }
+    },
+    "materiality": {
+      "changed_files_threshold": 1,
+      "changed_lines_threshold": 1
+    },
+    "execution": {
+      "max_read_scope_entries": 12,
+      "max_write_scope_entries": 1,
+      "roles": {
+        "worker": {
+          "tools": [
+            "git",
+            "rg"
+          ],
+          "filesystem": {
+            "read_roots": [
+              "src",
+              "tests",
+              "docs"
+            ],
+            "write_roots": [],
+            "allow_overwrite": false
+          }
+        }
+      }
+    }
+  },
+  "requirements": [
+    {
+      "host": "pi",
+      "capabilities": [
+        "model_override",
+        "reasoning_effort",
+        "fork_none"
+      ]
+    }
+  ],
+  "profiles": {
+    "pi-driver": {
+      "client": "pi",
+      "model": "openai/gpt-4o-mini",
+      "agent_type": "switchloom-pi-driver",
+      "effort": "medium",
+      "cost_tier": "standard"
+    },
+    "pi-worker": {
+      "client": "pi",
+      "model": "openai/gpt-4o-mini",
+      "agent_type": "switchloom-pi-worker",
+      "effort": "low",
+      "cost_tier": "standard",
+      "fork_turns": {
+        "mode": "none"
+      }
+    }
+  },
+  "routes": [
+    {
+      "match": {
+        "work_type": "code"
+      },
+      "profile": "pi-worker",
+      "fallbacks": [
+        "pi-driver"
+      ]
+    }
+  ],
+  "route_default": {
+    "profile": "pi-driver",
+    "fallbacks": []
+  },
+  "artifacts": [
+    {
+      "path": ".pi/workflows/model-routing-preset-runner.json",
+      "media_type": "application/json",
+      "mode": "create",
+      "content": "{\n  \"schema_version\": 1,\n  \"workflow\": \"model-routing-preset-runner\",\n  \"runner\": \"pi\",\n  \"runtime_class\": \"external-runner\",\n  \"arguments\": {\n    \"agent_type\": \"switchloom-pi-worker\",\n    \"provider_model\": \"openai/gpt-4o-mini\",\n    \"thinking\": \"low\",\n    \"isolation\": {\n      \"session\": \"none\",\n      \"tools\": \"none\",\n      \"extensions\": \"none\",\n      \"skills\": \"none\",\n      \"agent_dir\": \"report-workdir/.pi-agent\"\n    },\n    \"task\": {\n      \"semantic_role\": \"worker\",\n      \"profile\": \"pi-worker\",\n      \"returns\": \"nonce-only\"\n    }\n  },\n  \"process\": {\n    \"argv\": [\n      \"pi\",\n      \"--print\",\n      \"--no-session\",\n      \"--no-tools\",\n      \"--no-extensions\",\n      \"--no-skills\",\n      \"--provider\",\n      \"openai\",\n      \"--model\",\n      \"gpt-4o-mini\",\n      \"--thinking\",\n      \"low\"\n    ],\n    \"state_boundary\": \"PI_CODING_AGENT_DIR is set to a report-local directory for every certification run\"\n  },\n  \"security\": {\n    \"filesystem_tools\": \"disabled\",\n    \"session_persistence\": \"disabled\",\n    \"native_subagents\": \"not used\",\n    \"certification_requirement\": \"A persisted workflow receipt must include the dynamic nonce returned by a live Pi child process before advisory runtime evidence is accepted.\"\n  }\n}\n",
+      "sha256": "cc139567f4ee91ed0ef1fb39b11df1e5ffbb24e1a66a0b57ed2e6c904db1488b"
+    }
+  ],
+  "evidence": {
+    "evaluation_ids": [
+      "builtin-pi-external-v1"
+    ],
+    "status": "experimental"
+  },
+  "adapter_contract": {
+    "schema_version": 1,
+    "routing_intent": {
+      "schema_version": 1,
+      "integration": "standalone",
+      "semantic_roles": [
+        "driver",
+        "worker"
+      ],
+      "role_requests": [
+        {
+          "semantic_role": "driver",
+          "requested_model": "openai/gpt-4o-mini",
+          "requested_effort": "medium",
+          "instructions": "Route `driver` through `pi-driver`."
+        },
+        {
+          "semantic_role": "worker",
+          "requested_model": "openai/gpt-4o-mini",
+          "requested_effort": "low",
+          "instructions": "Route `worker` through `pi-worker`."
+        }
+      ],
+      "required_guarantees": [
+        "artifact_lifecycle",
+        "dispatch_identity"
+      ]
+    },
+    "capability": {
+      "schema_version": 1,
+      "host": "pi",
+      "host_version_constraints": {
+        "evidence_max_age_seconds": 31536000
+      },
+      "runtime_class": "external-runner",
+      "runtime_behavior": {
+        "capability_version": "builtin-pi-external-v1",
+        "installed_host_version_source": "pi --version",
+        "backend_selection_source": "host account, workspace, provider, or runner configuration outside Switchloom ownership",
+        "trust_boundary": "repository-local generated artifacts are Switchloom-managed; host authentication, account policy, and execution state are host-owned",
+        "discovery_behavior": "host-specific project artifact discovery",
+        "role_precedence": [
+          "Switchloom declares requested semantic role, profile, model, effort, and artifacts",
+          "the host runtime remains the authority for effective execution"
+        ],
+        "shared_filesystem": false,
+        "delegation_modes": {
+          "explicit_agent_type_dispatch": true,
+          "ultra_auto_delegation": false,
+          "automatic_delegation_requires_ultra": false
+        },
+        "source_references": [
+          "builtin-pi-external-runner-contract",
+          "pi-print-mode-process-contract"
+        ]
+      },
+      "discovery_artifacts": [
+        "builtin-pi-external-runner-contract",
+        "pi-print-mode-process-contract"
+      ],
+      "dispatch_fields": [
+        "profile",
+        "model",
+        "provider",
+        "effort",
+        "agent_type",
+        "fork_turns",
+        "isolation",
+        "task"
+      ],
+      "model_control": {
+        "level": "advisory",
+        "field": "model",
+        "evidence_required": true
+      },
+      "effort_control": {
+        "level": "advisory",
+        "field": "effort",
+        "evidence_required": true
+      },
+      "context_semantics": {
+        "supports_fork_none": true,
+        "supports_fork_all": false,
+        "requires_bounded_context_for_overrides": false
+      },
+      "nesting": {
+        "max_depth": 1,
+        "level": "deterministic"
+      },
+      "parallelism": {
+        "max_parallel_children": 1,
+        "level": "advisory"
+      },
+      "observability": {
+        "requested_dispatch": "deterministic",
+        "effective_identity": "advisory",
+        "effective_model": "advisory",
+        "raw_evidence_refs": [
+          "builtin-pi-external-runner-contract",
+          "pi-print-mode-process-contract"
+        ]
+      },
+      "guarantees": {
+        "artifact_lifecycle": {
+          "level": "deterministic",
+          "reason": "Switchloom owns preview/apply/update/rollback/uninstall for managed artifacts.",
+          "evidence_required": false
+        },
+        "dispatch_identity": {
+          "level": "deterministic",
+          "reason": "Adapter can emit explicit local child identity and non-all context policy.",
+          "evidence_required": true
+        },
+        "effective_runtime_evidence": {
+          "level": "advisory",
+          "reason": "Generated bundles declare requested routing; certification must persist requested-versus-effective host evidence.",
+          "evidence_required": true
+        },
+        "effort_selection": {
+          "level": "advisory",
+          "reason": "Host accepts an effort-like field but effective precedence must be proven separately.",
+          "evidence_required": true
+        },
+        "model_selection": {
+          "level": "advisory",
+          "reason": "Host accepts a requested model but may apply account, workspace, or runtime precedence.",
+          "evidence_required": true
+        }
+      },
+      "known_limitations": [
+        "Pi external runner execution is process-isolated from native subagent discovery and does not create host-native child agents",
+        "Provider credentials, model availability, and network policy are controlled by Pi and the configured provider",
+        "The workflow receipt is advisory unless a live Pi print-mode child returns the nonce from an isolated session directory"
+      ]
+    },
+    "adapter": {
+      "schema_version": 1,
+      "adapter_id": "pi-external",
+      "adapter_version": "1.0.0",
+      "runtime_class": "external-runner",
+      "accepts_intent_schema": "RoutingIntentV1",
+      "emitted_artifact_modes": [
+        "create"
+      ],
+      "dispatch_recipe": {
+        "invocation": "external-runner-process",
+        "required_fields": [
+          "profile",
+          "model",
+          "provider",
+          "effort",
+          "agent_type",
+          "fork_turns",
+          "isolation",
+          "task"
+        ],
+        "artifact_paths": [
+          ".pi/workflows/model-routing-preset-runner.json"
+        ]
+      },
+      "lifecycle_owner": "switchloom-managed"
+    },
+    "dispatch_evidence": {
+      "schema_version": 1,
+      "required_verdicts": [
+        "deterministic",
+        "advisory",
+        "unsupported"
+      ],
+      "receipt_schema": "DispatchEvidenceV1"
+    },
+    "planr_handoff": {
+      "schema_version": 1,
+      "switchloom_package": "switchloom@0.2.2",
+      "semantic_role_contract": "Planr supplies usage policy `read-only-audit`, work_type routes, and semantic roles; Switchloom owns the selected host binding, model, effort, fork/context policy, and generated dispatch artifacts.",
+      "required_consumer_behavior": [
+        "Consume RoutingIntentV1 as the only source for semantic_role, work_type, selected profile, model, effort, agent_type, and fork_turns inputs.",
+        "Use the CLI lifecycle or SetupSpecV1 recipe commands to preview, apply, update, status, rollback, and uninstall repository-local artifacts.",
+        "Record Switchloom package version, package digest, bundle_id, host version, requested dispatch, effective child identity, nonce, and receipt paths before claiming certification.",
+        "Treat advisory or unsupported guarantees as uncertified until nonce-bearing live host evidence upgrades them.",
+        "For the available-host release gate, Codex may be certified from deterministic effective-routing evidence; Cursor profiles may only claim advisory nonce-correlated requested-routing evidence unless the host exposes authenticated effective role/model telemetry. Claude Code, OpenCode, and Pi remain unavailable or unverified until authentic receipts exist."
+      ],
+      "forbidden_duplicate_ownership": [
+        "Do not maintain a Planr-side model catalog, effort catalog, preset compiler, host adapter, or fork policy normalizer for Switchloom-owned inputs.",
+        "Do not re-normalize Switchloom model, effort, role, agent_type, profile, or fork policy identifiers in Planr.",
+        "Do not overwrite Switchloom-managed artifacts outside preview/apply/update/rollback/uninstall.",
+        "Do not mark Claude Code, OpenCode, Pi, or any advisory receipt as certified without live nonce-bearing child evidence."
+      ],
+      "certification_report_reference": "reports/native-host-certification/<host>/<timestamp>/workdir/dispatch-evidence.json plus the matching bundle.json, invocation receipt, package digest, and validator stdout"
+    }
+  }
+}

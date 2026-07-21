@@ -1,6 +1,6 @@
 {
   "name": "switchloom",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Deterministic model routing for coding agents.",
   "license": "MIT",
   "repository": {
@@ -19,7 +19,8 @@
     "npm/native",
     "README.md",
     "LICENSE",
-    "docs"
+    "docs",
+    "!docs/prepublish-certification-*.md"
   ],
   "publishConfig": {
     "access": "public",

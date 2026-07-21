@@ -2,11 +2,12 @@ schema_version = 1
 id = "cursor-fable-grok"
 version = "1.0.0"
 host = "cursor"
+runtime_class = "native-subagent"
 driver_role = "driver"
 default_role = "driver"
 capability_evidence = ["builtin-cursor-project-agent-contract"]
 billing_assumptions = ["Model Routing records declared tiers; Cursor remains billing authority"]
-known_limitations = ["workspace policy or Max Mode may override the requested model"]
+known_limitations = ["workspace policy or Max Mode may override the requested model", "effective child model is advisory unless a live Cursor receipt exposes the executed model"]
 
 [capabilities]
 model_override = true
@@ -23,7 +24,7 @@ cost_tier = "premium"
 [profiles.worker]
 profile = "cursor-grok-worker"
 client = "cursor"
-model = "grok-code-fast-1"
+model = "cursor-grok-4.5-medium"
 cost_tier = "standard"
 fork_turns = { mode = "none" }
 
@@ -42,7 +43,7 @@ path = ".cursor/agents/model-routing-preset-worker.md"
 kind = "cursor_agent"
 content = '''---
 name: model-routing-preset-worker
-model: grok-code-fast-1
+model: cursor-grok-4.5-medium
 ---
-Follow the generated role instructions and preserve routing evidence.
+Follow the generated role instructions and preserve routing evidence. Treat the declared model as requested; only claim a verified verdict when a live Cursor receipt exposes matching effective execution.
 '''

@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "evidence_id": "codex-cli-0.144.5-native-v2",
+  "observed_at": "2026-07-20T00:00:00Z",
+  "installed_version": {
+    "command": "codex --version",
+    "stdout": "codex-cli 0.144.5",
+    "stdout_sha256": "7dad51bb7d583ef2fa4162db23022b589b630f7187b091ba6f4015a5958994ab"
+  },
+  "runtime_class": "native-subagent",
+  "backend_selection_owner": "installed Codex backend selected by the authenticated host account and workspace; Switchloom only declares repository-local project agent model and effort requests",
+  "switchloom_ownership": [
+    "semantic role compilation",
+    "repository-local .codex/agents role files",
+    "repository-local .codex/config.toml agent registrations",
+    "dispatch recipe fields",
+    "requested-versus-effective verification contract"
+  ],
+  "codex_ownership": [
+    "project trust",
+    "agent discovery and reload timing",
+    "effective backend availability",
+    "execution timing and orchestration",
+    "parallel child scheduling",
+    "billing and account/workspace precedence"
+  ],
+  "trust_and_discovery": {
+    "trust_boundary": "trusted project repository plus generated .codex/config.toml [agents.*] registrations; global Codex configuration is outside Switchloom ownership",
+    "discovery_behavior": "Codex discovers repository-local agent files through .codex/config.toml registration entries after project trust and host reload/restart"
+  },
+  "parallelism": {
+    "max_parallel_children": 3,
+    "source": "Codex V2 collaboration host exposes four active agent slots including the root, leaving three parallel child slots in the current runtime"
+  },
+  "role_precedence": [
+    "spawn_agent agent_type selects the registered project agent file",
+    "the selected project agent file declares requested child model and model_reasoning_effort fields when present",
+    "optional custom-agent model and model_reasoning_effort inherit from the parent session when omitted",
+    "parent live sandbox and approval choices are reapplied when spawning a child",
+    "the live Codex backend remains the authority for effective model availability, billing, timing, and orchestration"
+  ],
+  "shared_filesystem": true,
+  "delegation_modes": {
+    "explicit_agent_type_dispatch": true,
+    "ultra_auto_delegation": true,
+    "automatic_delegation_requires_ultra": true
+  },
+  "claim_provenance": {
+    "installed_version": [
+      {
+        "kind": "host-command",
+        "source": "codex --version",
+        "observed_at": "2026-07-20T00:00:00Z",
+        "codex_version": "codex-cli 0.144.5",
+        "observed_value": "codex-cli 0.144.5",
+        "required_raw_fragments": [
+          "codex-cli 0.144.5"
+        ],
+        "source_path": "local-shell:codex --version",
+        "raw_output": "codex-cli 0.144.5\n",
+        "raw_output_sha256": "7dad51bb7d583ef2fa4162db23022b589b630f7187b091ba6f4015a5958994ab"
+      }
+    ],
+    "backend_selection_owner": [
+      {
+        "kind": "source-document",
+        "source": "OpenAI Codex configuration reference: project-scoped config cannot override machine-local provider, auth, host-owned app request metadata, configuration profile selection, or telemetry routing keys.",
+        "observed_at": "2026-07-20T00:00:00Z",
+        "codex_version": "codex-cli 0.144.5",
+        "observed_value": "installed Codex backend selected by the authenticated host account and workspace; Switchloom only declares repository-local project agent model and effort requests",
+        "required_raw_fragments": [
+          "Project-scoped config cannot override machine-local provider, auth",
+          "configuration profile selection"
+        ],
+        "source_url": "https://developers.openai.com/codex/config-reference",
+        "raw_output": "Project-scoped config cannot override machine-local provider, auth, host-owned app request metadata, notification, configuration profile selection, or telemetry routing keys; provider/auth/profile routing belongs in user-level config or host state.\n",
+        "raw_output_sha256": "9219083d3e27afac0fcaa9f420fcc5af99108ec070758096ba4be0db21d289d4"
+      }
+    ],
+    "trust_and_discovery": [
+      {
+        "kind": "source-document",
+        "source": "OpenAI Codex configuration and subagents references: trusted project-scoped config plus project-scoped .codex/agents custom agent files.",
+        "observed_at": "2026-07-20T00:00:00Z",
+        "codex_version": "codex-cli 0.144.5",
+        "observed_value": {
+          "trust_boundary": "trusted project repository plus generated .codex/config.toml [agents.*] registrations; global Codex configuration is outside Switchloom ownership",
+          "discovery_behavior": "Codex discovers repository-local agent files through .codex/config.toml registration entries after project trust and host reload/restart"
+        },
+        "required_raw_fragments": [
+          "project-scoped config files only when you trust the project",
+          "standalone TOML files under .codex/agents/"
+        ],
+        "source_url": "https://developers.openai.com/codex/config-reference",
+        "source_path": "https://developers.openai.com/codex/subagents",
+        "raw_output": "Codex loads project-scoped config files only when you trust the project. To define project-scoped custom agents, add standalone TOML files under .codex/agents/.\n",
+        "raw_output_sha256": "6cd7d7bd69bbf1c855c102c0079de0dcebff56250da0c8459966fb6bcc59ebb6"
+      }
+    ],
+    "parallelism": [
+      {
+        "kind": "runtime-contract",
+        "source": "Codex session developer runtime contract for this workspace declares the active collaboration slot budget.",
+        "observed_at": "2026-07-20T00:00:00Z",
+        "codex_version": "codex-cli 0.144.5",
+        "observed_value": {
+          "max_parallel_children": 3,
+          "source": "Codex V2 collaboration host exposes four active agent slots including the root, leaving three parallel child slots in the current runtime"
+        },
+        "required_raw_fragments": [
+          "4 available concurrency slots",
+          "including the root thread",
+          "at most 3 parallel child agents"
+        ],
+        "source_path": "current-session:developer-collaboration-runtime",
+        "raw_output": "Current Codex session runtime contract: There are 4 available concurrency slots, meaning that up to 4 agents can be active at once, including the root thread; therefore a root session can run at most 3 parallel child agents.\n",
+        "raw_output_sha256": "c957d58cea4f8001d4c7cc06d9affc542dcf5048ef7f7bca077af5033e18e664"
+      }
+    ],
+    "role_precedence": [
+      {
+        "kind": "source-document",
+        "source": "OpenAI Codex subagents reference: parent live sandbox and approval overrides are reapplied to children; omitted custom-agent model and model_reasoning_effort inherit from the parent session.",
+        "observed_at": "2026-07-20T00:00:00Z",
+        "codex_version": "codex-cli 0.144.5",
+        "observed_value": [
+          "spawn_agent agent_type selects the registered project agent file",
+          "the selected project agent file declares requested child model and model_reasoning_effort fields when present",
+          "optional custom-agent model and model_reasoning_effort inherit from the parent session when omitted",
+          "parent live sandbox and approval choices are reapplied when spawning a child",
+          "the live Codex backend remains the authority for effective model availability, billing, timing, and orchestration"
+        ],
+        "required_raw_fragments": [
+          "reapplies the parent turn live runtime overrides",
+          "sandbox and approval choices",
+          "model_reasoning_effort inherit from the parent session when omitted"
+        ],
+        "source_url": "https://developers.openai.com/codex/subagents",
+        "raw_output": "Codex also reapplies the parent turn live runtime overrides when it spawns a child, including sandbox and approval choices, even if the selected custom agent file sets different defaults. Optional custom-agent fields such as model and model_reasoning_effort inherit from the parent session when omitted.\n",
+        "raw_output_sha256": "ab0a4ab9826bef877c1c2a4693913a00b22e5a4b3d44a6711588519d4eb94120"
+      }
+    ],
+    "shared_filesystem": [
+      {
+        "kind": "session-runtime-contract",
+        "source": "Codex session developer runtime contract for this workspace declares shared filesystem behavior for team agents.",
+        "observed_at": "2026-07-20T00:00:00Z",
+        "codex_version": "codex-cli 0.144.5",
+        "observed_value": true,
+        "required_raw_fragments": [
+          "All agents share the same container and filesystem",
+          "edits made by one agent are immediately visible to all other agents"
+        ],
+        "source_path": "current-session:developer-collaboration-runtime",
+        "raw_output": "Current Codex team runtime contract: All agents share the same container and filesystem, use the same current working directory, and edits made by one agent are immediately visible to all other agents.\n",
+        "raw_output_sha256": "10d40615c319399239f02c74faba540b6240030690c34ab1b3b8e14ad4ea3b44"
+      }
+    ],
+    "delegation_modes": [
+      {
+        "kind": "source-document",
+        "source": "OpenAI Codex subagents and models references: Ultra can proactively delegate; most intelligence levels require explicit delegation.",
+        "observed_at": "2026-07-20T00:00:00Z",
+        "codex_version": "codex-cli 0.144.5",
+        "observed_value": {
+          "explicit_agent_type_dispatch": true,
+          "ultra_auto_delegation": true,
+          "automatic_delegation_requires_ultra": true
+        },
+        "required_raw_fragments": [
+          "With Ultra, ChatGPT can proactively delegate work",
+          "At most intelligence levels, ask for delegation explicitly"
+        ],
+        "source_url": "https://developers.openai.com/codex/subagents",
+        "source_path": "https://developers.openai.com/codex/models",
+        "raw_output": "With Ultra, ChatGPT can proactively delegate work when parallel agents would materially improve speed or quality. At most intelligence levels, ask for delegation explicitly.\n",
+        "raw_output_sha256": "a39f4a51dcb7defef4141b993f852a3ca45af6ebcccffa677ff7dac8dd655aa9"
+      }
+    ]
+  },
+  "negative_contracts": [
+    "do not certify Codex V2 with a different installed version unless the capability evidence id and host_version_constraints are updated",
+    "do not accept source references without the expected digest-bound evidence document",
+    "do not accept child slot counts other than the frozen three-child V2 contract",
+    "do not enable automatic delegation outside the explicit Ultra mode boundary",
+    "do not accept a contract whose runtime facts differ from this parsed evidence even when the source reference digest matches these bytes"
+  ]
+}

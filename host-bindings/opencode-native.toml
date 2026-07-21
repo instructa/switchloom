@@ -1,0 +1,76 @@
+schema_version = 1
+id = "opencode-native"
+version = "1.0.0"
+host = "opencode"
+runtime_class = "native-subagent"
+driver_role = "driver"
+default_role = "driver"
+capability_evidence = ["builtin-opencode-project-agent-contract", "opencode-task-permission-contract"]
+billing_assumptions = ["Model Routing records declared tiers; OpenCode provider/account configuration remains billing authority"]
+known_limitations = ["provider account configuration may override or reject requested models", "effective child model is advisory unless a live OpenCode receipt exposes the executed model", "Task dispatch is controlled by OpenCode permission.task rules"]
+
+[capabilities]
+model_override = true
+effort_override = true
+fork_none = true
+fork_all = false
+
+[profiles.driver]
+profile = "opencode-driver"
+client = "opencode"
+model = "opencode/gpt-5-nano"
+effort = "medium"
+cost_tier = "premium"
+
+[profiles.worker]
+profile = "opencode-worker"
+client = "opencode"
+model = "opencode/gpt-5-nano"
+effort = "low"
+cost_tier = "standard"
+fork_turns = { mode = "none" }
+
+[[routes]]
+work_type = "code"
+role = "worker"
+fallback_roles = ["driver"]
+
+[verification]
+id = "builtin-opencode-native-v1"
+verified_at_unix = 1783987200
+max_age_seconds = 31536000
+
+[[artifacts]]
+path = ".opencode/agents/model-routing-preset-driver.md"
+kind = "opencode_agent"
+content = '''---
+description: Switchloom driver that delegates implementation to the preset worker.
+mode: primary
+model: opencode/gpt-5-nano
+variant: medium
+permission:
+  edit: deny
+  bash: ask
+  task:
+    "*": deny
+    model-routing-preset-worker: allow
+---
+Use OpenCode's Task tool to invoke `model-routing-preset-worker` for implementation work. Preserve routing evidence and do not claim a verified verdict without a persisted live OpenCode receipt.
+'''
+
+[[artifacts]]
+path = ".opencode/agents/model-routing-preset-worker.md"
+kind = "opencode_agent"
+content = '''---
+description: Switchloom worker subagent for bounded implementation tasks.
+mode: subagent
+model: opencode/gpt-5-nano
+variant: low
+permission:
+  edit: allow
+  bash: ask
+  task:
+    "*": deny
+---
+Follow the generated role instructions and preserve routing evidence. Treat the declared model and variant as requested values; only claim a verified verdict when a live OpenCode receipt exposes matching effective execution.
+'''

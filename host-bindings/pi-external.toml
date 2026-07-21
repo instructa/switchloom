@@ -1,0 +1,99 @@
+schema_version = 1
+id = "pi-external"
+version = "1.0.0"
+host = "pi"
+runtime_class = "external-runner"
+driver_role = "driver"
+default_role = "driver"
+capability_evidence = ["builtin-pi-external-runner-contract", "pi-print-mode-process-contract"]
+billing_assumptions = ["Model Routing records declared provider/model tiers; Pi remains provider, billing, and authentication authority"]
+known_limitations = [
+  "Pi external runner execution is process-isolated from native subagent discovery and does not create host-native child agents",
+  "Provider credentials, model availability, and network policy are controlled by Pi and the configured provider",
+  "The workflow receipt is advisory unless a live Pi print-mode child returns the nonce from an isolated session directory"
+]
+
+[capabilities]
+model_override = true
+effort_override = true
+fork_none = true
+fork_all = false
+
+[profiles.driver]
+profile = "pi-driver"
+client = "pi"
+model = "openai/gpt-4o-mini"
+agent_type = "switchloom-pi-driver"
+effort = "medium"
+cost_tier = "standard"
+
+[profiles.worker]
+profile = "pi-worker"
+client = "pi"
+model = "openai/gpt-4o-mini"
+agent_type = "switchloom-pi-worker"
+effort = "low"
+cost_tier = "standard"
+fork_turns = { mode = "none" }
+
+[[routes]]
+work_type = "code"
+role = "worker"
+fallback_roles = ["driver"]
+
+[verification]
+id = "builtin-pi-external-v1"
+verified_at_unix = 1784160000
+max_age_seconds = 31536000
+
+[[artifacts]]
+path = ".pi/workflows/model-routing-preset-runner.json"
+kind = "pi_workflow"
+content = '''
+{
+  "schema_version": 1,
+  "workflow": "model-routing-preset-runner",
+  "runner": "pi",
+  "runtime_class": "external-runner",
+  "arguments": {
+    "agent_type": "switchloom-pi-worker",
+    "provider_model": "openai/gpt-4o-mini",
+    "thinking": "low",
+    "isolation": {
+      "session": "none",
+      "tools": "none",
+      "extensions": "none",
+      "skills": "none",
+      "agent_dir": "report-workdir/.pi-agent"
+    },
+    "task": {
+      "semantic_role": "worker",
+      "profile": "pi-worker",
+      "returns": "nonce-only"
+    }
+  },
+  "process": {
+    "argv": [
+      "pi",
+      "--print",
+      "--no-session",
+      "--no-tools",
+      "--no-extensions",
+      "--no-skills",
+      "--provider",
+      "openai",
+      "--model",
+      "gpt-4o-mini",
+      "--thinking",
+      "low"
+    ],
+    "state_boundary": "PI_CODING_AGENT_DIR is set to a report-local directory for every certification run"
+  },
+  "security": {
+    "filesystem_tools": "disabled",
+    "session_persistence": "disabled",
+    "native_subagents": "not used",
+    "certification_requirement": "A persisted workflow receipt must include the dynamic nonce returned by a live Pi child process before advisory runtime evidence is accepted."
+  }
+}
+'''

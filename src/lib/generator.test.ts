@@ -38,6 +38,24 @@ const generatedCatalog = {
           { id: "sonnet", efforts: ["medium", "high"], tier: "standard" as const },
         ],
       },
+      {
+        id: "opencode",
+        binding: "opencode-native",
+        models: [
+          { id: "opencode/gpt-5-nano", efforts: ["low", "medium", "high", "max"], tier: "standard" as const },
+          { id: "anthropic/claude-sonnet-4-5", efforts: ["low", "medium", "high"], tier: "standard" as const },
+          { id: "anthropic/claude-opus-4-5", efforts: ["high", "max"], tier: "premium" as const },
+        ],
+      },
+      {
+        id: "pi",
+        binding: "pi-external",
+        models: [
+          { id: "openai/gpt-4o-mini", efforts: ["low", "medium", "high", "xhigh"], tier: "standard" as const },
+          { id: "google/gemini-2.5-flash", efforts: ["low", "medium", "high", "xhigh"], tier: "standard" as const },
+          { id: "anthropic/claude-sonnet-4-5", efforts: ["low", "medium", "high", "xhigh"], tier: "premium" as const },
+        ],
+      },
     ],
   },
 };
@@ -68,6 +86,18 @@ describe("Switchloom generator", () => {
       "composer-2.5",
     ]);
     expect(hostCatalog.cursor.binding).toBe("cursor-openai");
+    expect(hostCatalog.opencode.binding).toBe("opencode-native");
+    expect(hostCatalog.opencode.models.map((model) => model.id)).toEqual([
+      "opencode/gpt-5-nano",
+      "anthropic/claude-sonnet-4-5",
+      "anthropic/claude-opus-4-5",
+    ]);
+    expect(hostCatalog.pi.binding).toBe("pi-external");
+    expect(hostCatalog.pi.models.map((model) => model.id)).toEqual([
+      "openai/gpt-4o-mini",
+      "google/gemini-2.5-flash",
+      "anthropic/claude-sonnet-4-5",
+    ]);
     expect(() => hostCatalogFrom({ setupContract: { hosts: [] } })).toThrow(/canonical setup contract/);
   });
 
@@ -216,6 +246,8 @@ describe("Switchloom generator", () => {
       "npm install -g switchloom",
       expect.stringMatching(/^switchloom preview --recipe 'sw1_/),
       expect.stringMatching(/^switchloom apply --recipe 'sw1_/),
+      "switchloom doctor cursor",
+      "switchloom certify reports/native-host-certification/cursor-openai/<timestamp>/workdir/dispatch-evidence.json --bundle reports/native-host-certification/cursor-openai/<timestamp>/workdir/bundle.json",
       "switchloom update --repository .",
       "switchloom status --repository .",
       "switchloom rollback --repository .",

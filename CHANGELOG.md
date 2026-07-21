@@ -2,6 +2,16 @@
 
 All notable changes to Switchloom are recorded here.
 
+## [0.2.2] - 2026-07-21
+
+- Prepared a superseding release candidate for Codex V2 primary routing and
+  published-byte certification.
+- Re-certified repository-local Codex V2 roles, Cursor OpenAI, and Cursor
+  Fable/Grok evidence paths with explicit immutable-byte gates before
+  publication.
+- Kept Claude Code certification explicitly unavailable until live host access
+  can return a nonce-backed receipt.
+
 ## [0.2.1] - 2026-07-19
 
 - Prepared a superseding release candidate after the `0.2.0` native Codex

@@ -2,6 +2,7 @@ schema_version = 1
 id = "mixed-host"
 version = "2.0.0"
 host = "mixed-host"
+runtime_class = "native-subagent"
 driver_role = "driver"
 default_role = "driver"
 capability_evidence = ["codex-0.144.0-native-v2-9ff47868eb", "builtin-cursor-project-agent-contract"]
@@ -114,24 +115,4 @@ sandbox_mode = "read-only"
 developer_instructions = """
 Independently verify acceptance criteria and evidence, and report findings before the verdict.
 """
-'''
-
-[[artifacts]]
-path = ".codex/skills/model-routing-native-routing/SKILL.md"
-kind = "codex_skill"
-content = '''---
-name: model-routing-native-routing
-description: Dispatch mixed-host Model Routing work from the Cursor driver through repository-owned native Codex worker roles.
----
-# Planr mixed-host native routing
-
-The Cursor `model-routing-fable-driver` remains the driver. Dispatch Codex work through these generated repository roles; each role file owns its model and reasoning effort.
-
-| Work type | Native dispatch |
-| --- | --- |
-| code | `spawn_agent({ agent_type: "model_routing_terra_high", fork_turns: "none", ... })` |
-| mechanical | `spawn_agent({ agent_type: "model_routing_luna_xhigh", fork_turns: "none", ... })` |
-| review | `spawn_agent({ agent_type: "model_routing_sol_high", fork_turns: "none", ... })` |
-
-Every dispatch that changes role, model, or reasoning effort must name `agent_type` and use `fork_turns: "none"` or an evidenced positive bounded integer. Native Codex rejects `fork_turns: "all"` when `agent_type` selects a role with model or effort overrides. Global Codex CLI `-m` or `-c model_reasoning_effort=...` flags also override spawned role files, so leave those flags unset when role-local child routing is required. Do not use implicit model inheritance or a fallback role.
 '''

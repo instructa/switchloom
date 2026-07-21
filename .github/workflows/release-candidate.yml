@@ -52,8 +52,8 @@ jobs:
         run: rustup target add ${{ matrix.rust_target }}
       - name: Verify candidate version
         run: |
-          test "$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)" = "0.2.1"
-          test "$(jq -r .version package.json)" = "0.2.1"
+          test "$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)" = "0.2.2"
+          test "$(jq -r .version package.json)" = "0.2.2"
       - name: Build native candidate
         env:
           SWITCHLOOM_TARGET: ${{ matrix.target }}
@@ -66,7 +66,7 @@ jobs:
             "npm/native/${{ matrix.target }}/model-routing"
       - name: Verify native version on matching runner
         run: |
-          test "$(./target/${{ matrix.rust_target }}/release/model-routing --version)" = "model-routing 0.2.1"
+          test "$(./target/${{ matrix.rust_target }}/release/model-routing --version)" = "model-routing 0.2.2"
       - name: Write native provenance
         env:
           TARGET: ${{ matrix.target }}
