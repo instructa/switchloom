@@ -29,7 +29,7 @@
             "match": {
               "work_type": "mechanical"
             },
-            "profile": "codex-luna-xhigh"
+            "profile": "codex-terra-high-mechanical"
           },
           {
             "fallbacks": [],
@@ -42,7 +42,7 @@
         "host": "codex",
         "id": "codex-openai",
         "profiles": {
-          "codex-luna-xhigh": {
+          "codex-luna-xhigh-experimental": {
             "agent_type": "model_routing_luna_xhigh",
             "client": "codex",
             "cost_tier": "premium",
@@ -67,6 +67,9 @@
             "client": "codex",
             "cost_tier": "standard",
             "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
             "model": "gpt-5.6-sol"
           },
           "codex-sol-ultra": {
@@ -81,6 +84,16 @@
           },
           "codex-terra-high": {
             "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "codex-terra-high-mechanical": {
+            "agent_type": "model_routing_terra_mechanical",
             "client": "codex",
             "cost_tier": "standard",
             "effort": "high",
@@ -220,7 +233,7 @@
         "artifacts": [
           {
             "path": ".codex/agents/model-routing-luna-xhigh.toml",
-            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+            "sha256": "b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7"
           },
           {
             "path": ".codex/agents/model-routing-sol-high.toml",
@@ -239,20 +252,24 @@
             "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
           },
           {
+            "path": ".codex/agents/model-routing-terra-mechanical.toml",
+            "sha256": "7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15"
+          },
+          {
             "path": ".codex/agents/model-routing-terra-medium.toml",
             "sha256": "458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464"
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "38511fd94693a95ebcdb0d2ca65f414109b05835172729c35f91d70d20d3b60d"
+            "sha256": "5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e"
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "3289f2d7231639a7084c4455c13448e89a1f596a2877672db5b1962d06f5f905",
+        "manifestSha256": "da329ed10bbf9be4cc136173eb2702237662d6c13ad9e0f995e531535a0bc603",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -412,11 +429,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "0796e44507fabdefd9901ba47f7de06fa24396f5007c087541d0b83d9d47c296",
+        "manifestSha256": "6b6081228d9c1440d14b49482195d5cf3820228a5743129b222e7a5afa83fe29",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -576,11 +593,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "51daa89d66e3810faaf83dccee3f046e831c76ae896eaa54be6654e7a13bb8f1",
+        "manifestSha256": "8c56000562371c4d55261ebb681b91f5a7d7ab391066a16de6cc6bb08b648c63",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -742,11 +759,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "b5e13c49520edfcab143d61e6dc923507d90f1c432e3816fcac0d5fe58cd329b",
+        "manifestSha256": "2f8081c8c6fc3a987d59697b5de4a2bdfa236617a8558ea1f07522b4160fd939",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -912,11 +929,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "325868ffbf05720f2afd9057aca3d7af2cb4712e7ba48a80dd178268922dfe5d",
+        "manifestSha256": "0f35fe9f105bed487657dab69e1f1c1c56430901207fc7d0428cae342863a60e",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -1080,11 +1097,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "af47cdae77149e2a5320c839954dd6f25bef458a96073bed28a10871b4894f9e",
+        "manifestSha256": "db60c3d5d8460e1c704de54868e8abbc73075ac62793cd4771c25ac7cac96a53",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -1105,7 +1122,7 @@
             "match": {
               "work_type": "mechanical"
             },
-            "profile": "mixed-codex-luna-xhigh"
+            "profile": "mixed-codex-terra-high-mechanical"
           },
           {
             "fallbacks": [],
@@ -1118,7 +1135,7 @@
         "host": "mixed-host",
         "id": "mixed-host",
         "profiles": {
-          "mixed-codex-luna-xhigh": {
+          "mixed-codex-luna-xhigh-experimental": {
             "agent_type": "model_routing_luna_xhigh",
             "client": "codex",
             "cost_tier": "premium",
@@ -1140,6 +1157,16 @@
           },
           "mixed-codex-terra-high": {
             "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "mixed-codex-terra-high-mechanical": {
+            "agent_type": "model_routing_terra_mechanical",
             "client": "codex",
             "cost_tier": "standard",
             "effort": "high",
@@ -1274,7 +1301,7 @@
         "artifacts": [
           {
             "path": ".codex/agents/model-routing-luna-xhigh.toml",
-            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+            "sha256": "b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7"
           },
           {
             "path": ".codex/agents/model-routing-sol-high.toml",
@@ -1285,8 +1312,12 @@
             "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
           },
           {
+            "path": ".codex/agents/model-routing-terra-mechanical.toml",
+            "sha256": "7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15"
+          },
+          {
             "path": ".codex/config.toml",
-            "sha256": "673a3abad282412014d93160a42e2366c203553ff18530951afd7394e78c11c8"
+            "sha256": "62c632cf3eb279cd1f82c71a527559b2a40c75f2646307d5a1df3523dd12d016"
           },
           {
             "path": ".cursor/agents/model-routing-fable-driver.md",
@@ -1294,11 +1325,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "15723f5557aaa7e053dd407d0cb35ba6c7a5b66f0d169b920607abba6c6484b9",
+        "manifestSha256": "6516747d43ceebe030e139b68771b67066de7a0c95e0ed6e4ae7cbbe9dce714c",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -1333,7 +1364,7 @@
             "match": {
               "work_type": "mechanical"
             },
-            "profile": "codex-luna-xhigh"
+            "profile": "codex-terra-high-mechanical"
           },
           {
             "fallbacks": [],
@@ -1346,7 +1377,7 @@
         "host": "codex",
         "id": "codex-openai",
         "profiles": {
-          "codex-luna-xhigh": {
+          "codex-luna-xhigh-experimental": {
             "agent_type": "model_routing_luna_xhigh",
             "client": "codex",
             "cost_tier": "premium",
@@ -1371,6 +1402,9 @@
             "client": "codex",
             "cost_tier": "standard",
             "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
             "model": "gpt-5.6-sol"
           },
           "codex-sol-ultra": {
@@ -1385,6 +1419,16 @@
           },
           "codex-terra-high": {
             "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "codex-terra-high-mechanical": {
+            "agent_type": "model_routing_terra_mechanical",
             "client": "codex",
             "cost_tier": "standard",
             "effort": "high",
@@ -1524,7 +1568,7 @@
         "artifacts": [
           {
             "path": ".codex/agents/model-routing-luna-xhigh.toml",
-            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+            "sha256": "b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7"
           },
           {
             "path": ".codex/agents/model-routing-sol-high.toml",
@@ -1543,20 +1587,24 @@
             "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
           },
           {
+            "path": ".codex/agents/model-routing-terra-mechanical.toml",
+            "sha256": "7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15"
+          },
+          {
             "path": ".codex/agents/model-routing-terra-medium.toml",
             "sha256": "458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464"
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "38511fd94693a95ebcdb0d2ca65f414109b05835172729c35f91d70d20d3b60d"
+            "sha256": "5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e"
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "a63f314c5e10464499ec9e7189f89dfa13437df4f203799616353ec611f65e01",
+        "manifestSha256": "efa00a0b8992660fa77d57ace0221f43893893089a8864e4105ae1b218b46904",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -1716,11 +1764,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "392437a358761e9ecfca34a0047971296d866de48bec681a52342cf05a2dd9f8",
+        "manifestSha256": "106db73eb1456287fb2bb975e46c39d706c4cf39a74f75b2170062a17fb1f2a7",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -1880,11 +1928,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "2ec35fcaa41ef746611d0cbc82289f6dee4bb83e5af8bda3680ab4e5af6d0d57",
+        "manifestSha256": "a9eb9136fb14d3a96a607f92c126713a762b6cf72c6330b17e74e5ece32778f5",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -2046,11 +2094,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "791f305571fa4ce2a373588ba2b284073f0f78a0adc5a5666be8278b73a2e1e7",
+        "manifestSha256": "11da8615dc1d782f53421a5f57ec4d14b21ad4d968936b39b412cebf7fce3492",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -2216,11 +2264,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "6e44b7ffedfc66753c791a75c48362f552758038ff922d703ef1d86b2fb0eaaa",
+        "manifestSha256": "4fc39cc6e533d05d8fbbde2233aee2b082f79b997240d620c77d94f81dd247d2",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -2384,11 +2432,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "becfb3251cb48c010c0857f2c5d84fb0005d509b10b73e736763cfb916be7d04",
+        "manifestSha256": "ff0954d69556a651351fae382550cd7dca81f41ed0ef852c7a5c50eed603f991",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -2409,7 +2457,7 @@
             "match": {
               "work_type": "mechanical"
             },
-            "profile": "mixed-codex-luna-xhigh"
+            "profile": "mixed-codex-terra-high-mechanical"
           },
           {
             "fallbacks": [],
@@ -2422,7 +2470,7 @@
         "host": "mixed-host",
         "id": "mixed-host",
         "profiles": {
-          "mixed-codex-luna-xhigh": {
+          "mixed-codex-luna-xhigh-experimental": {
             "agent_type": "model_routing_luna_xhigh",
             "client": "codex",
             "cost_tier": "premium",
@@ -2444,6 +2492,16 @@
           },
           "mixed-codex-terra-high": {
             "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "mixed-codex-terra-high-mechanical": {
+            "agent_type": "model_routing_terra_mechanical",
             "client": "codex",
             "cost_tier": "standard",
             "effort": "high",
@@ -2578,7 +2636,7 @@
         "artifacts": [
           {
             "path": ".codex/agents/model-routing-luna-xhigh.toml",
-            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+            "sha256": "b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7"
           },
           {
             "path": ".codex/agents/model-routing-sol-high.toml",
@@ -2589,8 +2647,12 @@
             "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
           },
           {
+            "path": ".codex/agents/model-routing-terra-mechanical.toml",
+            "sha256": "7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15"
+          },
+          {
             "path": ".codex/config.toml",
-            "sha256": "673a3abad282412014d93160a42e2366c203553ff18530951afd7394e78c11c8"
+            "sha256": "62c632cf3eb279cd1f82c71a527559b2a40c75f2646307d5a1df3523dd12d016"
           },
           {
             "path": ".cursor/agents/model-routing-fable-driver.md",
@@ -2598,11 +2660,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "58003f86483ddfa424968240c8ca6ec2ef444e994d81d88f05c5fc00cea16009",
+        "manifestSha256": "12a776041f4e7dd723029c5ebb8a38317952d12b1ad30b0e3e9d88f7a7fe727e",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -2637,7 +2699,7 @@
             "match": {
               "work_type": "mechanical"
             },
-            "profile": "codex-luna-xhigh"
+            "profile": "codex-terra-high-mechanical"
           },
           {
             "fallbacks": [],
@@ -2650,7 +2712,7 @@
         "host": "codex",
         "id": "codex-openai",
         "profiles": {
-          "codex-luna-xhigh": {
+          "codex-luna-xhigh-experimental": {
             "agent_type": "model_routing_luna_xhigh",
             "client": "codex",
             "cost_tier": "premium",
@@ -2675,6 +2737,9 @@
             "client": "codex",
             "cost_tier": "standard",
             "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
             "model": "gpt-5.6-sol"
           },
           "codex-sol-ultra": {
@@ -2689,6 +2754,16 @@
           },
           "codex-terra-high": {
             "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "codex-terra-high-mechanical": {
+            "agent_type": "model_routing_terra_mechanical",
             "client": "codex",
             "cost_tier": "standard",
             "effort": "high",
@@ -2828,7 +2903,7 @@
         "artifacts": [
           {
             "path": ".codex/agents/model-routing-luna-xhigh.toml",
-            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+            "sha256": "b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7"
           },
           {
             "path": ".codex/agents/model-routing-sol-high.toml",
@@ -2847,20 +2922,24 @@
             "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
           },
           {
+            "path": ".codex/agents/model-routing-terra-mechanical.toml",
+            "sha256": "7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15"
+          },
+          {
             "path": ".codex/agents/model-routing-terra-medium.toml",
             "sha256": "458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464"
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "38511fd94693a95ebcdb0d2ca65f414109b05835172729c35f91d70d20d3b60d"
+            "sha256": "5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e"
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "b89a0d7aca4ef2f34ecbaf4a663c85a4ef18f0f7bd2e3d09011b2a496b1d75a3",
+        "manifestSha256": "9886185283a2c96c661375d6b784673c2cb6a62bd1978a087c84de1dab214be6",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -3020,11 +3099,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "01d071da43e4b6f36d280f35a439cf0c63d2f36ab59383f8952eaf57d894f143",
+        "manifestSha256": "0815d2280abdab8d293c9a913e40392108187ad629b82b39ea16a657fac900cf",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -3184,11 +3263,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "094b2a3a4746c8dbbf5d969cd658862c780fc12e58923ef1bdf666a57d9690f2",
+        "manifestSha256": "9a9c73f9af7f1bb3c84c7356dd1fcb5bbcab474cc0c6d27f2892e13cc9b343e6",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -3350,11 +3429,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "d2ee1036da30ce7958914ff738bd8ec142cc2bc0190a4903fc31dfa2774f6688",
+        "manifestSha256": "4d07ba3ce188c2fc8248791166d5a3edb30f958b93256d6e597f00299f7b281d",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -3520,11 +3599,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "278fa992a4ed6aecd952836904309aae026943a8d68b59f59b62fd60ef3ee711",
+        "manifestSha256": "72567c9a8dd3c5a2da0d067017df8bef5a867b8c3675dfd8296300d64f85cebc",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -3688,11 +3767,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "711b3881b13535e3d4bf4b08d12026f82357cda881ef77fadc2547841b0ad66f",
+        "manifestSha256": "41f02fa470b333bafac286611b21d7f60a8d44b21c39dea17c9009f3043d4edf",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -3713,7 +3792,7 @@
             "match": {
               "work_type": "mechanical"
             },
-            "profile": "mixed-codex-luna-xhigh"
+            "profile": "mixed-codex-terra-high-mechanical"
           },
           {
             "fallbacks": [],
@@ -3726,7 +3805,7 @@
         "host": "mixed-host",
         "id": "mixed-host",
         "profiles": {
-          "mixed-codex-luna-xhigh": {
+          "mixed-codex-luna-xhigh-experimental": {
             "agent_type": "model_routing_luna_xhigh",
             "client": "codex",
             "cost_tier": "premium",
@@ -3748,6 +3827,16 @@
           },
           "mixed-codex-terra-high": {
             "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "mixed-codex-terra-high-mechanical": {
+            "agent_type": "model_routing_terra_mechanical",
             "client": "codex",
             "cost_tier": "standard",
             "effort": "high",
@@ -3882,7 +3971,7 @@
         "artifacts": [
           {
             "path": ".codex/agents/model-routing-luna-xhigh.toml",
-            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+            "sha256": "b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7"
           },
           {
             "path": ".codex/agents/model-routing-sol-high.toml",
@@ -3893,8 +3982,12 @@
             "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
           },
           {
+            "path": ".codex/agents/model-routing-terra-mechanical.toml",
+            "sha256": "7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15"
+          },
+          {
             "path": ".codex/config.toml",
-            "sha256": "673a3abad282412014d93160a42e2366c203553ff18530951afd7394e78c11c8"
+            "sha256": "62c632cf3eb279cd1f82c71a527559b2a40c75f2646307d5a1df3523dd12d016"
           },
           {
             "path": ".cursor/agents/model-routing-fable-driver.md",
@@ -3902,11 +3995,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "c94d0730f8a2d12271217c9d1cbc1a6bb12753ba57370a1268e057b0076480f3",
+        "manifestSha256": "67b12f790864b4018428ef357c99c7512022cd5bc0d0a33a047ad256122b1c45",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -3941,7 +4034,7 @@
             "match": {
               "work_type": "mechanical"
             },
-            "profile": "codex-luna-xhigh"
+            "profile": "codex-terra-high-mechanical"
           },
           {
             "fallbacks": [],
@@ -3954,7 +4047,7 @@
         "host": "codex",
         "id": "codex-openai",
         "profiles": {
-          "codex-luna-xhigh": {
+          "codex-luna-xhigh-experimental": {
             "agent_type": "model_routing_luna_xhigh",
             "client": "codex",
             "cost_tier": "premium",
@@ -3979,6 +4072,9 @@
             "client": "codex",
             "cost_tier": "standard",
             "effort": "medium",
+            "fork_turns": {
+              "mode": "none"
+            },
             "model": "gpt-5.6-sol"
           },
           "codex-sol-ultra": {
@@ -3993,6 +4089,16 @@
           },
           "codex-terra-high": {
             "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "codex-terra-high-mechanical": {
+            "agent_type": "model_routing_terra_mechanical",
             "client": "codex",
             "cost_tier": "standard",
             "effort": "high",
@@ -4127,7 +4233,7 @@
         "artifacts": [
           {
             "path": ".codex/agents/model-routing-luna-xhigh.toml",
-            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+            "sha256": "b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7"
           },
           {
             "path": ".codex/agents/model-routing-sol-high.toml",
@@ -4146,20 +4252,24 @@
             "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
           },
           {
+            "path": ".codex/agents/model-routing-terra-mechanical.toml",
+            "sha256": "7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15"
+          },
+          {
             "path": ".codex/agents/model-routing-terra-medium.toml",
             "sha256": "458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464"
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "38511fd94693a95ebcdb0d2ca65f414109b05835172729c35f91d70d20d3b60d"
+            "sha256": "5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e"
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "696c9d1ca75a8861f9339fc9e7a82340d424900bc8ffc42fc72e772f46cf6c4a",
+        "manifestSha256": "4fae4ee77b4408b96da09d2e07aebaf29d4357d18fab26022ab8587a16202b32",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -4314,11 +4424,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "580f77bf20241b24790a371710f2f13c435dafdf088a22fdbf520e2c7e69894d",
+        "manifestSha256": "ee897a1fe02c80bf7704ddd3086845dc561f12d135b42151a2991898735398b3",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -4473,11 +4583,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "f6a70384920cf457c07354fb1997c80922b1f857ed842a32ad8062828fdb4edf",
+        "manifestSha256": "fc68693e2eee239c5c5d1b22bd8fa131035891aaee8f7715e5965dfce9a863d2",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -4634,11 +4744,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "85295f7867ea9e147e35148f3f703b6acd61d10f3ad84aabe28cc04fed2656d1",
+        "manifestSha256": "12b719bfb29249384c717d817b6a59987c0c570b29c86f9d2ad2281a8d42c11e",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -4799,11 +4909,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "ee320b7581c3209e1ed50a8790f57c85352805ab494004653b303ac44ab8d478",
+        "manifestSha256": "45401dc8a4fa67d108beccdb9279e48d8d97937ca975346ff3be8bfb408e5a5a",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -4962,11 +5072,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "b0fd2af2f24fb1342aea164391538d2eb6c24e1188dce2f6c4f40ad26071435b",
+        "manifestSha256": "89744638d828ab94b9736890caa7edee67e8c098a7b437ba11daf133c982202c",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -4987,7 +5097,7 @@
             "match": {
               "work_type": "mechanical"
             },
-            "profile": "mixed-codex-luna-xhigh"
+            "profile": "mixed-codex-terra-high-mechanical"
           },
           {
             "fallbacks": [],
@@ -5000,7 +5110,7 @@
         "host": "mixed-host",
         "id": "mixed-host",
         "profiles": {
-          "mixed-codex-luna-xhigh": {
+          "mixed-codex-luna-xhigh-experimental": {
             "agent_type": "model_routing_luna_xhigh",
             "client": "codex",
             "cost_tier": "premium",
@@ -5022,6 +5132,16 @@
           },
           "mixed-codex-terra-high": {
             "agent_type": "model_routing_terra_high",
+            "client": "codex",
+            "cost_tier": "standard",
+            "effort": "high",
+            "fork_turns": {
+              "mode": "none"
+            },
+            "model": "gpt-5.6-terra"
+          },
+          "mixed-codex-terra-high-mechanical": {
+            "agent_type": "model_routing_terra_mechanical",
             "client": "codex",
             "cost_tier": "standard",
             "effort": "high",
@@ -5151,7 +5271,7 @@
         "artifacts": [
           {
             "path": ".codex/agents/model-routing-luna-xhigh.toml",
-            "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+            "sha256": "b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7"
           },
           {
             "path": ".codex/agents/model-routing-sol-high.toml",
@@ -5162,8 +5282,12 @@
             "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
           },
           {
+            "path": ".codex/agents/model-routing-terra-mechanical.toml",
+            "sha256": "7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15"
+          },
+          {
             "path": ".codex/config.toml",
-            "sha256": "673a3abad282412014d93160a42e2366c203553ff18530951afd7394e78c11c8"
+            "sha256": "62c632cf3eb279cd1f82c71a527559b2a40c75f2646307d5a1df3523dd12d016"
           },
           {
             "path": ".cursor/agents/model-routing-fable-driver.md",
@@ -5171,11 +5295,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "411ee4caa515ed4368551f69268bc5f2065a306b9df2108325818df834da3d72",
+        "manifestSha256": "7be221d1d4262414ad9067671ad1dd535b2a4fb45925f67e59f2160633d32f97",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.0"
+        "version": "0.3.1"
       },
       "replacement": null,
       "status": "experimental",
@@ -5227,7 +5351,25 @@
           "selected_roles": {
             "driver": {
               "effort": "medium",
-              "model": "gpt-5.6-sol"
+              "model": "gpt-5.6-sol",
+              "spawn": {
+                "agent_type": "model_routing_sol_medium",
+                "fork_turns": {
+                  "mode": "none"
+                },
+                "task_name": "driver"
+              }
+            },
+            "experimental_luna": {
+              "effort": "xhigh",
+              "model": "gpt-5.6-luna",
+              "spawn": {
+                "agent_type": "model_routing_luna_xhigh",
+                "fork_turns": {
+                  "mode": "none"
+                },
+                "task_name": "experimental_luna"
+              }
             },
             "explorer": {
               "effort": "medium",
@@ -5241,10 +5383,10 @@
               }
             },
             "mechanical": {
-              "effort": "xhigh",
-              "model": "gpt-5.6-luna",
+              "effort": "high",
+              "model": "gpt-5.6-terra",
               "spawn": {
-                "agent_type": "model_routing_luna_xhigh",
+                "agent_type": "model_routing_terra_mechanical",
                 "fork_turns": {
                   "mode": "none"
                 },
@@ -5655,9 +5797,13 @@
             "driver": {
               "model": "fable-5"
             },
-            "mechanical": {
+            "experimental_luna": {
               "effort": "xhigh",
               "model": "gpt-5.6-luna"
+            },
+            "mechanical": {
+              "effort": "high",
+              "model": "gpt-5.6-terra"
             },
             "reviewer": {
               "effort": "high",

@@ -4,9 +4,12 @@ use crate::registry::*;
 use crate::{bail, product_error};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
+use std::fs;
 
 pub(crate) const CODEX_V2_RUNTIME_EVIDENCE_JSON: &str =
     include_str!("../docs/codex-v2-runtime-evidence.json");
+const CODEX_0145_EXACT_VERSION_CAPTURE: &str =
+    include_str!("../docs/codex-0.145-exact-version-capture.txt");
 
 pub(crate) fn codex_v2_runtime_evidence() -> Result<CodexV2RuntimeEvidence> {
     let evidence: CodexV2RuntimeEvidence = serde_json::from_str(CODEX_V2_RUNTIME_EVIDENCE_JSON)
@@ -23,9 +26,11 @@ pub(crate) fn validate_codex_v2_runtime_evidence(evidence: &CodexV2RuntimeEviden
     if evidence.schema_version != 1 {
         bail!("unsupported Codex V2 runtime evidence schema_version");
     }
+    let installed_command = evidence.installed_version.command.trim();
     if evidence.evidence_id.trim().is_empty()
         || evidence.observed_at.trim().is_empty()
-        || evidence.installed_version.command != "codex --version"
+        || !installed_command.contains("codex")
+        || !installed_command.contains("--version")
         || evidence.installed_version.stdout.trim().is_empty()
         || evidence.backend_selection_owner.trim().is_empty()
         || evidence
@@ -127,6 +132,7 @@ pub(crate) fn validate_codex_claim_provenance_record(
     if raw_output_sha256 != sha256(raw_output.as_bytes()) {
         bail!("Codex V2 runtime evidence provenance raw output digest mismatch for {claim}");
     }
+    validate_codex_retained_source_contains_raw_output(claim, record, raw_output)?;
     let expected_value = codex_claim_observed_value(evidence, claim)?;
     if record.observed_value != expected_value {
         bail!("Codex V2 runtime evidence provenance observed value mismatch for {claim}");
@@ -205,8 +211,13 @@ pub(crate) fn validate_codex_claim_source_identity(
     let matches = match claim {
         "installed_version" => {
             record.kind == "host-command"
-                && record.source == "codex --version"
-                && source_path == Some("local-shell:codex --version")
+                && !record.source.trim().is_empty()
+                && record.source.contains("codex")
+                && record.source.contains("--version")
+                && source_path.is_some_and(|path| {
+                    path == format!("local-shell:{}", record.source)
+                        || path == "docs/codex-0.145-exact-version-capture.txt"
+                })
                 && source_url.is_none()
         }
         "backend_selection_owner" => {
@@ -243,6 +254,37 @@ pub(crate) fn validate_codex_claim_source_identity(
     };
     if !matches {
         bail!("Codex V2 runtime evidence provenance source identity mismatch for {claim}");
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_codex_retained_source_contains_raw_output(
+    claim: &str,
+    record: &CodexClaimProvenance,
+    raw_output: &str,
+) -> Result<()> {
+    let Some(source_path) = record.source_path.as_deref() else {
+        return Ok(());
+    };
+    let source_content = match source_path {
+        "docs/codex-0.145-exact-version-capture.txt" => {
+            CODEX_0145_EXACT_VERSION_CAPTURE.to_string()
+        }
+        path if path.starts_with("fixtures/codex-v2-runtime-evidence/") => fs::read_to_string(path)
+            .with_context(|| {
+                format!("failed to read Codex V2 evidence fixture source `{source_path}`")
+            })?,
+        path if path.starts_with("retained-evidence/") => {
+            fs::read_to_string(path).with_context(|| {
+                format!("failed to read Codex V2 retained evidence source `{source_path}`")
+            })?
+        }
+        _ => return Ok(()),
+    };
+    if !source_content.contains(raw_output) {
+        bail!(
+            "Codex V2 runtime evidence source `{source_path}` does not contain claimed raw output for {claim}"
+        );
     }
     Ok(())
 }

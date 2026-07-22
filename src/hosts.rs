@@ -5,9 +5,12 @@ use crate::{bail, product_error};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
+use std::fs;
+use std::path::Path;
 use std::process::Command;
 
 pub(crate) const NPM_PACKAGE_JSON: &str = include_str!("../package.json");
+const CODEX_PROJECT_CONFIG_PATH: &str = ".codex/config.toml";
 pub(crate) const BINDINGS: [(&str, &str); 7] = [
     (
         "codex-openai",
@@ -40,6 +43,14 @@ pub(crate) const BINDINGS: [(&str, &str); 7] = [
 ];
 
 pub fn probe_host(host: &str, command_override: Option<&str>) -> Result<ProbeReport> {
+    probe_host_with_repository(host, command_override, Path::new("."))
+}
+
+pub fn probe_host_with_repository(
+    host: &str,
+    command_override: Option<&str>,
+    repository: &Path,
+) -> Result<ProbeReport> {
     let binding = binding_for_selector(host)?;
     let default_command = match binding.host.as_str() {
         "codex" => Some("codex"),
@@ -72,6 +83,8 @@ pub fn probe_host(host: &str, command_override: Option<&str>) -> Result<ProbeRep
             Some("mixed-host bindings require separate probes for each declared host".to_string()),
         )
     };
+    let diagnostics =
+        probe_diagnostics_for_binding(&binding, available, version.as_deref(), repository)?;
     Ok(ProbeReport {
         host: host.to_string(),
         command: command.map(ToOwned::to_owned),
@@ -80,7 +93,169 @@ pub fn probe_host(host: &str, command_override: Option<&str>) -> Result<ProbeRep
         capabilities: requirement_capabilities_for_binding(&binding),
         authentication: "not_tested".to_string(),
         limitation,
+        diagnostics,
     })
+}
+
+pub(crate) fn probe_diagnostics_for_binding(
+    binding: &HostBinding,
+    available: bool,
+    version: Option<&str>,
+    repository: &Path,
+) -> Result<Vec<ProbeDiagnostic>> {
+    if binding.host != "codex" {
+        return Ok(Vec::new());
+    }
+
+    let mut diagnostics = Vec::new();
+    match version.and_then(parse_codex_semver) {
+        Some([0, 145, 0]) => diagnostics.push(probe_diagnostic(
+            "codex_exact_version_ready",
+            "info",
+            "Codex reports exact version 0.145.0 for the certified V2 contract.",
+            "No version action required for Switchloom v0.3.1 certification.",
+        )),
+        Some([major, minor, patch]) if available => diagnostics.push(probe_diagnostic(
+            "codex_exact_version_mismatch",
+            "error",
+            format!(
+                "Codex reports {major}.{minor}.{patch}; this Switchloom contract is certified only for Codex 0.145.0."
+            ),
+            "Install or select Codex CLI 0.145.0 before claiming certified native V2 routing; newer or older versions must be re-certified.",
+        )),
+        _ => diagnostics.push(probe_diagnostic(
+            "codex_unavailable",
+            "error",
+            "Codex version could not be read.",
+            "Install Codex CLI 0.145.0 or pass --command with a compatible Codex binary.",
+        )),
+    }
+    diagnostics.push(probe_diagnostic(
+        "codex_luna_experimental_unverified",
+        "warning",
+        "Luna is available only as an explicit experimental/unverified Codex role; certified default routing uses Terra for mechanical work.",
+        "Use Terra defaults for certified Codex V2 routing; select Luna only manually and do not claim deterministic Luna certification until exact-version live evidence is independently reviewed.",
+    ));
+
+    diagnostics.extend(codex_repository_diagnostics(repository)?);
+    Ok(diagnostics)
+}
+
+pub(crate) fn codex_repository_diagnostics(repository: &Path) -> Result<Vec<ProbeDiagnostic>> {
+    let config_path = repository.join(CODEX_PROJECT_CONFIG_PATH);
+    if !config_path.exists() {
+        return Ok(vec![probe_diagnostic(
+            "codex_project_config_missing",
+            "warning",
+            "Repository-local .codex/config.toml is missing, so Codex cannot discover Switchloom roles from this repository yet.",
+            "Run switchloom preview/apply for a Codex bundle, then trust the repository and reload or restart Codex.",
+        )]);
+    }
+
+    let content = fs::read_to_string(&config_path)
+        .with_context(|| format!("failed to read `{}`", config_path.display()))?;
+    let parsed: toml::Value = match toml::from_str(&content) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            return Ok(vec![probe_diagnostic(
+                "codex_project_config_invalid",
+                "error",
+                format!("Repository-local .codex/config.toml is not valid TOML: {error}"),
+                "Fix the TOML syntax, then rerun switchloom doctor codex.",
+            )]);
+        }
+    };
+    let multi_agent_v2 = parsed
+        .get("features")
+        .and_then(toml::Value::as_table)
+        .and_then(|features| features.get("multi_agent_v2"))
+        .and_then(toml::Value::as_table);
+    let mut diagnostics = Vec::new();
+    match multi_agent_v2.and_then(|table| table.get("enabled")).and_then(toml::Value::as_bool) {
+        Some(true) => {}
+        Some(false) => diagnostics.push(probe_diagnostic(
+            "codex_v2_activation_conflict",
+            "error",
+            "Repository-local features.multi_agent_v2.enabled is false; Switchloom will not override explicit user-owned disabled V2 state.",
+            "Change .codex/config.toml to enabled = true intentionally, or remove the conflicting user-owned setting before applying certified Codex V2 routing.",
+        )),
+        None => diagnostics.push(probe_diagnostic(
+            "codex_v2_activation_missing",
+            "warning",
+            "Repository-local features.multi_agent_v2.enabled is missing, so Codex V2 role dispatch is not activated for this project.",
+            "Run switchloom update/apply for a Codex 0.145 bundle to add enabled = true, then reload or restart Codex.",
+        )),
+    }
+    match multi_agent_v2
+        .and_then(|table| table.get("hide_spawn_agent_metadata"))
+        .and_then(toml::Value::as_bool)
+    {
+        Some(false) => {}
+        Some(true) => diagnostics.push(probe_diagnostic(
+            "codex_v2_metadata_conflict",
+            "error",
+            "Repository-local features.multi_agent_v2.hide_spawn_agent_metadata is true; certified Switchloom evidence expects visible spawn metadata.",
+            "Set hide_spawn_agent_metadata = false for certified evidence capture, then reload or restart Codex.",
+        )),
+        None => diagnostics.push(probe_diagnostic(
+            "codex_v2_metadata_missing",
+            "warning",
+            "Repository-local features.multi_agent_v2.hide_spawn_agent_metadata is missing.",
+            "Run switchloom update/apply for a Codex 0.145 bundle to add hide_spawn_agent_metadata = false.",
+        )),
+    }
+
+    let agents = parsed.get("agents").and_then(toml::Value::as_table);
+    for agent in [
+        "model_routing_terra_high",
+        "model_routing_terra_mechanical",
+        "model_routing_sol_high",
+    ] {
+        if agents.and_then(|agents| agents.get(agent)).is_none() {
+            diagnostics.push(probe_diagnostic(
+                "codex_role_registration_missing",
+                "warning",
+                format!("Repository-local .codex/config.toml does not register required role `{agent}`."),
+                "Run switchloom update/apply for a Codex bundle, then reload or restart Codex before dispatching by agent_type.",
+            ));
+        }
+    }
+    diagnostics.push(probe_diagnostic(
+        "codex_trust_reload_required",
+        "info",
+        "Codex project trust and agent discovery after reload/restart are host-owned and cannot be mutated by Switchloom doctor.",
+        "Trust this repository in Codex if prompted, then reload or restart the Codex session before relying on newly applied roles.",
+    ));
+    Ok(diagnostics)
+}
+
+fn probe_diagnostic(
+    code: impl Into<String>,
+    severity: impl Into<String>,
+    message: impl Into<String>,
+    repair: impl Into<String>,
+) -> ProbeDiagnostic {
+    ProbeDiagnostic {
+        code: code.into(),
+        severity: severity.into(),
+        message: message.into(),
+        repair: repair.into(),
+    }
+}
+
+fn parse_codex_semver(value: &str) -> Option<[u64; 3]> {
+    let version = value
+        .trim()
+        .strip_prefix("codex ")
+        .or_else(|| value.trim().strip_prefix("codex-cli "))?;
+    let mut parts = version.split(['-', '+']).next()?.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next()?.parse().ok()?;
+    let patch = parts.next()?.parse().ok()?;
+    if parts.next().is_some() {
+        return None;
+    }
+    Some([major, minor, patch])
 }
 
 #[cfg(test)]
@@ -952,13 +1127,25 @@ pub(crate) fn render_codex_agent_registration_artifact(
     artifacts: &[SourceArtifact],
 ) -> Result<Option<SourceArtifact>> {
     #[derive(Serialize)]
-    struct CodexAgentRegistrationConfig {
+    struct CodexConfig {
         agents: BTreeMap<String, CodexAgentRegistration>,
+        features: CodexFeaturesConfig,
     }
 
     #[derive(Serialize)]
     struct CodexAgentRegistration {
         config_file: String,
+    }
+
+    #[derive(Serialize)]
+    struct CodexFeaturesConfig {
+        multi_agent_v2: CodexMultiAgentV2Config,
+    }
+
+    #[derive(Serialize)]
+    struct CodexMultiAgentV2Config {
+        enabled: bool,
+        hide_spawn_agent_metadata: bool,
     }
 
     let mut agents = BTreeMap::new();
@@ -995,7 +1182,15 @@ pub(crate) fn render_codex_agent_registration_artifact(
     if agents.is_empty() {
         return Ok(None);
     }
-    let mut content = toml::to_string_pretty(&CodexAgentRegistrationConfig { agents })?;
+    let mut content = toml::to_string_pretty(&CodexConfig {
+        agents,
+        features: CodexFeaturesConfig {
+            multi_agent_v2: CodexMultiAgentV2Config {
+                enabled: true,
+                hide_spawn_agent_metadata: false,
+            },
+        },
+    })?;
     if !content.ends_with('\n') {
         content.push('\n');
     }

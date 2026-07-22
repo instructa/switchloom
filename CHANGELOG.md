@@ -2,6 +2,15 @@
 
 All notable changes to Switchloom are recorded here.
 
+## [0.3.1] - 2026-07-22
+
+- Added repository-local Codex Multi-Agent V2 activation and ownership-safe
+  lifecycle handling for the official Codex CLI 0.145 contract.
+- Certified Terra and Sol native V2 routing with exact-version persisted
+  runtime evidence while keeping Luna explicit and experimental/unverified.
+- Regenerated the public catalog, bundles, fixtures, website recipes, and
+  guidance for the v0.3.1 compatibility release.
+
 ## [0.3.0] - 2026-07-21
 
 - Hard-cut maintainer-only live verification, catalog, registry, probe, and

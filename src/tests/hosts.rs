@@ -1,5 +1,31 @@
 use crate::*;
 use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
+fn temp_host_repo(name: &str) -> PathBuf {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let path = std::env::temp_dir().join(format!("switchloom-hosts-{name}-{unique}"));
+    fs::create_dir_all(&path).unwrap();
+    path
+}
+
+#[cfg(unix)]
+fn codex_version_stub(repository: &Path, output: &str) -> PathBuf {
+    let script = repository.join("codex-version-stub.sh");
+    fs::write(&script, format!("#!/bin/sh\nprintf '{}\\n'\n", output)).unwrap();
+    let mut permissions = fs::metadata(&script).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&script, permissions).unwrap();
+    script
+}
 
 #[test]
 fn adapter_contract_distinguishes_external_runner_runtime_class() {
@@ -49,6 +75,82 @@ fn adapter_contract_distinguishes_external_runner_runtime_class() {
     assert_eq!(
         contract.adapter.dispatch_recipe.invocation,
         "external-runner-process"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn codex_doctor_reports_exact_0145_v2_conflicts_and_reload_guidance() {
+    let repository = temp_host_repo("codex-doctor");
+    fs::create_dir_all(repository.join(".codex")).unwrap();
+    fs::write(
+        repository.join(".codex/config.toml"),
+        r#"[agents.model_routing_terra_high]
+config_file = "./agents/model-routing-terra-high.toml"
+
+[agents.model_routing_sol_high]
+config_file = "./agents/model-routing-sol-high.toml"
+
+[features.multi_agent_v2]
+enabled = false
+hide_spawn_agent_metadata = false
+"#,
+    )
+    .unwrap();
+    let exact = codex_version_stub(&repository, "codex 0.145.0");
+    let exact_report =
+        probe_host_with_repository("codex", Some(exact.to_str().unwrap()), &repository).unwrap();
+    assert!(exact_report.available);
+    assert_eq!(exact_report.version.as_deref(), Some("codex 0.145.0"));
+    assert!(exact_report.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_exact_version_ready" && diagnostic.severity == "info"
+    }));
+    assert!(exact_report.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_v2_activation_conflict"
+            && diagnostic.repair.contains("enabled = true")
+    }));
+    assert!(exact_report.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_trust_reload_required"
+            && diagnostic.repair.contains("reload or restart")
+    }));
+    assert!(exact_report.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_luna_experimental_unverified"
+            && diagnostic.severity == "warning"
+            && diagnostic.message.contains("experimental/unverified")
+            && diagnostic.repair.contains("Terra")
+    }));
+
+    let drifted = codex_version_stub(&repository, "codex-cli 0.144.5");
+    let drifted_report =
+        probe_host_with_repository("codex", Some(drifted.to_str().unwrap()), &repository).unwrap();
+    assert!(drifted_report.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_exact_version_mismatch"
+            && diagnostic.message.contains("0.144.5")
+            && diagnostic.repair.contains("0.145.0")
+    }));
+
+    fs::write(
+        repository.join(".codex/config.toml"),
+        r#"[agents.model_routing_terra_high]
+config_file = "./agents/model-routing-terra-high.toml"
+
+[agents.model_routing_sol_high]
+config_file = "./agents/model-routing-sol-high.toml"
+
+[features.multi_agent_v2]
+enabled = true
+hide_spawn_agent_metadata = false
+"#,
+    )
+    .unwrap();
+    let exact = codex_version_stub(&repository, "codex 0.145.0");
+    let ready_report =
+        probe_host_with_repository("codex", Some(exact.to_str().unwrap()), &repository).unwrap();
+    assert!(
+        !ready_report
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.severity == "error")
     );
 }
 

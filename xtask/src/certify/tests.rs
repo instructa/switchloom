@@ -34,26 +34,41 @@ impl Drop for TempDir {
 
 fn codex_receipt() -> Value {
     let parent = "11111111-1111-4111-8111-111111111111";
-    let child = "22222222-2222-4222-8222-222222222222";
+    let maker = "22222222-2222-4222-8222-222222222222";
+    let reviewer = "33333333-3333-4333-8333-333333333333";
     let hash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     json!({
         "schema_version": "switchloom.codex_runtime_evidence.v1",
         "run": { "status": "complete", "complete_marker": "SWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE", "evidence_source": "codex_persisted_spawn_state", "parent_thread_id": parent, "parent_session": format!("{parent}.jsonl"), "workdir": "/tmp/work" },
         "children": [{
-            "kind": "worker", "profile": "codex-terra-high", "agent_type": "model_routing_terra_high", "task_name": "worker", "canonical_task": "/root/worker", "parent_thread_id": parent, "child_thread_id": child,
-            "spawn": { "surface": "collaboration.spawn_agent", "agent_type": "model_routing_terra_high", "task_name": "worker", "fork_turns": "none", "call_id": "call-worker" },
+            "kind": "maker", "profile": "codex-terra-high", "agent_type": "model_routing_terra_high", "task_name": "maker", "canonical_task": "/root/maker", "parent_thread_id": parent, "child_thread_id": maker,
+            "spawn": { "surface": "collaboration.spawn_agent", "agent_type": "model_routing_terra_high", "task_name": "maker", "fork_turns": "none", "call_id": "call-maker" },
             "input": { "message_sha256": hash, "message_bytes": 12, "max_message_bytes": 512, "message_encoding": "plaintext", "message_plaintext_verdict": "deterministic" },
-            "spawn_output": { "task_name": "/root/worker" },
-            "session": { "agent_role": "model_routing_terra_high", "agent_path": "/root/worker", "thread_source": "subagent", "parent_thread_id": parent, "session_file": format!("{child}.jsonl") },
-            "state": { "agent_role": "model_routing_terra_high", "agent_path": "/root/worker", "model": "gpt-5.6-terra", "reasoning_effort": "high", "thread_source": "subagent", "cwd": "/tmp/work" },
+            "spawn_output": { "task_name": "/root/maker" },
+            "session": { "agent_role": "model_routing_terra_high", "agent_path": "/root/maker", "thread_source": "subagent", "parent_thread_id": parent, "session_file": format!("{maker}.jsonl") },
+            "state": { "agent_role": "model_routing_terra_high", "agent_path": "/root/maker", "model": "gpt-5.6-terra", "reasoning_effort": "high", "thread_source": "subagent", "cwd": "/tmp/work" },
+            "final_answer": { "message_type": "FINAL_ANSWER" }
+        }, {
+            "kind": "reviewer", "profile": "codex-sol-high", "agent_type": "model_routing_sol_high", "task_name": "reviewer", "canonical_task": "/root/reviewer", "parent_thread_id": parent, "child_thread_id": reviewer,
+            "spawn": { "surface": "collaboration.spawn_agent", "agent_type": "model_routing_sol_high", "task_name": "reviewer", "fork_turns": "none", "call_id": "call-reviewer" },
+            "input": { "message_sha256": hash, "message_bytes": 12, "max_message_bytes": 512, "message_encoding": "plaintext", "message_plaintext_verdict": "deterministic" },
+            "spawn_output": { "task_name": "/root/reviewer" },
+            "session": { "agent_role": "model_routing_sol_high", "agent_path": "/root/reviewer", "thread_source": "subagent", "parent_thread_id": parent, "session_file": format!("{reviewer}.jsonl") },
+            "state": { "agent_role": "model_routing_sol_high", "agent_path": "/root/reviewer", "model": "gpt-5.6-sol", "reasoning_effort": "high", "thread_source": "subagent", "cwd": "/tmp/work" },
             "final_answer": { "message_type": "FINAL_ANSWER" }
         }],
         "dispatch_evidence": [{
-            "schema_version": 1, "package_digest": format!("sha256:{hash}"), "host_version": "codex 0.144.0",
-            "requested_dispatch": { "semantic_role": "worker", "profile": "codex-terra-high", "model": "gpt-5.6-terra", "effort": "high", "agent_type": "model_routing_terra_high", "fork_turns": { "mode": "none" }, "message_sha256": hash, "message_encoding": "plaintext", "message_plaintext_verdict": "deterministic", "message_bytes": 12, "max_message_bytes": 512 },
-            "child_identity": { "host": "codex", "role": "worker", "agent_role": "model_routing_terra_high", "agent_type": "model_routing_terra_high", "task_name": "worker" },
-            "effective_model": "gpt-5.6-terra", "effective_effort": "high", "nonce": format!("{parent}:{child}:call-worker"),
-            "raw_evidence_refs": [format!("codex-session:{parent}.jsonl"), format!("codex-session:{child}.jsonl"), format!("state_5.sqlite:thread_spawn_edges:{parent}:{child}"), "spawn_call:call-worker"], "verdict": "deterministic"
+            "schema_version": 1, "package_digest": format!("sha256:{hash}"), "host_version": "codex-cli 0.145.0",
+            "requested_dispatch": { "semantic_role": "maker", "profile": "codex-terra-high", "model": "gpt-5.6-terra", "effort": "high", "agent_type": "model_routing_terra_high", "fork_turns": { "mode": "none" }, "message_sha256": hash, "message_encoding": "plaintext", "message_plaintext_verdict": "deterministic", "message_bytes": 12, "max_message_bytes": 512 },
+            "child_identity": { "host": "codex", "role": "maker", "agent_role": "model_routing_terra_high", "agent_type": "model_routing_terra_high", "task_name": "maker" },
+            "effective_model": "gpt-5.6-terra", "effective_effort": "high", "nonce": format!("{parent}:{maker}:call-maker"),
+            "raw_evidence_refs": [format!("codex-session:{parent}.jsonl"), format!("codex-session:{maker}.jsonl"), format!("state_5.sqlite:thread_spawn_edges:{parent}:{maker}"), "spawn_call:call-maker"], "verdict": "deterministic"
+        }, {
+            "schema_version": 1, "package_digest": format!("sha256:{hash}"), "host_version": "codex-cli 0.145.0",
+            "requested_dispatch": { "semantic_role": "reviewer", "profile": "codex-sol-high", "model": "gpt-5.6-sol", "effort": "high", "agent_type": "model_routing_sol_high", "fork_turns": { "mode": "none" }, "message_sha256": hash, "message_encoding": "plaintext", "message_plaintext_verdict": "deterministic", "message_bytes": 12, "max_message_bytes": 512 },
+            "child_identity": { "host": "codex", "role": "reviewer", "agent_role": "model_routing_sol_high", "agent_type": "model_routing_sol_high", "task_name": "reviewer" },
+            "effective_model": "gpt-5.6-sol", "effective_effort": "high", "nonce": format!("{parent}:{reviewer}:call-reviewer"),
+            "raw_evidence_refs": [format!("codex-session:{parent}.jsonl"), format!("codex-session:{reviewer}.jsonl"), format!("state_5.sqlite:thread_spawn_edges:{parent}:{reviewer}"), "spawn_call:call-reviewer"], "verdict": "deterministic"
         }]
     })
 }
@@ -79,6 +94,21 @@ fn codex_fails_closed_on_prose_missing_inherited_uncorrelated_and_tampered_evide
             v["run"].as_object_mut().unwrap().remove("complete_marker");
         },
         |v: &mut Value| {
+            v["schema_version"] = json!("switchloom.codex_runtime_evidence.v0");
+        },
+        |v: &mut Value| {
+            v["dispatch_evidence"][0]["host_version"] = json!("codex-cli 0.144.5");
+        },
+        |v: &mut Value| {
+            v["children"][0]["spawn"]["surface"] = json!("nested_exec");
+        },
+        |v: &mut Value| {
+            v["children"][0]["spawn"]["fork_turns"] = json!("all");
+        },
+        |v: &mut Value| {
+            v["children"][0].as_object_mut().unwrap().remove("input");
+        },
+        |v: &mut Value| {
             v["children"][0]["session"]["parent_thread_id"] =
                 json!("33333333-3333-4333-8333-333333333333");
         },
@@ -88,6 +118,27 @@ fn codex_fails_closed_on_prose_missing_inherited_uncorrelated_and_tampered_evide
         },
         |v: &mut Value| {
             v["dispatch_evidence"][0]["nonce"] = json!("nonce-placeholder");
+        },
+        |v: &mut Value| {
+            v["children"][0]["profile"] = json!("codex-luna-xhigh-experimental");
+            v["children"][0]["agent_type"] = json!("model_routing_luna_xhigh");
+            v["children"][0]["spawn"]["agent_type"] = json!("model_routing_luna_xhigh");
+            v["children"][0]["session"]["agent_role"] = json!("model_routing_luna_xhigh");
+            v["children"][0]["state"]["agent_role"] = json!("model_routing_luna_xhigh");
+            v["children"][0]["state"]["model"] = json!("gpt-5.6-luna");
+            v["children"][0]["state"]["reasoning_effort"] = json!("xhigh");
+            v["dispatch_evidence"][0]["requested_dispatch"]["profile"] =
+                json!("codex-luna-xhigh-experimental");
+            v["dispatch_evidence"][0]["requested_dispatch"]["model"] = json!("gpt-5.6-luna");
+            v["dispatch_evidence"][0]["requested_dispatch"]["effort"] = json!("xhigh");
+            v["dispatch_evidence"][0]["requested_dispatch"]["agent_type"] =
+                json!("model_routing_luna_xhigh");
+            v["dispatch_evidence"][0]["child_identity"]["agent_role"] =
+                json!("model_routing_luna_xhigh");
+            v["dispatch_evidence"][0]["child_identity"]["agent_type"] =
+                json!("model_routing_luna_xhigh");
+            v["dispatch_evidence"][0]["effective_model"] = json!("gpt-5.6-luna");
+            v["dispatch_evidence"][0]["effective_effort"] = json!("xhigh");
         },
     ] {
         let mut receipt = codex_receipt();

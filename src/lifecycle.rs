@@ -65,6 +65,8 @@ pub(crate) struct ManagedArtifact {
     pub(crate) sha256: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) content: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) ownership_content: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -176,7 +178,12 @@ pub(crate) fn apply_bundle_json(
     recover_pending_transactions(&repository)?;
     let planned = plan_artifacts(&repository, bundle, None)?;
     ensure_apply_is_safe(&planned)?;
-    let manifest = manifest_from_bundle(bundle, sha256(bundle_input.as_bytes()), None);
+    let manifest = manifest_from_plan(
+        &bundle.bundle_id,
+        sha256(bundle_input.as_bytes()),
+        &planned,
+        None,
+    );
     commit_transaction(&repository, &planned, &manifest)?;
     Ok(report_from_plan(
         "apply",
@@ -276,6 +283,7 @@ pub fn uninstall_repository(repository: &Path) -> Result<LifecycleReport> {
             path: artifact.path.clone(),
             sha256: artifact.sha256.clone(),
             content: artifact.content.clone(),
+            ownership_content: artifact.ownership_content.clone(),
         })
         .collect::<Vec<_>>();
     if residual_artifacts.is_empty() {
@@ -392,6 +400,7 @@ pub(crate) struct PlannedArtifact {
     pub(crate) mode: String,
     pub(crate) content: Option<String>,
     pub(crate) managed_content: Option<String>,
+    pub(crate) desired_content: Option<String>,
     pub(crate) sha256: String,
     pub(crate) status: String,
 }
@@ -469,6 +478,7 @@ pub(crate) fn plan_artifacts(
             mode: artifact.mode.clone(),
             content: Some(artifact.content.clone()),
             managed_content: Some(artifact.content.clone()),
+            desired_content: None,
             sha256: artifact.sha256.clone(),
             status: status.to_string(),
         });
@@ -505,7 +515,8 @@ pub(crate) fn plan_artifacts(
                 target,
                 mode: "delete".to_string(),
                 content,
-                managed_content: artifact.content.clone(),
+                managed_content: Some(managed_artifact_ownership_content(artifact)?.to_string()),
+                desired_content: artifact.content.clone(),
                 sha256: artifact.sha256.clone(),
                 status,
             });
@@ -607,6 +618,7 @@ pub(crate) fn plan_rollback_artifacts(
             mode: "replace".to_string(),
             content: Some(content),
             managed_content: artifact.content.clone(),
+            desired_content: None,
             sha256: artifact.sha256.clone(),
             status: status.to_string(),
         });
@@ -642,7 +654,8 @@ pub(crate) fn plan_rollback_artifacts(
             target,
             mode: "delete".to_string(),
             content,
-            managed_content: artifact.content.clone(),
+            managed_content: Some(managed_artifact_ownership_content(artifact)?.to_string()),
+            desired_content: artifact.content.clone(),
             sha256: artifact.sha256.clone(),
             status,
         });
@@ -680,6 +693,12 @@ pub(crate) fn plan_codex_config_artifact(
                         )?,
                     )
                 }
+            } else if codex_config_has_unmanaged_conflict(
+                &current,
+                &artifact.content,
+                Some(managed),
+            )? {
+                ("conflict".to_string(), Some(current))
             } else {
                 ("preserved-modified".to_string(), Some(current))
             }
@@ -697,12 +716,25 @@ pub(crate) fn plan_codex_config_artifact(
         ensure_parent_is_safe(repository, &target)?;
         ("create".to_string(), Some(artifact.content.clone()))
     };
+    let current_for_ownership = if target.exists() {
+        Some(
+            fs::read_to_string(&target)
+                .with_context(|| format!("failed to read `{}`", target.display()))?,
+        )
+    } else {
+        None
+    };
     Ok(PlannedArtifact {
         path: artifact.path.clone(),
         target,
         mode: artifact.mode.clone(),
         content,
-        managed_content: Some(artifact.content.clone()),
+        managed_content: codex_config_managed_content(
+            current_for_ownership.as_deref(),
+            managed_entry,
+            &artifact.content,
+        )?,
+        desired_content: Some(artifact.content.clone()),
         sha256: artifact.sha256.clone(),
         status,
     })
@@ -741,6 +773,12 @@ pub(crate) fn plan_codex_config_rollback_artifact(
                         )?,
                     )
                 }
+            } else if codex_config_has_unmanaged_conflict(
+                &current_text,
+                &desired_content,
+                Some(managed),
+            )? {
+                ("conflict".to_string(), Some(current_text))
             } else {
                 ("preserved-modified".to_string(), Some(current_text))
             }
@@ -756,12 +794,25 @@ pub(crate) fn plan_codex_config_rollback_artifact(
         ensure_parent_is_safe(repository, &target)?;
         ("create".to_string(), Some(desired_content.clone()))
     };
+    let current_for_ownership = if target.exists() {
+        Some(
+            fs::read_to_string(&target)
+                .with_context(|| format!("failed to read `{}`", target.display()))?,
+        )
+    } else {
+        None
+    };
     Ok(PlannedArtifact {
         path: artifact.path.clone(),
         target,
         mode: "replace".to_string(),
         content,
-        managed_content: Some(desired_content),
+        managed_content: codex_config_managed_content(
+            current_for_ownership.as_deref(),
+            current,
+            &desired_content,
+        )?,
+        desired_content: Some(desired_content),
         sha256: artifact.sha256.clone(),
         status,
     })
@@ -794,7 +845,7 @@ pub(crate) fn preserved_or_removed_status(
     if artifact.path == CODEX_CONFIG_PATH {
         let current = fs::read_to_string(target)
             .with_context(|| format!("failed to read `{}`", target.display()))?;
-        return if codex_config_contains_managed_entries(&current, artifact)? {
+        return if codex_config_contains_owned_entries(&current, artifact)? {
             Ok("removed".to_string())
         } else {
             Ok("preserved-modified".to_string())
@@ -854,7 +905,7 @@ pub(crate) fn uninstall_managed_artifact(
     if artifact.path == CODEX_CONFIG_PATH {
         let current = fs::read_to_string(target)
             .with_context(|| format!("failed to read `{}`", target.display()))?;
-        if !codex_config_contains_managed_entries(&current, artifact)? {
+        if !codex_config_contains_owned_entries(&current, artifact)? {
             return Ok("preserved-modified");
         }
         match remove_managed_codex_config_entries(target, artifact)? {
@@ -880,24 +931,50 @@ pub(crate) fn codex_config_contains_managed_entries(
     current_content: &str,
     managed: &ManagedArtifact,
 ) -> Result<bool> {
-    let managed_content = managed.content.as_deref().ok_or_else(|| {
-        product_error!("managed artifact `{}` has no stored content", managed.path)
-    })?;
+    let managed_content = managed_desired_content(managed)?;
     Ok(
         !codex_config_has_unmanaged_conflict(current_content, managed_content, None)?
             && codex_config_contains_desired_entries(current_content, managed_content)?,
     )
 }
 
+pub(crate) fn codex_config_contains_owned_entries(
+    current_content: &str,
+    managed: &ManagedArtifact,
+) -> Result<bool> {
+    let managed_content = managed_artifact_ownership_content(managed)?;
+    codex_config_contains_desired_entries(current_content, managed_content)
+}
+
+pub(crate) fn managed_desired_content(managed: &ManagedArtifact) -> Result<&str> {
+    managed
+        .content
+        .as_deref()
+        .ok_or_else(|| product_error!("managed artifact `{}` has no stored content", managed.path))
+}
+
+pub(crate) fn managed_artifact_ownership_content(managed: &ManagedArtifact) -> Result<&str> {
+    managed
+        .ownership_content
+        .as_deref()
+        .or(managed.content.as_deref())
+        .ok_or_else(|| product_error!("managed artifact `{}` has no stored content", managed.path))
+}
+
 pub(crate) fn codex_config_contains_desired_entries(
     current_content: &str,
     desired_content: &str,
 ) -> Result<bool> {
-    let current = codex_agent_entries(current_content)?;
-    let desired = codex_agent_entries(desired_content)?;
+    let current = codex_config_entries(current_content)?;
+    let desired = codex_config_entries(desired_content)?;
     Ok(desired
+        .agents
         .iter()
-        .all(|(name, desired_entry)| current.get(name) == Some(desired_entry)))
+        .all(|(name, desired_entry)| current.agents.get(name) == Some(desired_entry))
+        && desired
+            .multi_agent_v2
+            .iter()
+            .all(|(key, desired_entry)| current.multi_agent_v2.get(key) == Some(desired_entry)))
 }
 
 pub(crate) fn codex_config_has_unmanaged_conflict(
@@ -905,17 +982,25 @@ pub(crate) fn codex_config_has_unmanaged_conflict(
     desired_content: &str,
     previously_managed: Option<&ManagedArtifact>,
 ) -> Result<bool> {
-    let current = codex_agent_entries(current_content)?;
-    let desired = codex_agent_entries(desired_content)?;
+    let current = codex_config_entries(current_content)?;
+    let desired = codex_config_entries(desired_content)?;
     let old_keys = previously_managed
-        .and_then(|managed| managed.content.as_deref())
-        .map(codex_agent_entry_names)
+        .map(managed_artifact_ownership_content)
+        .transpose()?
+        .map(codex_config_entry_keys)
         .transpose()?
         .unwrap_or_default();
-    Ok(desired.iter().any(|(name, desired_entry)| {
+    Ok(desired.agents.iter().any(|(name, desired_entry)| {
         !old_keys.contains(name)
             && current
+                .agents
                 .get(name)
+                .is_some_and(|entry| entry != desired_entry)
+    }) || desired.multi_agent_v2.iter().any(|(key, desired_entry)| {
+        !old_keys.contains(&codex_multi_agent_v2_key(key))
+            && current
+                .multi_agent_v2
+                .get(key)
                 .is_some_and(|entry| entry != desired_entry)
     }))
 }
@@ -930,12 +1015,48 @@ pub(crate) fn merge_codex_config_entries(
         None => toml::value::Table::new(),
     };
     if let Some(managed) = previously_managed {
-        let managed_content = managed.content.as_deref().ok_or_else(|| {
-            product_error!("managed artifact `{}` has no stored content", managed.path)
-        })?;
-        remove_codex_agent_entries(&mut root, &codex_agent_entry_names(managed_content)?)?;
+        let managed_content = managed_artifact_ownership_content(managed)?;
+        let keys = codex_config_entry_keys(managed_content)?;
+        remove_codex_agent_entries(&mut root, &keys.agent_names)?;
+        remove_codex_multi_agent_v2_entries(&mut root, &keys.multi_agent_v2_keys)?;
     }
-    upsert_codex_agent_entries(&mut root, codex_agent_entries(desired_content)?)?;
+    let desired = codex_config_entries(desired_content)?;
+    upsert_codex_agent_entries(&mut root, desired.agents)?;
+    upsert_codex_multi_agent_v2_entries(&mut root, desired.multi_agent_v2)?;
+    render_toml_root(root)
+}
+
+pub(crate) fn codex_config_managed_content(
+    current_content: Option<&str>,
+    previously_managed: Option<&ManagedArtifact>,
+    desired_content: &str,
+) -> Result<Option<String>> {
+    let desired = codex_config_entries(desired_content)?;
+    let current = current_content
+        .map(codex_config_entries)
+        .transpose()?
+        .unwrap_or_default();
+    let old_keys = previously_managed
+        .map(managed_artifact_ownership_content)
+        .transpose()?
+        .map(codex_config_entry_keys)
+        .transpose()?
+        .unwrap_or_default();
+
+    let mut root = toml::value::Table::new();
+    upsert_codex_agent_entries(&mut root, desired.agents)?;
+
+    let managed_multi_agent_v2 = desired
+        .multi_agent_v2
+        .into_iter()
+        .filter(|(key, _)| {
+            let owned_key = codex_multi_agent_v2_key(key);
+            current_content.is_none()
+                || old_keys.contains(&owned_key)
+                || !current.multi_agent_v2.contains_key(key)
+        })
+        .collect::<BTreeMap<_, _>>();
+    upsert_codex_multi_agent_v2_entries(&mut root, managed_multi_agent_v2)?;
     render_toml_root(root)
 }
 
@@ -945,11 +1066,11 @@ pub(crate) fn remove_managed_codex_config_entries(
 ) -> Result<Option<String>> {
     let current = fs::read_to_string(target)
         .with_context(|| format!("failed to read `{}`", target.display()))?;
-    let managed_content = managed.content.as_deref().ok_or_else(|| {
-        product_error!("managed artifact `{}` has no stored content", managed.path)
-    })?;
+    let managed_content = managed_artifact_ownership_content(managed)?;
     let mut root = parse_toml_root(&current)?;
-    remove_codex_agent_entries(&mut root, &codex_agent_entry_names(managed_content)?)?;
+    let keys = codex_config_entry_keys(managed_content)?;
+    remove_codex_agent_entries(&mut root, &keys.agent_names)?;
+    remove_codex_multi_agent_v2_entries(&mut root, &keys.multi_agent_v2_keys)?;
     render_toml_root(root)
 }
 
@@ -960,22 +1081,70 @@ pub(crate) fn parse_toml_root(content: &str) -> Result<toml::value::Table> {
     }
 }
 
-pub(crate) fn codex_agent_entry_names(content: &str) -> Result<BTreeSet<String>> {
-    Ok(codex_agent_entries(content)?.into_keys().collect())
+#[derive(Default)]
+pub(crate) struct CodexConfigEntries {
+    agents: BTreeMap<String, toml::Value>,
+    multi_agent_v2: BTreeMap<String, toml::Value>,
 }
 
-pub(crate) fn codex_agent_entries(content: &str) -> Result<BTreeMap<String, toml::Value>> {
+#[derive(Default)]
+pub(crate) struct CodexConfigEntryKeys {
+    agent_names: BTreeSet<String>,
+    multi_agent_v2_keys: BTreeSet<String>,
+}
+
+impl CodexConfigEntryKeys {
+    fn contains(&self, key: &str) -> bool {
+        self.agent_names.contains(key) || self.multi_agent_v2_keys.contains(key)
+    }
+}
+
+pub(crate) fn codex_multi_agent_v2_key(key: &str) -> String {
+    format!("features.multi_agent_v2.{key}")
+}
+
+pub(crate) fn codex_config_entry_keys(content: &str) -> Result<CodexConfigEntryKeys> {
+    let entries = codex_config_entries(content)?;
+    Ok(CodexConfigEntryKeys {
+        agent_names: entries.agents.into_keys().collect(),
+        multi_agent_v2_keys: entries
+            .multi_agent_v2
+            .into_keys()
+            .map(|key| codex_multi_agent_v2_key(&key))
+            .collect(),
+    })
+}
+
+pub(crate) fn codex_config_entries(content: &str) -> Result<CodexConfigEntries> {
     let root = parse_toml_root(content)?;
-    let Some(agents) = root.get("agents") else {
-        return Ok(BTreeMap::new());
+    let agents = match root.get("agents") {
+        Some(agents) => agents
+            .as_table()
+            .ok_or_else(|| product_error!("Codex config `agents` must be a table"))?
+            .iter()
+            .map(|(name, value)| (name.clone(), value.clone()))
+            .collect(),
+        None => BTreeMap::new(),
     };
-    let agents = agents
-        .as_table()
-        .ok_or_else(|| product_error!("Codex config `agents` must be a table"))?;
-    Ok(agents
-        .iter()
-        .map(|(name, value)| (name.clone(), value.clone()))
-        .collect())
+    let multi_agent_v2 = match root
+        .get("features")
+        .and_then(toml::Value::as_table)
+        .and_then(|features| features.get("multi_agent_v2"))
+    {
+        Some(value) => value
+            .as_table()
+            .ok_or_else(|| {
+                product_error!("Codex config `features.multi_agent_v2` must be a table")
+            })?
+            .iter()
+            .map(|(name, value)| (name.clone(), value.clone()))
+            .collect(),
+        None => BTreeMap::new(),
+    };
+    Ok(CodexConfigEntries {
+        agents,
+        multi_agent_v2,
+    })
 }
 
 pub(crate) fn remove_codex_agent_entries(
@@ -1016,6 +1185,69 @@ pub(crate) fn upsert_codex_agent_entries(
         .ok_or_else(|| product_error!("Codex config `agents` must be a table"))?;
     for (name, value) in entries {
         agents.insert(name, value);
+    }
+    Ok(())
+}
+
+pub(crate) fn remove_codex_multi_agent_v2_entries(
+    root: &mut toml::value::Table,
+    keys: &BTreeSet<String>,
+) -> Result<()> {
+    let Some(features_value) = root.get_mut("features") else {
+        return Ok(());
+    };
+    let features = features_value
+        .as_table_mut()
+        .ok_or_else(|| product_error!("Codex config `features` must be a table"))?;
+    let Some(multi_agent_value) = features.get_mut("multi_agent_v2") else {
+        return Ok(());
+    };
+    let multi_agent = multi_agent_value
+        .as_table_mut()
+        .ok_or_else(|| product_error!("Codex config `features.multi_agent_v2` must be a table"))?;
+    for key in keys {
+        if let Some(field) = key.strip_prefix("features.multi_agent_v2.") {
+            multi_agent.remove(field);
+        }
+    }
+    if multi_agent.is_empty() {
+        features.remove("multi_agent_v2");
+    }
+    if features.is_empty() {
+        root.remove("features");
+    }
+    Ok(())
+}
+
+pub(crate) fn upsert_codex_multi_agent_v2_entries(
+    root: &mut toml::value::Table,
+    entries: BTreeMap<String, toml::Value>,
+) -> Result<()> {
+    if entries.is_empty() {
+        return Ok(());
+    }
+    if !root.contains_key("features") {
+        root.insert(
+            "features".to_string(),
+            toml::Value::Table(toml::value::Table::new()),
+        );
+    }
+    let features = root
+        .get_mut("features")
+        .and_then(toml::Value::as_table_mut)
+        .ok_or_else(|| product_error!("Codex config `features` must be a table"))?;
+    if !features.contains_key("multi_agent_v2") {
+        features.insert(
+            "multi_agent_v2".to_string(),
+            toml::Value::Table(toml::value::Table::new()),
+        );
+    }
+    let multi_agent = features
+        .get_mut("multi_agent_v2")
+        .and_then(toml::Value::as_table_mut)
+        .ok_or_else(|| product_error!("Codex config `features.multi_agent_v2` must be a table"))?;
+    for (name, value) in entries {
+        multi_agent.insert(name, value);
     }
     Ok(())
 }
@@ -1506,28 +1738,6 @@ pub(crate) fn ensure_parent_is_safe(repository: &Path, target: &Path) -> Result<
     Ok(())
 }
 
-pub(crate) fn manifest_from_bundle(
-    bundle: &RoutingBundleV1,
-    bundle_sha256: String,
-    previous: Option<ManagedSnapshot>,
-) -> ManagedManifest {
-    ManagedManifest {
-        schema_version: 1,
-        bundle_id: bundle.bundle_id.clone(),
-        bundle_sha256,
-        artifacts: bundle
-            .artifacts
-            .iter()
-            .map(|artifact| ManagedArtifact {
-                path: artifact.path.clone(),
-                sha256: artifact.sha256.clone(),
-                content: Some(artifact.content.clone()),
-            })
-            .collect(),
-        previous,
-    }
-}
-
 pub(crate) fn manifest_from_plan(
     bundle_id: &str,
     bundle_sha256: String,
@@ -1544,7 +1754,17 @@ pub(crate) fn manifest_from_plan(
             .map(|artifact| ManagedArtifact {
                 path: artifact.path.clone(),
                 sha256: artifact.sha256.clone(),
-                content: artifact.managed_content.clone(),
+                content: artifact
+                    .desired_content
+                    .clone()
+                    .or_else(|| artifact.managed_content.clone()),
+                ownership_content: artifact.desired_content.as_ref().and_then(|_| {
+                    if artifact.managed_content == artifact.desired_content {
+                        None
+                    } else {
+                        artifact.managed_content.clone()
+                    }
+                }),
             })
             .collect(),
         previous,

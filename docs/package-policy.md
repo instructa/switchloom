@@ -15,7 +15,7 @@ The policy is enforced by `.gitignore`, `Cargo.toml` `exclude`, and the CI packa
 
 Only source, fixtures, docs, CI metadata, and deterministic generator inputs should enter the package. Live verification receipts and authenticated-host evidence belong in release notes or reviewed handoff docs after secret scrubbing, not in the crate payload.
 
-## v0.3.0 Public Boundary
+## v0.3.1 Public Boundary
 
 The published CLI owns `policy`, `compile`, `inspect`, `preview`, `apply`,
 `update`, `status`, `rollback`, `uninstall`, and `doctor`. Maintainer verification,

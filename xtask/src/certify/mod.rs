@@ -17,7 +17,8 @@ use std::path::{Path, PathBuf};
 pub(crate) use codex::validate as validate_codex;
 pub(crate) use codex_spawn::{CodexRawInput, extract as extract_codex};
 pub(crate) use live::{
-    LiveRunArgs, PlanrRunArgs, run_codex as run_live_codex, run_native as run_live_native,
+    LiveRunArgs, PlanrRunArgs, run_codex as run_live_codex,
+    run_codex_negative_fixture as run_live_codex_negative_fixture, run_native as run_live_native,
     run_opencode as run_live_opencode, run_pi as run_live_pi, run_planr,
 };
 pub(crate) use opencode::validate as validate_opencode;

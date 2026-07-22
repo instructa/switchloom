@@ -6,13 +6,13 @@
     { "path": "retained-evidence/evidence-validator-parity/legacy/validate-codex-runtime-evidence.mjs", "sha256": "6120612503d08505984c6177185b373008db23ff52a4e55e1560ff6f0f9dc554", "owner": "frozen-legacy" },
     { "path": "retained-evidence/evidence-validator-parity/legacy/validate-opencode-runtime-evidence.mjs", "sha256": "a89826177bcfd97c595f2a08dc32aa0664629c48df9156398954026202333d14", "owner": "frozen-legacy" },
     { "path": "retained-evidence/evidence-validator-parity/legacy/validate-pi-runtime-evidence.mjs", "sha256": "ff42e19fe139bee3c329aaaa00dfbd2a92eef69bc985a758cc604eef63d6e909", "owner": "frozen-legacy" },
-    { "path": "xtask/src/certify/codex.rs", "sha256": "11c89f32acdbec66c2a428b76c1de552216286e7c3eabd57a1fe72ba900c9ddf", "owner": "canonical-rust" },
-    { "path": "xtask/src/certify/codex_spawn.rs", "sha256": "e1e31b0b1413a1520938a226cf8c658f474875d78d3d51c0a5e9c0786a13278c", "owner": "canonical-rust" },
+    { "path": "xtask/src/certify/codex.rs", "sha256": "e47acf858cd3dfdf9db68b06702320634f8176135e31858bc7baa81e01633c61", "owner": "canonical-rust" },
+    { "path": "xtask/src/certify/codex_spawn.rs", "sha256": "2e594c99553aa7e45c92c73093ac8b1cef17dc90f499d164c9a9ffbcaf29955c", "owner": "canonical-rust" },
     { "path": "xtask/src/certify/opencode.rs", "sha256": "c08b2531418bea9610a47043f04ccbc10c4a3a60444095a4613bd9b7185a0c62", "owner": "canonical-rust" },
     { "path": "xtask/src/certify/pi.rs", "sha256": "000b152e90377a7ef6f5074f1362ae1d8131429084d990b1e3e922d493b38e58", "owner": "canonical-rust" }
   ],
   "corpus": [
-    { "path": "retained-evidence/evidence-validator-parity/legacy/validate-codex-runtime-evidence.test.mjs", "sha256": "c770295b6dda3c9581fa78120e73631d0debea91a062832f68b5b63f24164ea0" },
+    { "path": "retained-evidence/evidence-validator-parity/legacy/validate-codex-runtime-evidence.test.mjs", "sha256": "2e37c5ecdf600f569b4a7aaec28102bfe028ce856eaea7406f6b60f29950601c" },
     { "path": "retained-evidence/evidence-validator-parity/legacy/validate-opencode-runtime-evidence.test.mjs", "sha256": "23bf2cbfd2ab166fbf764a7451c80fa89ddf4ee9bc1558d8dcf7fd712a5fd25e" },
     { "path": "retained-evidence/evidence-validator-parity/legacy/validate-pi-runtime-evidence.test.mjs", "sha256": "0bfd07e8bffec000accdbd2f67233d6082e6bb5663994ef9d7d40250e69971b2" }
   ],

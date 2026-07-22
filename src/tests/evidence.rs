@@ -40,11 +40,33 @@ fn codex_runtime_evidence_fixtures_fail_for_named_provenance_reasons() {
 }
 
 #[test]
+fn codex_runtime_evidence_rejects_retained_source_without_claimed_raw_output() {
+    let mut evidence = codex_v2_runtime_evidence().unwrap();
+    let record = evidence
+        .claim_provenance
+        .get_mut("installed_version")
+        .unwrap()
+        .first_mut()
+        .unwrap();
+    record.source_path = Some(
+        "fixtures/codex-v2-runtime-evidence/codex-0.145-after-without-version.txt".to_string(),
+    );
+
+    let error = validate_codex_v2_runtime_evidence(&evidence)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains("does not contain claimed raw output"),
+        "unexpected error: {error}"
+    );
+}
+
+#[test]
 fn dispatch_evidence_requires_persisted_requested_and_effective_receipt_fields() {
     let mut valid = DispatchEvidenceV1 {
         schema_version: 1,
         package_digest: "sha256:abc".to_string(),
-        host_version: "codex 0.144.0".to_string(),
+        host_version: "codex 0.145.0".to_string(),
         requested_dispatch: RequestedDispatchEvidence {
             semantic_role: "worker".to_string(),
             profile: "codex-terra-high".to_string(),
@@ -76,7 +98,7 @@ fn dispatch_evidence_requires_persisted_requested_and_effective_receipt_fields()
     let missing_nonce = r#"{
   "schema_version": 1,
   "package_digest": "sha256:abc",
-  "host_version": "codex 0.144.0",
+  "host_version": "codex 0.145.0",
   "requested_dispatch": {
     "semantic_role": "worker",
     "profile": "codex-terra-high",

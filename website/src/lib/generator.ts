@@ -1,6 +1,7 @@
 export const ROLE_IDS = ["orchestrator", "implementer", "reviewer", "verifier"] as const;
 export const HOST_IDS = ["codex", "cursor", "claude-code", "opencode", "pi"] as const;
 export const PRESET_IDS = ["light", "balanced", "high"] as const;
+const SWITCHLOOM_VERSION = "0.3.1";
 
 export type RoleId = (typeof ROLE_IDS)[number];
 export type HostId = (typeof HOST_IDS)[number];
@@ -61,7 +62,7 @@ export const HOSTS: Record<HostId, {
 }> = {
   codex: {
     label: "Codex",
-    note: "Internal V2 child threads using project-local .codex roles; Codex remains orchestration and billing authority.",
+    note: "Requires Codex 0.145+ and activates project-local Multi-Agent V2 roles; this release certifies exact 0.145.0 Terra and Sol routing, while Luna remains experimental/unverified. Codex remains orchestration and billing authority.",
     runtime: "V2 thread tree",
     effortLabel: "Reasoning",
     defaults: {
@@ -137,9 +138,9 @@ const PRESET_ASSIGNMENTS: Record<HostId, Record<PresetId, Record<RoleId, RoleAss
   codex: {
     light: {
       orchestrator: { model: "gpt-5.6-terra", effort: "low" },
-      implementer: { model: "gpt-5.6-luna", effort: "low" },
+      implementer: { model: "gpt-5.6-terra", effort: "low" },
       reviewer: { model: "gpt-5.6-terra", effort: "low" },
-      verifier: { model: "gpt-5.6-luna", effort: "low" },
+      verifier: { model: "gpt-5.6-terra", effort: "low" },
     },
     balanced: HOSTS.codex.defaults,
     high: {
@@ -211,7 +212,7 @@ const PRESET_ASSIGNMENTS: Record<HostId, Record<PresetId, Record<RoleId, RoleAss
   },
 };
 
-function modelLabel(model: string) {
+function modelLabel(host: HostId, model: string) {
   const labels: Record<string, string> = {
     "gpt-5.6-sol": "Sol",
     "gpt-5.6-terra": "Terra",
@@ -230,7 +231,14 @@ function modelLabel(model: string) {
     opus: "Opus",
     sonnet: "Sonnet",
   };
-  return labels[model] ?? model;
+  const label = labels[model] ?? model;
+  if (host === "codex" && (model === "gpt-5.6-sol" || model === "gpt-5.6-terra")) {
+    return `${label} (certified)`;
+  }
+  if (host === "codex" && model === "gpt-5.6-luna") {
+    return `${label} (experimental)`;
+  }
+  return label;
 }
 
 function modelProvider(model: string) {
@@ -268,7 +276,7 @@ export function hostCatalogFrom(catalog: CatalogShape): HostCatalog {
       const tier: ModelOption["tier"] = model.tier === "premium" ? "premium" : "standard";
       return {
         id: model.id,
-        label: modelLabel(model.id),
+        label: modelLabel(host, model.id),
         provider: modelProvider(model.id),
         efforts: model.efforts,
         tier,
@@ -467,14 +475,14 @@ export function shellQuote(value: string) {
 }
 
 export function recipeApplyCommand(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_") {
-  return `npx switchloom@0.3.0 apply --recipe ${shellQuote(setupRecipe(config, catalog, recipePrefix))} --repository .`;
+  return `npx switchloom@${SWITCHLOOM_VERSION} apply --recipe ${shellQuote(setupRecipe(config, catalog, recipePrefix))} --repository .`;
 }
 
 export function lifecycleCommands(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_") {
   const recipe = shellQuote(setupRecipe(config, catalog, recipePrefix));
   const host = config.host;
   return [
-    "npm install -g switchloom@0.3.0",
+    `npm install -g switchloom@${SWITCHLOOM_VERSION}`,
     `switchloom preview --recipe ${recipe} --repository .`,
     `switchloom apply --recipe ${recipe} --repository .`,
     `switchloom doctor ${host}`,

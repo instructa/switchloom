@@ -2,9 +2,10 @@ use crate::{
     Integration, apply_bundle_file, apply_saved_setup, apply_setup_config_file, apply_setup_recipe,
     compile_json, inspect_bundle_json, list_policies, prepare_saved_setup,
     prepare_setup_config_file, prepare_setup_recipe, preview_bundle_file, preview_prepared_setup,
-    preview_saved_setup, preview_setup_config_file, preview_setup_recipe, probe_host,
-    rollback_repository, show_policy, status_repository, uninstall_repository, update_bundle_file,
-    update_saved_setup, update_setup_config_file, update_setup_recipe,
+    preview_saved_setup, preview_setup_config_file, preview_setup_recipe,
+    probe_host_with_repository, rollback_repository, show_policy, status_repository,
+    uninstall_repository, update_bundle_file, update_saved_setup, update_setup_config_file,
+    update_setup_recipe,
 };
 use anyhow::{Result, bail};
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -84,6 +85,8 @@ struct ProbeArgs {
     host: String,
     #[arg(long)]
     command: Option<String>,
+    #[arg(long, default_value = ".")]
+    repository: PathBuf,
 }
 
 #[derive(Args)]
@@ -190,7 +193,11 @@ fn run() -> Result<()> {
         ),
         Command::Doctor(args) => println!(
             "{}",
-            serde_json::to_string_pretty(&probe_host(&args.host, args.command.as_deref())?)?
+            serde_json::to_string_pretty(&probe_host_with_repository(
+                &args.host,
+                args.command.as_deref(),
+                &args.repository,
+            )?)?
         ),
     }
     Ok(())
