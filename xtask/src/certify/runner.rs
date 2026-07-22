@@ -34,6 +34,9 @@ impl OwnedReportRepo {
             .join(format!("{epoch}-{}-{suffix}", std::process::id()));
         let workdir = report_dir.join("workdir");
         fs::create_dir_all(&workdir).context("failed to create owned certification repository")?;
+        let report_dir = fs::canonicalize(&report_dir)
+            .context("failed to canonicalize owned certification report")?;
+        let workdir = report_dir.join("workdir");
         let status = Command::new("git")
             .args(["init", "--quiet"])
             .current_dir(&workdir)
@@ -49,6 +52,7 @@ impl OwnedReportRepo {
     }
 }
 
+#[cfg(test)]
 #[derive(Debug)]
 pub(crate) struct FileSnapshot {
     path: PathBuf,
@@ -69,6 +73,7 @@ pub(crate) enum RestorationOutcome {
 
 pub(crate) type RestorationTracker = Rc<RefCell<RestorationOutcome>>;
 
+#[cfg(test)]
 impl FileSnapshot {
     pub fn capture(path: impl Into<PathBuf>) -> Result<Self> {
         let path = path.into();
@@ -107,6 +112,7 @@ impl FileSnapshot {
     }
 }
 
+#[cfg(test)]
 impl Drop for FileSnapshot {
     fn drop(&mut self) {
         if !self.restored {
@@ -118,6 +124,7 @@ impl Drop for FileSnapshot {
     }
 }
 
+#[cfg(test)]
 fn restore_file(path: &Path, original: Option<&[u8]>) -> Result<()> {
     match original {
         Some(bytes) => {
@@ -316,6 +323,9 @@ fn redact(value: &str, secrets: &[&str]) -> String {
 mod tests {
     use super::*;
 
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+
     fn temp(name: &str) -> PathBuf {
         let path = std::env::temp_dir().join(format!(
             "switchloom-runner-{name}-{}-{}",
@@ -406,6 +416,26 @@ mod tests {
         assert!(retained.timed_out);
         assert_eq!(retained.status, None);
         assert!(!retained.stdout.contains(secret));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn owned_report_repo_canonicalizes_a_symlinked_report_root() {
+        let root = temp("canonical-report");
+        let real = root.join("real");
+        let alias = root.join("alias");
+        fs::create_dir_all(&real).unwrap();
+        symlink(&real, &alias).unwrap();
+
+        let owned = OwnedReportRepo::create(&alias, "codex-openai").unwrap();
+
+        assert!(
+            owned
+                .report_dir
+                .starts_with(fs::canonicalize(&real).unwrap())
+        );
+        assert_eq!(owned.workdir, fs::canonicalize(&owned.workdir).unwrap());
         fs::remove_dir_all(root).unwrap();
     }
 }

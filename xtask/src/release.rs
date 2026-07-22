@@ -141,6 +141,7 @@ pub(crate) fn verify(options: VerifyOptions) -> Result<()> {
             "cargo",
             &["test", "--workspace", "--all-targets", "--all-features"],
         )?;
+        verify_packaged_source_tests(&options.root, &version)?;
         run(
             &options.root,
             "sh",
@@ -466,6 +467,60 @@ fn verify_public_inventories(root: &Path) -> Result<()> {
         cargo_files.len(),
         npm_files.len()
     );
+    Ok(())
+}
+
+fn verify_packaged_source_tests(root: &Path, version: &str) -> Result<()> {
+    run(
+        root,
+        "cargo",
+        &[
+            "package",
+            "--package",
+            "model-routing",
+            "--allow-dirty",
+            "--no-verify",
+            "--offline",
+        ],
+    )?;
+    let archive = fs::canonicalize(
+        root.join("target/package")
+            .join(format!("model-routing-{version}.crate")),
+    )?;
+    ensure!(
+        archive.is_file(),
+        "Cargo package archive missing at {}",
+        archive.display()
+    );
+
+    let stage = std::env::temp_dir().join(format!("switchloom-package-source-test-{version}"));
+    if stage.exists() {
+        fs::remove_dir_all(&stage)?;
+    }
+    fs::create_dir_all(&stage)?;
+    let archive = archive
+        .to_str()
+        .context("Cargo package archive path is not UTF-8")?;
+    run(&stage, "tar", &["-xzf", archive])?;
+
+    let unpacked = stage.join(format!("model-routing-{version}"));
+    ensure!(
+        unpacked.is_dir(),
+        "unpacked Cargo package missing at {}",
+        unpacked.display()
+    );
+    run(
+        &unpacked,
+        "cargo",
+        &[
+            "test",
+            "--offline",
+            "codex_runtime_evidence_rejects_retained_source_without_claimed_raw_output",
+            "--",
+            "--nocapture",
+        ],
+    )?;
+    println!("packaged source provenance test passed");
     Ok(())
 }
 

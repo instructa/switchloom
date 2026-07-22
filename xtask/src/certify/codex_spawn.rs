@@ -76,6 +76,8 @@ struct SpawnOutput {
 }
 
 pub(crate) fn extract(input: CodexRawInput) -> Result<String> {
+    let canonical_workdir =
+        fs::canonicalize(&input.workdir).context("failed to canonicalize Codex oracle workdir")?;
     let expected: Expected = read_json(&input.expected, "expected Codex dispatch")?;
     ensure(
         !expected.children.is_empty(),
@@ -121,7 +123,7 @@ pub(crate) fn extract(input: CodexRawInput) -> Result<String> {
         "parent session is not a user thread",
     )?;
     ensure(
-        parent_meta["cwd"].as_str() == input.workdir.to_str(),
+        persisted_cwd_matches(parent_meta["cwd"].as_str(), &canonical_workdir),
         "parent session cwd does not match oracle workdir",
     )?;
 
@@ -296,7 +298,7 @@ pub(crate) fn extract(input: CodexRawInput) -> Result<String> {
             .iter()
             .find(|edge| edge.child_thread_id == child_thread_id)
             .context("missing thread_spawn_edges row")?;
-        validate_edge(edge, child, &parent_thread_id, &input.workdir)?;
+        validate_edge(edge, child, &parent_thread_id, &canonical_workdir)?;
         let child_session = find_session(child_thread_id, [&sessions_dir, &archived_dir])?;
         let child_records = read_jsonl(&child_session)?;
         let meta =
@@ -321,7 +323,7 @@ pub(crate) fn extract(input: CodexRawInput) -> Result<String> {
             "input": {"message_sha256":message_hash,"message_bytes":message_bytes,"max_message_bytes":child.max_message_bytes,"message_encoding":encoding,"message_plaintext_verdict":plaintext_verdict,"message_plaintext_intent_sha256":intent_hash},
             "spawn_output": {"task_name":output.task_name,"agent_id":output.agent_id},
             "session": {"agent_role":meta["agent_role"],"agent_path":meta.get("agent_path").cloned().unwrap_or_else(|| json!(child.canonical_task)),"thread_source":meta["thread_source"],"parent_thread_id":meta["parent_thread_id"],"session_file":file_name(&child_session)},
-            "state": {"agent_role":edge.agent_role,"agent_path":edge.agent_path,"model":edge.model,"reasoning_effort":edge.reasoning_effort,"thread_source":edge.thread_source,"cwd":edge.cwd},
+            "state": {"agent_role":edge.agent_role,"agent_path":edge.agent_path,"model":edge.model,"reasoning_effort":edge.reasoning_effort,"thread_source":edge.thread_source,"cwd":&canonical_workdir},
             "final_answer":{"message_type":"FINAL_ANSWER"}
         }));
     }
@@ -334,7 +336,7 @@ pub(crate) fn extract(input: CodexRawInput) -> Result<String> {
         "nonce":format!("{}:{}:{}", parent_thread_id, child["child_thread_id"].as_str().unwrap(), child["spawn"]["call_id"].as_str().unwrap()),
         "raw_evidence_refs":[format!("codex-session:{}",file_name(&parent_session)),format!("codex-session:{}",child["session"]["session_file"].as_str().unwrap()),format!("state_5.sqlite:thread_spawn_edges:{}:{}",parent_thread_id,child["child_thread_id"].as_str().unwrap()),format!("spawn_call:{}",child["spawn"]["call_id"].as_str().unwrap())],"verdict":"deterministic"
     })).collect::<Vec<_>>();
-    let receipt = json!({"schema_version":"switchloom.codex_runtime_evidence.v1","run":{"status":"complete","complete_marker":"SWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE","evidence_source":"codex_persisted_spawn_state","parent_thread_id":parent_thread_id,"parent_session":file_name(&parent_session),"workdir":input.workdir},"children":observed,"dispatch_evidence":dispatch});
+    let receipt = json!({"schema_version":"switchloom.codex_runtime_evidence.v1","run":{"status":"complete","complete_marker":"SWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE","evidence_source":"codex_persisted_spawn_state","parent_thread_id":parent_thread_id,"parent_session":file_name(&parent_session),"workdir":canonical_workdir},"children":observed,"dispatch_evidence":dispatch});
     let text = serde_json::to_string_pretty(&receipt)?;
     codex::validate_json(&text, Some(&input.expected))?;
     Ok(text)
@@ -391,9 +393,19 @@ fn validate_edge(edge: &Edge, child: &ExpectedChild, parent: &str, workdir: &Pat
         "state identity/model/effort mismatch",
     )?;
     ensure(
-        edge.thread_source == "subagent" && Some(edge.cwd.as_str()) == workdir.to_str(),
+        edge.thread_source == "subagent" && persisted_cwd_matches(Some(&edge.cwd), workdir),
         "state source/cwd mismatch",
     )
+}
+
+fn persisted_cwd_matches(persisted: Option<&str>, expected: &Path) -> bool {
+    let Some(persisted) = persisted else {
+        return false;
+    };
+    match (fs::canonicalize(persisted), fs::canonicalize(expected)) {
+        (Ok(persisted), Ok(expected)) => persisted == expected,
+        _ => false,
+    }
 }
 
 fn validate_child_meta(
@@ -522,7 +534,14 @@ fn query_edges(db: &Path, parent: &str) -> Result<Vec<Edge>> {
         output.status.success(),
         String::from_utf8_lossy(&output.stderr),
     )?;
-    serde_json::from_slice(&output.stdout).context("sqlite3 returned invalid JSON")
+    parse_sqlite_edges(&output.stdout)
+}
+
+fn parse_sqlite_edges(output: &[u8]) -> Result<Vec<Edge>> {
+    if output.iter().all(u8::is_ascii_whitespace) {
+        return Ok(Vec::new());
+    }
+    serde_json::from_slice(output).context("sqlite3 returned invalid JSON")
 }
 fn find_session(thread: &str, roots: [&PathBuf; 2]) -> Result<PathBuf> {
     let suffix = format!("{thread}.jsonl");
@@ -583,4 +602,37 @@ fn is_codex_ciphertext(value: &str) -> bool {
         && value[5..]
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'='))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_sqlite_edges, persisted_cwd_matches};
+    use std::fs;
+
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+
+    #[test]
+    fn sqlite_json_no_rows_is_an_empty_edge_set() {
+        assert!(parse_sqlite_edges(b"").unwrap().is_empty());
+        assert!(parse_sqlite_edges(b"\n").unwrap().is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn persisted_cwd_accepts_symlink_alias_and_rejects_a_different_directory() {
+        let root =
+            std::env::temp_dir().join(format!("switchloom-codex-cwd-{}", std::process::id()));
+        let real = root.join("real");
+        let alias = root.join("alias");
+        let different = root.join("different");
+        fs::create_dir_all(&real).unwrap();
+        fs::create_dir_all(&different).unwrap();
+        symlink(&real, &alias).unwrap();
+
+        assert!(persisted_cwd_matches(alias.to_str(), &real));
+        assert!(!persisted_cwd_matches(different.to_str(), &real));
+
+        fs::remove_dir_all(root).unwrap();
+    }
 }

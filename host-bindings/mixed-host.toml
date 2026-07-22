@@ -5,9 +5,9 @@ host = "mixed-host"
 runtime_class = "native-subagent"
 driver_role = "driver"
 default_role = "driver"
-capability_evidence = ["codex-0.144.0-native-v2-9ff47868eb", "builtin-cursor-project-agent-contract"]
+capability_evidence = ["codex-0.145.0-native-v2", "builtin-cursor-project-agent-contract"]
 billing_assumptions = ["Each host remains authoritative for its own billing and availability"]
-known_limitations = ["effective route evidence must be collected independently from each active host backend"]
+known_limitations = ["effective route evidence must be collected independently from each active host backend", "Luna remains experimental/unverified for Codex V2 and is not used by certified default routes"]
 
 [capabilities]
 model_override = true
@@ -31,7 +31,16 @@ cost_tier = "standard"
 fork_turns = { mode = "none" }
 
 [profiles.mechanical]
-profile = "mixed-codex-luna-xhigh"
+profile = "mixed-codex-terra-high-mechanical"
+client = "codex"
+model = "gpt-5.6-terra"
+agent_type = "model_routing_terra_mechanical"
+effort = "high"
+cost_tier = "standard"
+fork_turns = { mode = "none" }
+
+[profiles.experimental_luna]
+profile = "mixed-codex-luna-xhigh-experimental"
 client = "codex"
 model = "gpt-5.6-luna"
 agent_type = "model_routing_luna_xhigh"
@@ -90,16 +99,30 @@ Implement one picked item, keep the slice small, and record real verification ev
 '''
 
 [[artifacts]]
+path = ".codex/agents/model-routing-terra-mechanical.toml"
+kind = "codex_agent"
+content = '''name = "model_routing_terra_mechanical"
+description = "Certified Terra mechanical implementation."
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+
+developer_instructions = """
+Follow one tightly bounded mechanical item, verify the result, and stop.
+"""
+'''
+
+[[artifacts]]
 path = ".codex/agents/model-routing-luna-xhigh.toml"
 kind = "codex_agent"
 content = '''name = "model_routing_luna_xhigh"
-description = "Bounded checklist-driven and mechanical implementation."
+description = "Experimental Luna role; not certified for deterministic Codex V2 routing."
 model = "gpt-5.6-luna"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
-Follow one tightly bounded item, verify the result, and stop.
+Use only when explicitly selected as experimental/unverified. Do not treat this role as a certified Switchloom default.
 """
 '''
 

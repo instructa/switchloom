@@ -405,6 +405,16 @@ pub struct ProbeReport {
     pub capabilities: Vec<String>,
     pub authentication: String,
     pub limitation: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diagnostics: Vec<ProbeDiagnostic>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ProbeDiagnostic {
+    pub code: String,
+    pub severity: String,
+    pub message: String,
+    pub repair: String,
 }
 
 #[derive(Debug, Clone, Copy)]

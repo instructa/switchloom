@@ -193,7 +193,7 @@ describe("website SetupSpec to CLI parity", () => {
     const command = recipeApplyCommand(config, hostCatalog, setupTransport.recipePrefix);
     const recipe = command.match(/--recipe '([^']+)'/)?.[1];
     expect(recipe).toBeTruthy();
-    expect(command).toBe(`npx switchloom@0.3.0 apply --recipe ${shellQuote(recipe!)} --repository .`);
+    expect(command).toBe(`npx switchloom@0.3.1 apply --recipe ${shellQuote(recipe!)} --repository .`);
 
     const { repository } = await tempRepo("switchloom-website-standalone-");
     const preview = report(run(["preview", "--recipe", recipe!, "--repository", repository]));

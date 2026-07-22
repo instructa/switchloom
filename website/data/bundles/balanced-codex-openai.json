@@ -6,7 +6,7 @@
   "generated_at": "2026-07-16T00:00:00Z",
   "source": {
     "package": "model-routing",
-    "package_version": "0.3.0",
+    "package_version": "0.3.1",
     "integration": "standalone"
   },
   "policy": {
@@ -89,7 +89,7 @@
     }
   ],
   "profiles": {
-    "codex-luna-xhigh": {
+    "codex-luna-xhigh-experimental": {
       "client": "codex",
       "model": "gpt-5.6-luna",
       "agent_type": "model_routing_luna_xhigh",
@@ -114,7 +114,10 @@
       "model": "gpt-5.6-sol",
       "agent_type": "model_routing_sol_medium",
       "effort": "medium",
-      "cost_tier": "standard"
+      "cost_tier": "standard",
+      "fork_turns": {
+        "mode": "none"
+      }
     },
     "codex-sol-ultra": {
       "client": "codex",
@@ -130,6 +133,16 @@
       "client": "codex",
       "model": "gpt-5.6-terra",
       "agent_type": "model_routing_terra_high",
+      "effort": "high",
+      "cost_tier": "standard",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "codex-terra-high-mechanical": {
+      "client": "codex",
+      "model": "gpt-5.6-terra",
+      "agent_type": "model_routing_terra_mechanical",
       "effort": "high",
       "cost_tier": "standard",
       "fork_turns": {
@@ -173,7 +186,7 @@
       "match": {
         "work_type": "mechanical"
       },
-      "profile": "codex-luna-xhigh",
+      "profile": "codex-terra-high-mechanical",
       "fallbacks": []
     },
     {
@@ -193,8 +206,8 @@
       "path": ".codex/agents/model-routing-luna-xhigh.toml",
       "media_type": "application/toml",
       "mode": "create",
-      "content": "name = \"model_routing_luna_xhigh\"\ndescription = \"Bounded checklist-driven and mechanical implementation.\"\nmodel = \"gpt-5.6-luna\"\nmodel_reasoning_effort = \"xhigh\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nFollow one tightly bounded item, verify the result, and stop.\n\"\"\"\n",
-      "sha256": "c37a8a3419eab6a7769cdbafeebb09167ff1564ee713f52593ef4d4f7b97f1a5"
+      "content": "name = \"model_routing_luna_xhigh\"\ndescription = \"Experimental Luna role; not certified for deterministic Codex V2 routing.\"\nmodel = \"gpt-5.6-luna\"\nmodel_reasoning_effort = \"xhigh\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nUse only when explicitly selected as experimental/unverified. Do not treat this role as a certified Switchloom default.\n\"\"\"\n",
+      "sha256": "b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7"
     },
     {
       "path": ".codex/agents/model-routing-sol-high.toml",
@@ -225,6 +238,13 @@
       "sha256": "8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d"
     },
     {
+      "path": ".codex/agents/model-routing-terra-mechanical.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_terra_mechanical\"\ndescription = \"Certified Terra mechanical implementation.\"\nmodel = \"gpt-5.6-terra\"\nmodel_reasoning_effort = \"high\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nFollow one tightly bounded mechanical item, verify the result, and stop.\n\"\"\"\n",
+      "sha256": "7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15"
+    },
+    {
       "path": ".codex/agents/model-routing-terra-medium.toml",
       "media_type": "application/toml",
       "mode": "create",
@@ -235,13 +255,13 @@
       "path": ".codex/config.toml",
       "media_type": "application/toml",
       "mode": "replace",
-      "content": "[agents.model_routing_luna_xhigh]\nconfig_file = \"./agents/model-routing-luna-xhigh.toml\"\n\n[agents.model_routing_sol_high]\nconfig_file = \"./agents/model-routing-sol-high.toml\"\n\n[agents.model_routing_sol_medium]\nconfig_file = \"./agents/model-routing-sol-medium.toml\"\n\n[agents.model_routing_sol_ultra]\nconfig_file = \"./agents/model-routing-sol-ultra.toml\"\n\n[agents.model_routing_terra_high]\nconfig_file = \"./agents/model-routing-terra-high.toml\"\n\n[agents.model_routing_terra_medium]\nconfig_file = \"./agents/model-routing-terra-medium.toml\"\n",
-      "sha256": "38511fd94693a95ebcdb0d2ca65f414109b05835172729c35f91d70d20d3b60d"
+      "content": "[agents.model_routing_luna_xhigh]\nconfig_file = \"./agents/model-routing-luna-xhigh.toml\"\n\n[agents.model_routing_sol_high]\nconfig_file = \"./agents/model-routing-sol-high.toml\"\n\n[agents.model_routing_sol_medium]\nconfig_file = \"./agents/model-routing-sol-medium.toml\"\n\n[agents.model_routing_sol_ultra]\nconfig_file = \"./agents/model-routing-sol-ultra.toml\"\n\n[agents.model_routing_terra_high]\nconfig_file = \"./agents/model-routing-terra-high.toml\"\n\n[agents.model_routing_terra_mechanical]\nconfig_file = \"./agents/model-routing-terra-mechanical.toml\"\n\n[agents.model_routing_terra_medium]\nconfig_file = \"./agents/model-routing-terra-medium.toml\"\n\n[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = false\n",
+      "sha256": "5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e"
     }
   ],
   "evidence": {
     "evaluation_ids": [
-      "codex-cli-0.144.5-native-v2"
+      "codex-0.145.0-native-v2"
     ],
     "status": "experimental"
   },
@@ -252,6 +272,7 @@
       "integration": "standalone",
       "semantic_roles": [
         "driver",
+        "experimental_luna",
         "explorer",
         "mechanical",
         "moonshot",
@@ -266,6 +287,12 @@
           "instructions": "Route `driver` through `codex-sol-medium`."
         },
         {
+          "semantic_role": "experimental_luna",
+          "requested_model": "gpt-5.6-luna",
+          "requested_effort": "xhigh",
+          "instructions": "Route `experimental_luna` through `codex-luna-xhigh-experimental`."
+        },
+        {
           "semantic_role": "explorer",
           "requested_model": "gpt-5.6-terra",
           "requested_effort": "medium",
@@ -273,9 +300,9 @@
         },
         {
           "semantic_role": "mechanical",
-          "requested_model": "gpt-5.6-luna",
-          "requested_effort": "xhigh",
-          "instructions": "Route `mechanical` through `codex-luna-xhigh`."
+          "requested_model": "gpt-5.6-terra",
+          "requested_effort": "high",
+          "instructions": "Route `mechanical` through `codex-terra-high-mechanical`."
         },
         {
           "semantic_role": "moonshot",
@@ -305,14 +332,14 @@
       "schema_version": 1,
       "host": "codex",
       "host_version_constraints": {
-        "minimum": "codex-cli 0.144.5",
-        "maximum": "codex-cli 0.144.5",
+        "minimum": "codex-cli 0.145.0",
+        "maximum": "codex-cli 0.145.0",
         "evidence_max_age_seconds": 31536000
       },
       "runtime_class": "native-subagent",
       "runtime_behavior": {
-        "capability_version": "codex-cli-0.144.5-native-v2",
-        "installed_host_version_source": "codex-cli 0.144.5 via codex --version",
+        "capability_version": "codex-0.145.0-native-v2",
+        "installed_host_version_source": "codex-cli 0.145.0 via npx -y @openai/codex@0.145.0 --version",
         "backend_selection_source": "installed Codex backend selected by the authenticated host account and workspace; Switchloom only declares repository-local project agent model and effort requests",
         "trust_boundary": "trusted project repository plus generated .codex/config.toml [agents.*] registrations; global Codex configuration is outside Switchloom ownership",
         "discovery_behavior": "Codex discovers repository-local agent files through .codex/config.toml registration entries after project trust and host reload/restart",
@@ -330,11 +357,11 @@
           "automatic_delegation_requires_ultra": true
         },
         "source_references": [
-          "docs/codex-v2-runtime-evidence.json#sha256:e9962d316274b08e7bc422747e12a2f3a723c3647354243f06f3efb6b504a8e9"
+          "docs/codex-v2-runtime-evidence.json#sha256:1ca8b20e2e8b2c57f741d905bbfed6971a54e0520b3e9a2e9e8e5eefc0aa123d"
         ]
       },
       "discovery_artifacts": [
-        "codex-cli-0.144.5-native-v2"
+        "codex-0.145.0-native-v2"
       ],
       "dispatch_fields": [
         "profile",
@@ -371,7 +398,7 @@
         "effective_identity": "deterministic",
         "effective_model": "deterministic",
         "raw_evidence_refs": [
-          "codex-cli-0.144.5-native-v2"
+          "codex-0.145.0-native-v2"
         ]
       },
       "guarantees": {
@@ -402,7 +429,8 @@
         }
       },
       "known_limitations": [
-        "native multi-agent v2 and the requested model must be active on the current Codex backend"
+        "Codex CLI 0.145.0 must load repository-local features.multi_agent_v2 after project trust and host reload/restart",
+        "Luna remains experimental/unverified for Codex V2 and is not used by certified default routes"
       ]
     },
     "adapter": {
@@ -430,6 +458,7 @@
           ".codex/agents/model-routing-sol-medium.toml",
           ".codex/agents/model-routing-sol-ultra.toml",
           ".codex/agents/model-routing-terra-high.toml",
+          ".codex/agents/model-routing-terra-mechanical.toml",
           ".codex/agents/model-routing-terra-medium.toml",
           ".codex/config.toml"
         ]
@@ -447,7 +476,7 @@
     },
     "planr_handoff": {
       "schema_version": 1,
-      "switchloom_package": "switchloom@0.3.0",
+      "switchloom_package": "switchloom@0.3.1",
       "semantic_role_contract": "Planr supplies usage policy `balanced`, work_type routes, and semantic roles; Switchloom owns the selected host binding, model, effort, fork/context policy, and generated dispatch artifacts.",
       "required_consumer_behavior": [
         "Consume RoutingIntentV1 as the only source for semantic_role, work_type, selected profile, model, effort, agent_type, and fork_turns inputs.",

@@ -6,7 +6,7 @@
   "generated_at": "2026-07-16T00:00:00Z",
   "source": {
     "package": "model-routing",
-    "package_version": "0.3.0",
+    "package_version": "0.3.1",
     "integration": "planr"
   },
   "policy": {
@@ -89,7 +89,7 @@
     }
   ],
   "profiles": {
-    "mixed-codex-luna-xhigh": {
+    "mixed-codex-luna-xhigh-experimental": {
       "client": "codex",
       "model": "gpt-5.6-luna",
       "agent_type": "model_routing_luna_xhigh",
@@ -119,6 +119,16 @@
         "mode": "none"
       }
     },
+    "mixed-codex-terra-high-mechanical": {
+      "client": "codex",
+      "model": "gpt-5.6-terra",
+      "agent_type": "model_routing_terra_mechanical",
+      "effort": "high",
+      "cost_tier": "standard",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
     "mixed-cursor-fable-driver": {
       "client": "cursor",
       "model": "fable-5",
@@ -137,7 +147,7 @@
       "match": {
         "work_type": "mechanical"
       },
-      "profile": "mixed-codex-luna-xhigh",
+      "profile": "mixed-codex-terra-high-mechanical",
       "fallbacks": []
     },
     {
@@ -157,8 +167,8 @@
       "path": ".codex/agents/model-routing-luna-xhigh.toml",
       "media_type": "application/toml",
       "mode": "create",
-      "content": "name = \"model_routing_luna_xhigh\"\ndescription = \"Bounded checklist-driven and mechanical implementation.\"\nmodel = \"gpt-5.6-luna\"\nmodel_reasoning_effort = \"xhigh\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nUse the existing Planr internal worker protocol for exactly one picked Planr item. Read the pick packet, implement only that item, log changed files and real verification commands, request review through Planr, and stop. Do not create or invoke any routing-specific, goal, or loop workflow skill. Planr users enter only through $planr-goal and $planr-loop.\n\nProtocol preload: $planr-work\n\"\"\"\n",
-      "sha256": "15302a8a8284a36902ac4c45f3ddfbb7f63ffd7360df2c1f992ff1bc5aa62643"
+      "content": "name = \"model_routing_luna_xhigh\"\ndescription = \"Experimental Luna role; not certified for deterministic Codex V2 routing.\"\nmodel = \"gpt-5.6-luna\"\nmodel_reasoning_effort = \"xhigh\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nUse the existing Planr internal worker protocol for exactly one picked Planr item. Read the pick packet, implement only that item, log changed files and real verification commands, request review through Planr, and stop. Do not create or invoke any routing-specific, goal, or loop workflow skill. Planr users enter only through $planr-goal and $planr-loop.\n\nProtocol preload: $planr-work\n\"\"\"\n",
+      "sha256": "4d7a699f7aa09fb3d8d32468f3c793ded3558a4fc1c5b4c2062807af07de85b8"
     },
     {
       "path": ".codex/agents/model-routing-sol-high.toml",
@@ -175,11 +185,18 @@
       "sha256": "d19e92ab08073ebcab81f3ebbc75e4af61fae610bf6bf5002cb1d9ad21dfca26"
     },
     {
+      "path": ".codex/agents/model-routing-terra-mechanical.toml",
+      "media_type": "application/toml",
+      "mode": "create",
+      "content": "name = \"model_routing_terra_mechanical\"\ndescription = \"Certified Terra mechanical implementation.\"\nmodel = \"gpt-5.6-terra\"\nmodel_reasoning_effort = \"high\"\nsandbox_mode = \"workspace-write\"\n\ndeveloper_instructions = \"\"\"\nFollow one tightly bounded mechanical item, verify the result, and stop.\n\"\"\"\n",
+      "sha256": "7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15"
+    },
+    {
       "path": ".codex/config.toml",
       "media_type": "application/toml",
       "mode": "replace",
-      "content": "[agents.model_routing_luna_xhigh]\nconfig_file = \"./agents/model-routing-luna-xhigh.toml\"\n\n[agents.model_routing_sol_high]\nconfig_file = \"./agents/model-routing-sol-high.toml\"\n\n[agents.model_routing_terra_high]\nconfig_file = \"./agents/model-routing-terra-high.toml\"\n",
-      "sha256": "673a3abad282412014d93160a42e2366c203553ff18530951afd7394e78c11c8"
+      "content": "[agents.model_routing_luna_xhigh]\nconfig_file = \"./agents/model-routing-luna-xhigh.toml\"\n\n[agents.model_routing_sol_high]\nconfig_file = \"./agents/model-routing-sol-high.toml\"\n\n[agents.model_routing_terra_high]\nconfig_file = \"./agents/model-routing-terra-high.toml\"\n\n[agents.model_routing_terra_mechanical]\nconfig_file = \"./agents/model-routing-terra-mechanical.toml\"\n\n[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = false\n",
+      "sha256": "62c632cf3eb279cd1f82c71a527559b2a40c75f2646307d5a1df3523dd12d016"
     },
     {
       "path": ".cursor/agents/model-routing-fable-driver.md",
@@ -192,8 +209,8 @@
       "path": ".planr/agents.toml",
       "media_type": "application/toml",
       "mode": "replace",
-      "content": "[profiles.mixed-cursor-fable-driver]\nclient = \"cursor\"\nmodel = \"fable-5\"\ncost_tier = \"premium\"\n\n[profiles.model_routing_luna_xhigh]\nclient = \"codex\"\nmodel = \"gpt-5.6-luna\"\neffort = \"xhigh\"\ncost_tier = \"premium\"\nnotes = \"native_agent_type=model_routing_luna_xhigh\"\n\n[profiles.model_routing_sol_high]\nclient = \"codex\"\nmodel = \"gpt-5.6-sol\"\neffort = \"high\"\ncost_tier = \"premium\"\nnotes = \"native_agent_type=model_routing_sol_high\"\n\n[profiles.model_routing_terra_high]\nclient = \"codex\"\nmodel = \"gpt-5.6-terra\"\neffort = \"high\"\ncost_tier = \"standard\"\nnotes = \"native_agent_type=model_routing_terra_high\"\n\n[[routes]]\nprofile = \"model_routing_terra_high\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"code\"\n\n[[routes]]\nprofile = \"model_routing_luna_xhigh\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"mechanical\"\n\n[[routes]]\nprofile = \"model_routing_sol_high\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"review\"\n\n[route_default]\nprofile = \"mixed-cursor-fable-driver\"\nfallbacks = []\n",
-      "sha256": "455aaa6587085ce368187e2f67ff71575ff65fd2eafc64bb8403e1c1365ecb1b"
+      "content": "[profiles.mixed-cursor-fable-driver]\nclient = \"cursor\"\nmodel = \"fable-5\"\ncost_tier = \"premium\"\n\n[profiles.model_routing_luna_xhigh]\nclient = \"codex\"\nmodel = \"gpt-5.6-luna\"\neffort = \"xhigh\"\ncost_tier = \"premium\"\nnotes = \"native_agent_type=model_routing_luna_xhigh\"\n\n[profiles.model_routing_sol_high]\nclient = \"codex\"\nmodel = \"gpt-5.6-sol\"\neffort = \"high\"\ncost_tier = \"premium\"\nnotes = \"native_agent_type=model_routing_sol_high\"\n\n[profiles.model_routing_terra_high]\nclient = \"codex\"\nmodel = \"gpt-5.6-terra\"\neffort = \"high\"\ncost_tier = \"standard\"\nnotes = \"native_agent_type=model_routing_terra_high\"\n\n[profiles.model_routing_terra_mechanical]\nclient = \"codex\"\nmodel = \"gpt-5.6-terra\"\neffort = \"high\"\ncost_tier = \"standard\"\nnotes = \"native_agent_type=model_routing_terra_mechanical\"\n\n[[routes]]\nprofile = \"model_routing_terra_high\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"code\"\n\n[[routes]]\nprofile = \"model_routing_terra_mechanical\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"mechanical\"\n\n[[routes]]\nprofile = \"model_routing_sol_high\"\nfallbacks = []\n\n[routes.match]\nwork_type = \"review\"\n\n[route_default]\nprofile = \"mixed-cursor-fable-driver\"\nfallbacks = []\n",
+      "sha256": "cc9bb0b657be0ddd9b2cc89ce5912f43b2f81bca7983e296d7570c936d3c86ca"
     },
     {
       "path": ".planr/policy.toml",
@@ -216,6 +233,7 @@
       "integration": "planr",
       "semantic_roles": [
         "driver",
+        "experimental_luna",
         "mechanical",
         "reviewer",
         "worker"
@@ -227,10 +245,16 @@
           "instructions": "Route `driver` through `mixed-cursor-fable-driver`."
         },
         {
-          "semantic_role": "mechanical",
+          "semantic_role": "experimental_luna",
           "requested_model": "gpt-5.6-luna",
           "requested_effort": "xhigh",
-          "instructions": "Route `mechanical` through `mixed-codex-luna-xhigh`."
+          "instructions": "Route `experimental_luna` through `mixed-codex-luna-xhigh-experimental`."
+        },
+        {
+          "semantic_role": "mechanical",
+          "requested_model": "gpt-5.6-terra",
+          "requested_effort": "high",
+          "instructions": "Route `mechanical` through `mixed-codex-terra-high-mechanical`."
         },
         {
           "semantic_role": "reviewer",
@@ -274,12 +298,12 @@
           "automatic_delegation_requires_ultra": false
         },
         "source_references": [
-          "codex-0.144.0-native-v2-9ff47868eb",
+          "codex-0.145.0-native-v2",
           "builtin-cursor-project-agent-contract"
         ]
       },
       "discovery_artifacts": [
-        "codex-0.144.0-native-v2-9ff47868eb",
+        "codex-0.145.0-native-v2",
         "builtin-cursor-project-agent-contract"
       ],
       "dispatch_fields": [
@@ -317,7 +341,7 @@
         "effective_identity": "advisory",
         "effective_model": "advisory",
         "raw_evidence_refs": [
-          "codex-0.144.0-native-v2-9ff47868eb",
+          "codex-0.145.0-native-v2",
           "builtin-cursor-project-agent-contract"
         ]
       },
@@ -349,7 +373,8 @@
         }
       },
       "known_limitations": [
-        "effective route evidence must be collected independently from each active host backend"
+        "effective route evidence must be collected independently from each active host backend",
+        "Luna remains experimental/unverified for Codex V2 and is not used by certified default routes"
       ]
     },
     "adapter": {
@@ -375,6 +400,7 @@
           ".codex/agents/model-routing-luna-xhigh.toml",
           ".codex/agents/model-routing-sol-high.toml",
           ".codex/agents/model-routing-terra-high.toml",
+          ".codex/agents/model-routing-terra-mechanical.toml",
           ".codex/config.toml",
           ".cursor/agents/model-routing-fable-driver.md",
           ".planr/agents.toml",
@@ -394,7 +420,7 @@
     },
     "planr_handoff": {
       "schema_version": 1,
-      "switchloom_package": "switchloom@0.3.0",
+      "switchloom_package": "switchloom@0.3.1",
       "semantic_role_contract": "Planr supplies usage policy `balanced`, work_type routes, and semantic roles; Switchloom owns the selected host binding, model, effort, fork/context policy, and generated dispatch artifacts.",
       "required_consumer_behavior": [
         "Consume RoutingIntentV1 as the only source for semantic_role, work_type, selected profile, model, effort, agent_type, and fork_turns inputs.",

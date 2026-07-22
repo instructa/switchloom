@@ -102,6 +102,10 @@ describe("Switchloom generator", () => {
   });
 
   it("uses the complete current Codex GPT-5.6 effort manifest", () => {
+    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-sol")?.label).toBe("Sol (certified)");
+    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-terra")?.label).toBe("Terra (certified)");
+    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-luna")?.label).toBe("Luna (experimental)");
+    expect(hostCatalog.cursor.models.find((model) => model.id === "gpt-5.6-luna")?.label).toBe("Luna");
     expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-sol")?.efforts).toEqual([
       "low", "medium", "high", "xhigh", "ultra",
     ]);
@@ -142,11 +146,21 @@ describe("Switchloom generator", () => {
     expect(Object.values(codexLight.assignments).map((assignment) => assignment.effort)).toEqual([
       "low", "low", "low", "low",
     ]);
+    expect(Object.values(codexLight.assignments).map((assignment) => assignment.model)).toEqual([
+      "gpt-5.6-terra", "gpt-5.6-terra", "gpt-5.6-terra", "gpt-5.6-terra",
+    ]);
     for (const host of HOST_IDS) {
       for (const preset of ["light", "balanced", "high"] as const) {
         expect(Object.values(applyPreset(createConfig(host), preset, hostCatalog).assignments))
           .not.toContainEqual(expect.objectContaining({ effort: "ultra" }));
       }
+    }
+  });
+
+  it("keeps Luna out of every certified Codex preset", () => {
+    for (const preset of ["light", "balanced", "high"] as const) {
+      expect(Object.values(applyPreset(createConfig("codex"), preset, hostCatalog).assignments))
+        .not.toContainEqual(expect.objectContaining({ model: "gpt-5.6-luna" }));
     }
   });
 
@@ -231,7 +245,7 @@ describe("Switchloom generator", () => {
     const recipe = setupRecipe(config, hostCatalog, transport.recipePrefix);
     expect(recipe).toMatch(/^sw1_[A-Za-z0-9_-]+$/);
     const command = recipeApplyCommand(config, hostCatalog, transport.recipePrefix);
-    expect(command).toMatch(/^npx switchloom@0\.3\.0 apply --recipe 'sw1_[A-Za-z0-9_-]+' --repository \.$/);
+    expect(command).toMatch(/^npx switchloom@0\.3\.1 apply --recipe 'sw1_[A-Za-z0-9_-]+' --repository \.$/);
     const toml = setupConfigToml(config, hostCatalog);
     expect(toml).toContain('host = "codex-openai"');
     expect(toml).toContain('integration = "standalone"');
@@ -243,7 +257,7 @@ describe("Switchloom generator", () => {
   it("shows the full CLI lifecycle without claiming custom setup verification", () => {
     const commands = lifecycleCommands(createConfig("cursor"), hostCatalog);
     expect(commands).toEqual([
-      "npm install -g switchloom@0.3.0",
+      "npm install -g switchloom@0.3.1",
       expect.stringMatching(/^switchloom preview --recipe 'sw1_/),
       expect.stringMatching(/^switchloom apply --recipe 'sw1_/),
       "switchloom doctor cursor",

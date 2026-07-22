@@ -624,7 +624,6 @@ pub(crate) fn setup_profiles_from_intent(
                     )
                 })?;
             if runtime_host == "codex"
-                && selection.spawn.is_none()
                 && selection_matches_binding_profile(role, selection, binding)
             {
                 return Ok((
@@ -742,9 +741,7 @@ pub(crate) fn setup_artifacts_from_intent(
     roles
         .iter()
         .map(|(role, selection)| {
-            if runtime_host == "codex"
-                && selection.spawn.is_none()
-                && selection_matches_binding_profile(role, selection, binding)
+            if runtime_host == "codex" && selection_matches_binding_profile(role, selection, binding)
             {
                 return binding_artifact_for_role(binding, binding_artifacts, role);
             }
@@ -1108,9 +1105,7 @@ pub(crate) fn profile_from_binding_profile(profile: &BindingProfile) -> Profile 
 }
 
 pub(crate) fn validate_profile_fork_policy(profile: &Profile) -> Result<()> {
-    let requires_explicit_fork = profile.client == "codex"
-        && profile.agent_type.is_some()
-        && profile.agent_type.as_deref() != Some("model_routing_sol_medium");
+    let requires_explicit_fork = profile.client == "codex" && profile.agent_type.is_some();
     if !requires_explicit_fork {
         return Ok(());
     }

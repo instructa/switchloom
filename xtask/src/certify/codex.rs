@@ -420,6 +420,12 @@ fn validate_child(
         format_args!("{kind} effective model mismatch"),
     )?;
     ensure(
+        child.state.model != "gpt-5.6-luna"
+            && child.agent_type != "model_routing_luna_xhigh"
+            && child.profile != "codex-luna-xhigh-experimental",
+        format_args!("{kind} Luna evidence is experimental and unsupported for certification"),
+    )?;
+    ensure(
         child.state.reasoning_effort == expected.effort,
         format_args!("{kind} effective effort mismatch"),
     )?;
@@ -687,15 +693,5 @@ fn path_matches(value: &Option<String>, canonical: &str) -> bool {
     value.as_deref().is_none_or(|value| value == canonical)
 }
 pub(super) fn is_codex_version(value: &str) -> bool {
-    let Some(rest) = value
-        .strip_prefix("codex ")
-        .or_else(|| value.strip_prefix("codex-cli "))
-    else {
-        return false;
-    };
-    rest.split(['-', '+']).next().is_some_and(|v| {
-        v.split('.').count() == 3
-            && v.split('.')
-                .all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()))
-    })
+    matches!(value, "codex-cli 0.145.0" | "codex 0.145.0")
 }

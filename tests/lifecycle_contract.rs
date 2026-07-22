@@ -55,7 +55,37 @@ fn assert_codex_config_entry(content: &str, agent_type: &str, config_file: &str)
 
 fn assert_no_codex_config_entry(content: &str, agent_type: &str) {
     let parsed: toml::Value = toml::from_str(content).unwrap();
-    assert!(parsed["agents"].get(agent_type).is_none());
+    assert!(
+        parsed
+            .get("agents")
+            .and_then(toml::Value::as_table)
+            .and_then(|agents| agents.get(agent_type))
+            .is_none()
+    );
+}
+
+fn assert_codex_v2_activation(content: &str) {
+    let parsed: toml::Value = toml::from_str(content).unwrap();
+    assert_eq!(
+        parsed["features"]["multi_agent_v2"]["enabled"].as_bool(),
+        Some(true)
+    );
+    assert_eq!(
+        parsed["features"]["multi_agent_v2"]["hide_spawn_agent_metadata"].as_bool(),
+        Some(false)
+    );
+}
+
+fn assert_codex_v2_disabled(content: &str) {
+    let parsed: toml::Value = toml::from_str(content).unwrap();
+    assert_eq!(
+        parsed["features"]["multi_agent_v2"]["enabled"].as_bool(),
+        Some(false)
+    );
+    assert_eq!(
+        parsed["features"]["multi_agent_v2"]["hide_spawn_agent_metadata"].as_bool(),
+        Some(false)
+    );
 }
 
 #[test]
@@ -315,6 +345,7 @@ fn lifecycle_codex_config_merges_unrelated_entries_update_rollback_and_uninstall
         "model_routing_sol_high",
         "./agents/model-routing-sol-high.toml",
     );
+    assert_codex_v2_activation(&config_after_apply);
     assert!(config_after_apply.contains("[features]"));
 
     let mixed = compile_policy("balanced", "mixed-host", Integration::Standalone).unwrap();
@@ -336,6 +367,7 @@ fn lifecycle_codex_config_merges_unrelated_entries_update_rollback_and_uninstall
         "model_routing_terra_high",
         "./agents/model-routing-terra-high.toml",
     );
+    assert_codex_v2_activation(&config_after_update);
     assert_no_codex_config_entry(&config_after_update, "model_routing_sol_medium");
     assert_no_codex_config_entry(&config_after_update, "model_routing_sol_ultra");
 
@@ -359,6 +391,7 @@ fn lifecycle_codex_config_merges_unrelated_entries_update_rollback_and_uninstall
         "model_routing_sol_ultra",
         "./agents/model-routing-sol-ultra.toml",
     );
+    assert_codex_v2_activation(&config_after_rollback);
 
     let uninstall = uninstall_repository(&repository).unwrap();
     assert!(
@@ -374,6 +407,12 @@ fn lifecycle_codex_config_merges_unrelated_entries_update_rollback_and_uninstall
     );
     assert_no_codex_config_entry(&config_after_uninstall, "model_routing_terra_high");
     assert_no_codex_config_entry(&config_after_uninstall, "model_routing_sol_high");
+    assert!(
+        toml::from_str::<toml::Value>(&config_after_uninstall).unwrap()["features"]
+            .get("multi_agent_v2")
+            .is_none(),
+        "Switchloom-managed V2 activation should be removed when Switchloom created it"
+    );
     assert!(config_after_uninstall.contains("[features]"));
     assert_eq!(
         fs::read_to_string(repository.join(".codex/agents/local-reviewer.toml")).unwrap(),
@@ -384,6 +423,142 @@ fn lifecycle_codex_config_merges_unrelated_entries_update_rollback_and_uninstall
         global_config_before
     );
     assert!(!repository.join(".model-routing/manifest.json").exists());
+}
+
+#[test]
+fn lifecycle_preserves_compatible_user_owned_codex_v2_activation_and_rejects_false() {
+    let repository = temp_repo("codex-v2-compatible");
+    fs::create_dir_all(repository.join(".codex")).unwrap();
+    fs::write(
+        repository.join(".codex/config.toml"),
+        "[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = false\n",
+    )
+    .unwrap();
+
+    let codex = compile_policy("balanced", "codex-openai", Integration::Standalone).unwrap();
+    apply_bundle_file_with_bundle(&repository, &codex).unwrap();
+    let after_apply = fs::read_to_string(repository.join(".codex/config.toml")).unwrap();
+    assert_codex_v2_activation(&after_apply);
+    assert_codex_config_entry(
+        &after_apply,
+        "model_routing_terra_high",
+        "./agents/model-routing-terra-high.toml",
+    );
+
+    let mixed = compile_policy("balanced", "mixed-host", Integration::Standalone).unwrap();
+    let mixed_file = write_bundle_file(&repository, "mixed.json", &mixed);
+    update_bundle_file(&repository, &mixed_file).unwrap();
+    let after_update = fs::read_to_string(repository.join(".codex/config.toml")).unwrap();
+    assert_codex_v2_activation(&after_update);
+    let status_after_update = status_repository(&repository).unwrap();
+    assert!(
+        status_after_update.artifacts.iter().any(|artifact| {
+            artifact.path == ".codex/config.toml" && artifact.status == "managed"
+        })
+    );
+    rollback_repository(&repository).unwrap();
+    let after_rollback = fs::read_to_string(repository.join(".codex/config.toml")).unwrap();
+    assert_codex_v2_activation(&after_rollback);
+    assert_codex_config_entry(
+        &after_rollback,
+        "model_routing_terra_high",
+        "./agents/model-routing-terra-high.toml",
+    );
+
+    uninstall_repository(&repository).unwrap();
+    let after_uninstall = fs::read_to_string(repository.join(".codex/config.toml")).unwrap();
+    assert_codex_v2_activation(&after_uninstall);
+    assert_no_codex_config_entry(&after_uninstall, "model_routing_terra_high");
+
+    let conflict_repo = temp_repo("codex-v2-post-update-conflict");
+    fs::create_dir_all(conflict_repo.join(".codex")).unwrap();
+    fs::write(
+        conflict_repo.join(".codex/config.toml"),
+        "[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = false\n",
+    )
+    .unwrap();
+    apply_bundle_file_with_bundle(&conflict_repo, &codex).unwrap();
+    let mixed_file = write_bundle_file(&conflict_repo, "mixed.json", &mixed);
+    update_bundle_file(&conflict_repo, &mixed_file).unwrap();
+    let config_path = conflict_repo.join(".codex/config.toml");
+    let drifted = fs::read_to_string(&config_path)
+        .unwrap()
+        .replace("enabled = true", "enabled = false");
+    fs::write(&config_path, drifted).unwrap();
+    let status_after_false = status_repository(&conflict_repo).unwrap();
+    assert!(status_after_false.artifacts.iter().any(|artifact| {
+        artifact.path == ".codex/config.toml"
+            && artifact.status == "modified"
+            && artifact.repair.is_some()
+    }));
+    let error = rollback_repository(&conflict_repo).unwrap_err().to_string();
+    assert!(error.contains(".codex/config.toml"));
+    assert!(error.contains("unmanaged content"));
+    let after_failed_rollback = fs::read_to_string(&config_path).unwrap();
+    assert_codex_v2_disabled(&after_failed_rollback);
+    assert_codex_config_entry(
+        &after_failed_rollback,
+        "model_routing_terra_high",
+        "./agents/model-routing-terra-high.toml",
+    );
+
+    let uninstall = uninstall_repository(&conflict_repo).unwrap();
+    assert!(
+        uninstall.artifacts.iter().any(|artifact| {
+            artifact.path == ".codex/config.toml" && artifact.status == "removed"
+        })
+    );
+    let after_conflict_uninstall = fs::read_to_string(&config_path).unwrap();
+    assert_codex_v2_disabled(&after_conflict_uninstall);
+    assert_no_codex_config_entry(&after_conflict_uninstall, "model_routing_terra_high");
+    assert_no_codex_config_entry(&after_conflict_uninstall, "model_routing_sol_high");
+    assert_no_codex_config_entry(&after_conflict_uninstall, "model_routing_luna_xhigh");
+    assert!(
+        !conflict_repo
+            .join(".codex/agents/model-routing-terra-high.toml")
+            .exists()
+    );
+    assert!(!conflict_repo.join(".model-routing/manifest.json").exists());
+
+    let cross_host_repo = temp_repo("codex-v2-cross-host-false");
+    fs::create_dir_all(cross_host_repo.join(".codex")).unwrap();
+    fs::write(
+        cross_host_repo.join(".codex/config.toml"),
+        "[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = false\n",
+    )
+    .unwrap();
+    apply_bundle_file_with_bundle(&cross_host_repo, &codex).unwrap();
+    let cross_host_config = cross_host_repo.join(".codex/config.toml");
+    let drifted = fs::read_to_string(&cross_host_config)
+        .unwrap()
+        .replace("enabled = true", "enabled = false");
+    fs::write(&cross_host_config, drifted).unwrap();
+
+    let cursor = compile_policy("balanced", "cursor-openai", Integration::Standalone).unwrap();
+    let cursor_file = write_bundle_file(&cross_host_repo, "cursor.json", &cursor);
+    let update = update_bundle_file(&cross_host_repo, &cursor_file).unwrap();
+    assert!(
+        update.artifacts.iter().any(|artifact| {
+            artifact.path == ".codex/config.toml" && artifact.status == "removed"
+        })
+    );
+    let after_cross_host_update = fs::read_to_string(&cross_host_config).unwrap();
+    assert_codex_v2_disabled(&after_cross_host_update);
+    assert_no_codex_config_entry(&after_cross_host_update, "model_routing_terra_high");
+    assert_no_codex_config_entry(&after_cross_host_update, "model_routing_sol_high");
+    assert_no_codex_config_entry(&after_cross_host_update, "model_routing_luna_xhigh");
+    assert!(
+        cross_host_repo
+            .join(".model-routing/manifest.json")
+            .exists()
+    );
+    let cross_host_status = status_repository(&cross_host_repo).unwrap();
+    assert!(
+        !cross_host_status
+            .artifacts
+            .iter()
+            .any(|artifact| artifact.path == ".codex/config.toml")
+    );
 }
 
 #[test]
@@ -557,6 +732,7 @@ fn fresh_repository_registers_codex_native_role_discovery_config() {
         parsed["agents"]["model_routing_sol_high"]["config_file"].as_str(),
         Some("./agents/model-routing-sol-high.toml")
     );
+    assert_codex_v2_activation(&config.content);
     assert_eq!(
         fs::read_to_string(repository.join(".codex/config.toml")).unwrap(),
         config.content
@@ -578,7 +754,7 @@ fn lifecycle_preview_apply_status_and_uninstall_are_repository_safe() {
     );
     let preview = preview_bundle_with_bundle(&repository, &bundle).unwrap();
     assert_eq!(preview.action, "preview");
-    assert_eq!(preview.artifacts.len(), 7);
+    assert_eq!(preview.artifacts.len(), 8);
     assert!(
         preview
             .artifacts
@@ -603,8 +779,13 @@ fn lifecycle_preview_apply_status_and_uninstall_are_repository_safe() {
     let codex_config = fs::read_to_string(repository.join(".codex/config.toml")).unwrap();
     assert!(codex_config.contains("[agents.model_routing_terra_high]"));
     assert!(codex_config.contains("config_file = \"./agents/model-routing-terra-high.toml\""));
+    assert!(codex_config.contains("[agents.model_routing_terra_mechanical]"));
+    assert!(
+        codex_config.contains("config_file = \"./agents/model-routing-terra-mechanical.toml\"")
+    );
     assert!(codex_config.contains("[agents.model_routing_sol_high]"));
     assert!(codex_config.contains("config_file = \"./agents/model-routing-sol-high.toml\""));
+    assert_codex_v2_activation(&codex_config);
     assert!(
         repository
             .join(".codex/agents/model-routing-terra-high.toml")

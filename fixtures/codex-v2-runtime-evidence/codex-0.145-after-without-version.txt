@@ -1,0 +1,2 @@
+features after activation:
+multi_agent_v2 stable true

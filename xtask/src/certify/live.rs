@@ -1,8 +1,8 @@
 use super::{
     CodexRawInput, OpencodeInput, PiInput,
     runner::{
-        FileSnapshot, OwnedReportRepo, ProcessReceipt, ProcessSpec, RestorationOutcome,
-        RestorationTracker, run_process,
+        OwnedReportRepo, ProcessReceipt, ProcessSpec, RestorationOutcome, RestorationTracker,
+        run_process,
     },
     validate_opencode, validate_pi,
 };
@@ -20,6 +20,14 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
+
+#[cfg(test)]
+use super::runner::FileSnapshot;
+
+const CODEX_PACKAGE: &str = "@openai/codex@0.145.0";
+const CODEX_COMPLETE_MARKER: &str = "SWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE";
+const CODEX_MAKER_DONE: &str = "SWITCHLOOM_STANDALONE_MAKER_DONE";
+const CODEX_REVIEWER_DONE: &str = "SWITCHLOOM_STANDALONE_REVIEWER_DONE";
 
 pub(crate) struct LiveRunArgs {
     pub routing_bin: PathBuf,
@@ -76,6 +84,7 @@ impl CertificationSession {
         }
     }
 
+    #[cfg(test)]
     fn track_restoration(&mut self, tracker: RestorationTracker) {
         self.restoration = Some(tracker);
         self.persist_best_effort();
@@ -584,12 +593,13 @@ pub(crate) fn run_codex(args: LiveRunArgs) -> Result<()> {
     let owned = OwnedReportRepo::create(&args.report_root, host)?;
     let mut session = CertificationSession::new(&owned, host);
     let routing_bin = absolute_binary(&args.routing_bin)?;
-    let codex_home = std::env::var_os("CODEX_HOME")
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".codex")))
-        .context("CODEX_HOME/HOME is unavailable")?;
-    let mut external_config = FileSnapshot::capture(codex_home.join("config.toml"))?;
-    session.track_restoration(external_config.outcome_tracker());
+    let codex_home = codex_runtime_home(&owned)?;
+    let protected_config_before = protected_codex_config_identity()?;
+    write_json(
+        &owned.report_dir.join("protected-codex-config-before.json"),
+        &protected_config_before,
+    )?;
+    fs::create_dir_all(&codex_home).context("failed to create isolated Codex home")?;
     session.run_checked(
         command(
             "compile",
@@ -617,93 +627,28 @@ pub(crate) fn run_codex(args: LiveRunArgs) -> Result<()> {
         ),
         &owned,
     )?;
-    let version = session.run_checked(
-        command(
-            "codex-version",
-            Path::new("codex"),
-            ["--version"],
-            &owned,
-            args.timeout,
-        ),
+    let mut version_spec = command(
+        "codex-version",
+        Path::new("npx"),
+        ["-y", CODEX_PACKAGE, "--version"],
         &owned,
-    )?;
+        args.timeout,
+    );
+    version_spec
+        .env
+        .insert("CODEX_HOME".to_string(), codex_home.display().to_string());
+    let version = session.run_checked(version_spec, &owned)?;
     let host_version = last_line(&version.stdout, &version.stderr);
-    let worker_message = "Inspect the generated repository without editing files. End your final answer with SWITCHLOOM_STANDALONE_IMPLEMENTER_DONE.";
-    let reviewer_message = "Independently inspect the generated repository without editing files. End your final answer with SWITCHLOOM_STANDALONE_REVIEWER_DONE.";
-    let expected = json!({"package_digest":sha256_file(&routing_bin)?,"host_version":host_version,"children":[{"semantic_role":"implementer","profile":"codex-terra-high","agent_type":"model_routing_terra_high","task_name":"standalone_implementer","canonical_task":"/root/standalone_implementer","model":"gpt-5.6-terra","effort":"high","message_sha256":format!("{:x}",Sha256::digest(worker_message)),"max_message_bytes":512,"completion_contains":"SWITCHLOOM_STANDALONE_IMPLEMENTER_DONE","allow_encrypted_message":true},{"semantic_role":"reviewer","profile":"codex-sol-high","agent_type":"model_routing_sol_high","task_name":"standalone_reviewer","canonical_task":"/root/standalone_reviewer","model":"gpt-5.6-sol","effort":"high","message_sha256":format!("{:x}",Sha256::digest(reviewer_message)),"max_message_bytes":512,"completion_contains":"SWITCHLOOM_STANDALONE_REVIEWER_DONE","allow_encrypted_message":true}]});
+    let expected = codex_expected_receipt(&routing_bin, &host_version)?;
     write_json(&owned.workdir.join("expected.json"), &expected)?;
-    let prompt = format!(
-        "Use the native collaboration spawn_agent tool exactly twice, then wait for both child agents to finish.\n\n\
-Your first tool call must be spawn_agent with exactly these fields:\n\
-- agent_type: model_routing_terra_high\n\
-- task_name: standalone_implementer\n\
-- fork_turns: none\n\
-- message: {worker_message}\n\n\
-Your second tool call must be spawn_agent with exactly these fields:\n\
-- agent_type: model_routing_sol_high\n\
-- task_name: standalone_reviewer\n\
-- fork_turns: none\n\
-- message: {reviewer_message}\n\n\
-Do not omit agent_type. Do not change either message. Do not pass model or reasoning_effort in either spawn call. Do not call wait_agent or answer before both spawn_agent calls have succeeded.\n\n\
-After both children finish, return a short final answer containing:\n\
-SWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE"
-    );
-    let trust_override = format!(
-        "projects.\"{}\".trust_level=\"trusted\"",
-        owned.workdir.display()
-    );
-    let terra_override = format!(
-        "agents.model_routing_terra_high.config_file=\"{}/.codex/agents/model-routing-terra-high.toml\"",
-        owned.workdir.display()
-    );
-    let sol_override = format!(
-        "agents.model_routing_sol_high.config_file=\"{}/.codex/agents/model-routing-sol-high.toml\"",
-        owned.workdir.display()
-    );
-    let host_run = run_process(
-        &command(
-            "codex-host",
-            Path::new("codex"),
-            [
-                "exec",
-                "--json",
-                "--ignore-user-config",
-                "-C",
-                owned
-                    .workdir
-                    .to_str()
-                    .context("workdir path is not UTF-8")?,
-                "-s",
-                "workspace-write",
-                "-c",
-                "approval_policy=\"never\"",
-                "-c",
-                &trust_override,
-                "-c",
-                &terra_override,
-                "-c",
-                &sol_override,
-                "-c",
-                "multi_agent_v2.hide_spawn_agent_metadata=false",
-                "-c",
-                "cli_auth_credentials_store=\"auto\"",
-                "-c",
-                "mcp_oauth_credentials_store=\"auto\"",
-                &prompt,
-            ],
-            &owned,
-            args.timeout,
-        ),
-        &owned.report_dir,
-    )?;
+    let host_spec = codex_host_spec(&owned, &codex_home, codex_positive_prompt(), args.timeout)?;
+    let host_run = run_process(&host_spec, &owned.report_dir)?;
     session.record(host_run.clone())?;
-    if let Err(error) = external_config.restore() {
-        session.fail(format!("failed to restore external Codex config: {error}"))?;
-        return Err(error);
-    }
     if !host_run.success() {
+        sanitize_codex_home(&codex_home)?;
+        ensure_protected_codex_config_unchanged(&owned, &protected_config_before)?;
         session.fail(format!(
-            "Codex host failed with status {:?}{}; external state restored",
+            "Codex host failed with status {:?}{}; isolated Codex home retained in report workdir",
             host_run.status,
             if host_run.timed_out {
                 " after timeout"
@@ -712,7 +657,94 @@ SWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE"
             }
         ))?;
         bail!(
-            "Codex host failed with status {:?}{}; external state restored",
+            "Codex host failed with status {:?}{}; isolated Codex home retained in report workdir",
+            host_run.status,
+            if host_run.timed_out {
+                " after timeout"
+            } else {
+                ""
+            }
+        );
+    }
+    finish_codex_positive_post_host(&owned, &codex_home, &host_run, &protected_config_before)?;
+    session.complete(true, None)?;
+    println!(
+        "Codex live certification passed: {}",
+        owned.report_dir.display()
+    );
+    Ok(())
+}
+
+pub(crate) fn run_codex_negative_fixture(args: LiveRunArgs) -> Result<()> {
+    let host = "codex-openai-negative";
+    let owned = OwnedReportRepo::create(&args.report_root, host)?;
+    let mut session = CertificationSession::new(&owned, host);
+    let routing_bin = absolute_binary(&args.routing_bin)?;
+    let codex_home = codex_runtime_home(&owned)?;
+    let protected_config_before = protected_codex_config_identity()?;
+    write_json(
+        &owned.report_dir.join("protected-codex-config-before.json"),
+        &protected_config_before,
+    )?;
+    fs::create_dir_all(&codex_home).context("failed to create isolated Codex home")?;
+    session.run_checked(
+        command(
+            "compile",
+            &routing_bin,
+            [
+                "compile",
+                "balanced",
+                "--host",
+                "codex-openai",
+                "--output",
+                "bundle.json",
+            ],
+            &owned,
+            args.timeout,
+        ),
+        &owned,
+    )?;
+    session.run_checked(
+        command(
+            "apply",
+            &routing_bin,
+            ["apply", "bundle.json", "--repository", "."],
+            &owned,
+            args.timeout,
+        ),
+        &owned,
+    )?;
+    let mut version_spec = command(
+        "codex-version",
+        Path::new("npx"),
+        ["-y", CODEX_PACKAGE, "--version"],
+        &owned,
+        args.timeout,
+    );
+    version_spec
+        .env
+        .insert("CODEX_HOME".to_string(), codex_home.display().to_string());
+    let version = session.run_checked(version_spec, &owned)?;
+    let host_version = last_line(&version.stdout, &version.stderr);
+    let expected = codex_expected_receipt(&routing_bin, &host_version)?;
+    write_json(&owned.workdir.join("expected.json"), &expected)?;
+    let host_spec = codex_host_spec(&owned, &codex_home, codex_negative_prompt(), args.timeout)?;
+    let host_run = run_process(&host_spec, &owned.report_dir)?;
+    session.record(host_run.clone())?;
+    if !host_run.success() {
+        sanitize_codex_home(&codex_home)?;
+        ensure_protected_codex_config_unchanged(&owned, &protected_config_before)?;
+        session.fail(format!(
+            "Codex negative fixture host failed with status {:?}{}; isolated Codex home retained in report workdir",
+            host_run.status,
+            if host_run.timed_out {
+                " after timeout"
+            } else {
+                ""
+            }
+        ))?;
+        bail!(
+            "Codex negative fixture host failed with status {:?}{}; isolated Codex home retained in report workdir",
             host_run.status,
             if host_run.timed_out {
                 " after timeout"
@@ -722,21 +754,53 @@ SWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE"
         );
     }
     fs::write(owned.workdir.join("codex-events.jsonl"), &host_run.stdout)?;
-    let receipt = super::extract_codex(CodexRawInput {
+    match super::extract_codex(CodexRawInput {
         events: owned.workdir.join("codex-events.jsonl"),
         workdir: owned.workdir.clone(),
         expected: owned.workdir.join("expected.json"),
         state_db: Some(codex_home.join("state_5.sqlite")),
         sessions_dir: Some(codex_home.join("sessions")),
         archived_sessions_dir: Some(codex_home.join("archived_sessions")),
-    })?;
-    fs::write(owned.workdir.join("codex-runtime-evidence.json"), receipt)?;
-    session.complete(true, None)?;
-    println!(
-        "Codex live certification passed: {}",
-        owned.report_dir.display()
-    );
-    Ok(())
+    }) {
+        Ok(receipt) => {
+            sanitize_codex_home(&codex_home)?;
+            ensure_protected_codex_config_unchanged(&owned, &protected_config_before)?;
+            fs::write(
+                owned.workdir.join("unexpected-codex-runtime-evidence.json"),
+                receipt,
+            )?;
+            session.fail("Codex negative fixture unexpectedly produced certifiable evidence")?;
+            bail!("Codex negative fixture unexpectedly produced certifiable evidence");
+        }
+        Err(error) => {
+            let error_text = format!("{error:#}");
+            if !expected_codex_negative_failure(&error_text) {
+                sanitize_codex_home(&codex_home)?;
+                ensure_protected_codex_config_unchanged(&owned, &protected_config_before)?;
+                session.fail(format!(
+                    "Codex negative fixture failed for an unexpected reason: {error_text}"
+                ))?;
+                bail!("Codex negative fixture failed for an unexpected reason: {error_text}");
+            }
+            fs::write(
+                owned.workdir.join("codex-negative-fail-closed.txt"),
+                &error_text,
+            )?;
+            sanitize_codex_home(&codex_home)?;
+            ensure_protected_codex_config_unchanged(&owned, &protected_config_before)?;
+            session.complete(
+                true,
+                Some(format!(
+                    "negative fixture invoked exact Codex and failed closed on the expected missing-child evidence: {error}"
+                )),
+            )?;
+            println!(
+                "Codex negative live fixture failed closed as expected: {}",
+                owned.report_dir.display()
+            );
+            Ok(())
+        }
+    }
 }
 
 pub(crate) fn run_planr(args: PlanrRunArgs) -> Result<()> {
@@ -859,6 +923,221 @@ fn command<'a>(
         timeout,
     }
 }
+
+fn codex_maker_message() -> &'static str {
+    "Inspect the generated repository without editing files. End your final answer with SWITCHLOOM_STANDALONE_MAKER_DONE."
+}
+
+fn codex_reviewer_message() -> &'static str {
+    "Independently inspect the generated repository without editing files. End your final answer with SWITCHLOOM_STANDALONE_REVIEWER_DONE."
+}
+
+fn codex_expected_receipt(routing_bin: &Path, host_version: &str) -> Result<Value> {
+    Ok(
+        json!({"package_digest":sha256_file(routing_bin)?,"host_version":host_version,"children":[{"semantic_role":"maker","profile":"codex-terra-high","agent_type":"model_routing_terra_high","task_name":"standalone_maker","canonical_task":"/root/standalone_maker","model":"gpt-5.6-terra","effort":"high","message_sha256":format!("{:x}",Sha256::digest(codex_maker_message())),"max_message_bytes":512,"completion_contains":CODEX_MAKER_DONE,"allow_encrypted_message":true},{"semantic_role":"reviewer","profile":"codex-sol-high","agent_type":"model_routing_sol_high","task_name":"standalone_reviewer","canonical_task":"/root/standalone_reviewer","model":"gpt-5.6-sol","effort":"high","message_sha256":format!("{:x}",Sha256::digest(codex_reviewer_message())),"max_message_bytes":512,"completion_contains":CODEX_REVIEWER_DONE,"allow_encrypted_message":true}]}),
+    )
+}
+
+fn codex_positive_prompt() -> String {
+    format!(
+        "Use the native collaboration spawn_agent tool exactly twice, then wait for both child agents to finish.\n\n\
+Your first tool call must be spawn_agent with exactly these fields:\n\
+- agent_type: model_routing_terra_high\n\
+- task_name: standalone_maker\n\
+- fork_turns: none\n\
+- message: {}\n\n\
+Your second tool call must be spawn_agent with exactly these fields:\n\
+- agent_type: model_routing_sol_high\n\
+- task_name: standalone_reviewer\n\
+- fork_turns: none\n\
+- message: {}\n\n\
+Do not omit agent_type. Do not change either message. Do not pass model or reasoning_effort in either spawn call. Do not call wait_agent or answer before both spawn_agent calls have succeeded.\n\n\
+After both children finish, return a short final answer containing:\n\
+{CODEX_COMPLETE_MARKER}",
+        codex_maker_message(),
+        codex_reviewer_message()
+    )
+}
+
+fn codex_negative_prompt() -> String {
+    format!(
+        "Inspect the generated repository without editing files. Do not call spawn_agent, do not create child agents, and do not edit files.\n\n\
+Return a short final answer containing:\n\
+{CODEX_COMPLETE_MARKER}"
+    )
+}
+
+fn codex_host_spec(
+    owned: &OwnedReportRepo,
+    codex_home: &Path,
+    prompt: String,
+    timeout: Duration,
+) -> Result<ProcessSpec> {
+    let trust_override = format!(
+        "projects.\"{}\".trust_level=\"trusted\"",
+        owned.workdir.display()
+    );
+    let terra_override = format!(
+        "agents.model_routing_terra_high.config_file=\"{}/.codex/agents/model-routing-terra-high.toml\"",
+        owned.workdir.display()
+    );
+    let sol_override = format!(
+        "agents.model_routing_sol_high.config_file=\"{}/.codex/agents/model-routing-sol-high.toml\"",
+        owned.workdir.display()
+    );
+    let mut spec = command(
+        "codex-host",
+        Path::new("npx"),
+        [
+            "-y",
+            CODEX_PACKAGE,
+            "exec",
+            "--json",
+            "--ignore-user-config",
+            "-C",
+            owned
+                .workdir
+                .to_str()
+                .context("workdir path is not UTF-8")?,
+            "-s",
+            "workspace-write",
+            "-c",
+            "approval_policy=\"never\"",
+            "-c",
+            &trust_override,
+            "-c",
+            &terra_override,
+            "-c",
+            &sol_override,
+            "-c",
+            "multi_agent_v2.hide_spawn_agent_metadata=false",
+            "-c",
+            "cli_auth_credentials_store=\"file\"",
+            "-c",
+            "mcp_oauth_credentials_store=\"auto\"",
+            &prompt,
+        ],
+        owned,
+        timeout,
+    );
+    spec.env
+        .insert("CODEX_HOME".to_string(), codex_home.display().to_string());
+    Ok(spec)
+}
+
+fn codex_runtime_home(owned: &OwnedReportRepo) -> Result<PathBuf> {
+    if let Some(path) = std::env::var_os("SWITCHLOOM_CODEX_RUNTIME_HOME") {
+        let path = PathBuf::from(path);
+        if path.is_absolute() {
+            Ok(path)
+        } else {
+            Ok(std::env::current_dir()?.join(path))
+        }
+    } else {
+        Ok(owned.workdir.join(".codex-home"))
+    }
+}
+
+fn expected_codex_negative_failure(error: &str) -> bool {
+    [
+        "parent must contain exactly 2 V2 spawn_agent calls",
+        "parent must contain exactly 2 sub_agent_activity started events",
+        "parent must contain exactly 2 persisted child edges",
+    ]
+    .iter()
+    .any(|expected| error.contains(expected))
+}
+
+fn finish_codex_positive_post_host(
+    owned: &OwnedReportRepo,
+    codex_home: &Path,
+    host_run: &ProcessReceipt,
+    protected_config_before: &Value,
+) -> Result<()> {
+    let result = (|| -> Result<()> {
+        fs::write(owned.workdir.join("codex-events.jsonl"), &host_run.stdout)?;
+        let receipt = super::extract_codex(CodexRawInput {
+            events: owned.workdir.join("codex-events.jsonl"),
+            workdir: owned.workdir.clone(),
+            expected: owned.workdir.join("expected.json"),
+            state_db: Some(codex_home.join("state_5.sqlite")),
+            sessions_dir: Some(codex_home.join("sessions")),
+            archived_sessions_dir: Some(codex_home.join("archived_sessions")),
+        })?;
+        fs::write(owned.workdir.join("codex-runtime-evidence.json"), receipt)?;
+        Ok(())
+    })();
+    let finalization = finalize_codex_live_report(owned, codex_home, protected_config_before);
+    match (result, finalization) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(error), Ok(())) => Err(error),
+        (Ok(()), Err(error)) => Err(error),
+        (Err(error), Err(finalize_error)) => {
+            bail!(
+                "Codex positive post-host processing failed: {error}; additionally finalization failed: {finalize_error}"
+            )
+        }
+    }
+}
+
+fn finalize_codex_live_report(
+    owned: &OwnedReportRepo,
+    codex_home: &Path,
+    protected_config_before: &Value,
+) -> Result<()> {
+    sanitize_codex_home(codex_home)?;
+    ensure_protected_codex_config_unchanged(owned, protected_config_before)
+}
+
+fn protected_codex_config_identity() -> Result<Value> {
+    let Some(root) = std::env::var_os("CODEX_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".codex")))
+    else {
+        return Ok(json!({"status":"unavailable","path":null}));
+    };
+    codex_config_identity(&root.join("config.toml"))
+}
+
+fn codex_config_identity(path: &Path) -> Result<Value> {
+    if path.exists() {
+        let bytes = fs::read(path)
+            .with_context(|| format!("failed to read protected Codex config {}", path.display()))?;
+        Ok(json!({
+            "status": "present",
+            "path": path,
+            "sha256": format!("{:x}", Sha256::digest(&bytes)),
+            "bytes": bytes.len(),
+        }))
+    } else {
+        Ok(json!({"status":"missing","path":path}))
+    }
+}
+
+fn ensure_protected_codex_config_unchanged(owned: &OwnedReportRepo, before: &Value) -> Result<()> {
+    let after = protected_codex_config_identity()?;
+    write_json(
+        &owned.report_dir.join("protected-codex-config-after.json"),
+        &after,
+    )?;
+    if &after == before {
+        Ok(())
+    } else {
+        bail!("protected user-global Codex config changed during live certification")
+    }
+}
+
+fn sanitize_codex_home(codex_home: &Path) -> Result<()> {
+    for relative in [".tmp", "tmp"] {
+        let path = codex_home.join(relative);
+        if path.exists() {
+            fs::remove_dir_all(&path)
+                .with_context(|| format!("failed to sanitize Codex cache {}", path.display()))?;
+        }
+    }
+    Ok(())
+}
+
 fn write_json(path: &Path, value: &impl Serialize) -> Result<()> {
     let mut bytes = serde_json::to_vec_pretty(value)?;
     bytes.push(b'\n');
@@ -952,6 +1231,187 @@ mod tests {
             std::process::id(),
             nonce(name)
         ))
+    }
+
+    #[test]
+    fn codex_live_expected_receipt_and_prompt_use_maker_reviewer_roles() {
+        let root = report_root("codex-maker-receipt");
+        fs::create_dir_all(&root).unwrap();
+        let routing_bin = root.join("model-routing");
+        fs::write(&routing_bin, "binary bytes").unwrap();
+
+        let expected = codex_expected_receipt(&routing_bin, "codex-cli 0.145.0").unwrap();
+        assert_eq!(
+            expected.pointer("/host_version"),
+            Some(&json!("codex-cli 0.145.0"))
+        );
+        assert_eq!(
+            expected.pointer("/children/0/semantic_role"),
+            Some(&json!("maker"))
+        );
+        assert_eq!(
+            expected.pointer("/children/0/task_name"),
+            Some(&json!("standalone_maker"))
+        );
+        assert_eq!(
+            expected.pointer("/children/0/completion_contains"),
+            Some(&json!(CODEX_MAKER_DONE))
+        );
+        assert_eq!(
+            expected.pointer("/children/1/semantic_role"),
+            Some(&json!("reviewer"))
+        );
+
+        let prompt = codex_positive_prompt();
+        assert!(prompt.contains("task_name: standalone_maker"));
+        assert!(prompt.contains(CODEX_MAKER_DONE));
+        assert!(prompt.contains(CODEX_REVIEWER_DONE));
+        assert!(prompt.contains(CODEX_COMPLETE_MARKER));
+        assert!(!prompt.contains("standalone_implementer"));
+        assert!(!prompt.contains("SWITCHLOOM_STANDALONE_IMPLEMENTER_DONE"));
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn codex_live_fixtures_use_exact_package_and_isolated_home() {
+        let root = report_root("codex-exact-command");
+        let owned = OwnedReportRepo::create(&root, "codex-openai").unwrap();
+        let codex_home = owned.workdir.join(".codex-home");
+
+        for prompt in [codex_positive_prompt(), codex_negative_prompt()] {
+            let spec = codex_host_spec(&owned, &codex_home, prompt.clone(), Duration::from_secs(5))
+                .unwrap();
+            assert_eq!(spec.program, "npx");
+            assert_eq!(spec.args[0], "-y");
+            assert_eq!(spec.args[1], CODEX_PACKAGE);
+            assert!(spec.args.iter().any(|arg| arg == "exec"));
+            assert!(spec.args.iter().any(|arg| arg == "--json"));
+            assert!(spec.args.iter().any(|arg| arg == "--ignore-user-config"));
+            assert!(
+                spec.args
+                    .iter()
+                    .any(|arg| arg == "cli_auth_credentials_store=\"file\"")
+            );
+            assert_eq!(
+                spec.env.get("CODEX_HOME").map(String::as_str),
+                Some(codex_home.to_str().unwrap())
+            );
+            assert!(spec.args.iter().any(|arg| {
+                arg == &format!(
+                    "projects.\"{}\".trust_level=\"trusted\"",
+                    owned.workdir.display()
+                )
+            }));
+        }
+
+        let negative = codex_negative_prompt();
+        assert!(negative.contains("Do not call spawn_agent"));
+        assert!(negative.contains(CODEX_COMPLETE_MARKER));
+        assert!(!negative.contains("model_routing_terra_high"));
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn codex_default_runtime_home_is_report_local_for_unauthenticated_runs() {
+        let root = report_root("codex-runtime-home");
+        let owned = OwnedReportRepo::create(&root, "codex-openai").unwrap();
+        assert_eq!(
+            codex_runtime_home(&owned).unwrap(),
+            owned.workdir.join(".codex-home")
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn codex_negative_fixture_accepts_only_expected_missing_child_errors() {
+        assert!(expected_codex_negative_failure(
+            "parent must contain exactly 2 V2 spawn_agent calls"
+        ));
+        assert!(expected_codex_negative_failure(
+            "parent must contain exactly 2 sub_agent_activity started events"
+        ));
+        assert!(expected_codex_negative_failure(
+            "parent must contain exactly 2 persisted child edges"
+        ));
+        assert!(!expected_codex_negative_failure(
+            "expected host_version must be observed codex --version output"
+        ));
+        assert!(!expected_codex_negative_failure(
+            "child turn_context model/effort mismatch"
+        ));
+    }
+
+    #[test]
+    fn codex_report_sanitizer_removes_temporary_plugin_caches_only() {
+        let root = report_root("codex-sanitize");
+        let codex_home = root.join(".codex-home");
+        let session = codex_home.join("sessions/parent.jsonl");
+        let plugin = codex_home.join(".tmp/plugins/plugins/example/plugin.json");
+        fs::create_dir_all(session.parent().unwrap()).unwrap();
+        fs::create_dir_all(plugin.parent().unwrap()).unwrap();
+        fs::write(&session, "{}").unwrap();
+        fs::write(&plugin, "{}").unwrap();
+
+        sanitize_codex_home(&codex_home).unwrap();
+
+        assert!(session.is_file());
+        assert!(!codex_home.join(".tmp").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn codex_positive_post_host_failure_still_finalizes_report() {
+        let root = report_root("codex-positive-finalize");
+        let owned = OwnedReportRepo::create(&root, "codex-openai").unwrap();
+        let codex_home = owned.workdir.join(".codex-home");
+        let plugin = codex_home.join(".tmp/plugins/plugins/example/plugin.json");
+        fs::create_dir_all(plugin.parent().unwrap()).unwrap();
+        fs::write(&plugin, "{}").unwrap();
+        let before = protected_codex_config_identity().unwrap();
+        let host_run = ProcessReceipt {
+            label: "codex-host".into(),
+            argv: vec![],
+            env_keys: vec!["CODEX_HOME".into()],
+            stdout: "{\"type\":\"thread.started\",\"thread_id\":\"11111111-1111-4111-8111-111111111111\"}\n".into(),
+            stderr: String::new(),
+            status: Some(0),
+            timed_out: false,
+            elapsed_ms: 1,
+        };
+
+        let result = finish_codex_positive_post_host(&owned, &codex_home, &host_run, &before);
+
+        assert!(result.is_err());
+        assert!(owned.workdir.join("codex-events.jsonl").is_file());
+        assert!(!owned.workdir.join("codex-runtime-evidence.json").exists());
+        assert!(
+            owned
+                .report_dir
+                .join("protected-codex-config-after.json")
+                .is_file()
+        );
+        assert!(!codex_home.join(".tmp").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn codex_config_identity_detects_present_missing_and_changed_config() {
+        let root = report_root("codex-config-identity");
+        let config = root.join("config.toml");
+        let missing = codex_config_identity(&config).unwrap();
+        assert_eq!(missing.pointer("/status"), Some(&json!("missing")));
+
+        fs::create_dir_all(config.parent().unwrap()).unwrap();
+        fs::write(&config, "model = \"gpt-5.6-sol\"\n").unwrap();
+        let first = codex_config_identity(&config).unwrap();
+        fs::write(&config, "model = \"gpt-5.6-terra\"\n").unwrap();
+        let second = codex_config_identity(&config).unwrap();
+
+        assert_eq!(first.pointer("/status"), Some(&json!("present")));
+        assert_ne!(first.pointer("/sha256"), second.pointer("/sha256"));
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

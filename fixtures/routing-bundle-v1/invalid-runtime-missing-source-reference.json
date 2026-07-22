@@ -262,7 +262,7 @@
   ],
   "evidence": {
     "evaluation_ids": [
-      "codex-cli-0.144.5-native-v2"
+      "codex-0.145.0-native-v2"
     ],
     "status": "experimental"
   },
@@ -326,14 +326,14 @@
       "schema_version": 1,
       "host": "codex",
       "host_version_constraints": {
-        "minimum": "codex-cli 0.144.5",
-        "maximum": "codex-cli 0.144.5",
+        "minimum": "codex-cli 0.145.0",
+        "maximum": "codex-cli 0.145.0",
         "evidence_max_age_seconds": 31536000
       },
       "runtime_class": "native-subagent",
       "runtime_behavior": {
-        "capability_version": "codex-cli-0.144.5-native-v2",
-        "installed_host_version_source": "codex-cli 0.144.5 via codex --version",
+        "capability_version": "codex-0.145.0-native-v2",
+        "installed_host_version_source": "codex-cli 0.145.0 via npx -y @openai/codex@0.145.0 --version",
         "backend_selection_source": "installed Codex backend selected by the authenticated host account and workspace; Switchloom only declares repository-local project agent model and effort requests",
         "trust_boundary": "trusted project repository plus generated .codex/config.toml [agents.*] registrations; global Codex configuration is outside Switchloom ownership",
         "discovery_behavior": "Codex discovers repository-local agent files through .codex/config.toml registration entries after project trust and host reload/restart",
@@ -353,7 +353,7 @@
         "source_references": []
       },
       "discovery_artifacts": [
-        "codex-cli-0.144.5-native-v2"
+        "codex-0.145.0-native-v2"
       ],
       "dispatch_fields": [
         "profile",
@@ -390,7 +390,7 @@
         "effective_identity": "deterministic",
         "effective_model": "deterministic",
         "raw_evidence_refs": [
-          "codex-cli-0.144.5-native-v2"
+          "codex-0.145.0-native-v2"
         ]
       },
       "guarantees": {

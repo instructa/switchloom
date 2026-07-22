@@ -62,6 +62,9 @@ struct CodexArgs {
     report_root: PathBuf,
     #[arg(long, default_value_t = 180)]
     timeout_seconds: u64,
+    /// Run the Codex exact-version fixture that must fail closed on missing child evidence.
+    #[arg(long, conflicts_with_all = ["receipt", "events"])]
+    negative_fixture: bool,
 }
 
 #[derive(Debug, Args)]
@@ -261,11 +264,16 @@ fn run(cli: Cli) -> Result<()> {
                     println!("{receipt}");
                     return Ok(());
                 }
-                certify::run_live_codex(certify::LiveRunArgs::new(
+                let live_args = certify::LiveRunArgs::new(
                     args.routing_bin,
                     args.report_root,
                     args.timeout_seconds,
-                ))?;
+                );
+                if args.negative_fixture {
+                    certify::run_live_codex_negative_fixture(live_args)?;
+                } else {
+                    certify::run_live_codex(live_args)?;
+                }
                 return Ok(());
             }
             CertifyCommand::Cursor(args) => {

@@ -47,8 +47,9 @@ agent discovery after reload/restart, backend availability, execution timing,
 parallel child scheduling, billing, and any account/workspace precedence that
 affects the effective backend.
 
-For Codex, the runtime behavior contract freezes `codex-cli 0.144.5` as both
-the minimum and maximum supported capability version for this contract slice.
+For Codex, the runtime behavior contract freezes official Codex CLI `0.145.0`
+as both the minimum and maximum supported capability version for this contract
+slice.
 The digest-bound source artifact is
 `docs/codex-v2-runtime-evidence.json#sha256:<digest>`. That artifact records
 the `codex --version` observation, Codex account/workspace state as the actual
@@ -65,14 +66,18 @@ dispatch, Ultra behavior, and role precedence:
   before the effective model/effort claim is certified.
 
 Native Codex setup is repository-local only: it writes managed `.codex`
-project config and role files, preserves unrelated project and global Codex
-configuration, and does not generate or instruct nested `codex exec` dispatch.
-After apply/update/rollback, Codex may require trusting the project and
-reloading or restarting the host session before the generated role
-registrations are discoverable.
+project config and role files, including `[features.multi_agent_v2]` with
+`enabled = true` and `hide_spawn_agent_metadata = false`. It preserves unrelated
+project and global Codex configuration, and does not generate or instruct
+nested `codex exec` dispatch. After apply/update/rollback, Codex may require
+trusting the project and reloading or restarting the host session before the
+generated role registrations are discoverable.
 
 Explicit semantic-role dispatch and Ultra are separate modes. Light, Balanced,
-and High presets use explicit `agent_type` dispatch with `fork_turns = none`;
+and High presets use explicit `agent_type` dispatch with `fork_turns = none`.
+Terra is the certified implementation and mechanical default for Codex routing.
+Luna remains available only as an explicit experimental/unverified role until
+authentic official-build Codex 0.145.0 V2 evidence passes independent review.
 Ultra is recorded as the automatic delegation mode and must remain separately
 selected rather than becoming a default preset.
 
@@ -90,8 +95,8 @@ model-routing compile balanced --host codex-openai --output routing-bundle.json
 model-routing preview routing-bundle.json --repository .
 model-routing apply routing-bundle.json --repository .
 
-npx switchloom@0.3.0 preview --recipe 'sw1_...' --repository .
-npx switchloom@0.3.0 apply --recipe 'sw1_...' --repository .
+npx switchloom@0.3.1 preview --recipe 'sw1_...' --repository .
+npx switchloom@0.3.1 apply --recipe 'sw1_...' --repository .
 switchloom status --repository .
 switchloom update --repository .
 switchloom rollback --repository .
@@ -107,9 +112,12 @@ must not emit `.planr` files.
 
 Live host checks, receipt validation, catalog generation, and catalog verification
 are unpublished maintainer operations owned by `xtask`. They are exercised by the
-repository release workflow and are not part of the v0.3.0 public CLI contract.
-Public users should run `switchloom doctor <host>` to check host availability and
-version, then review `preview` output before `apply`.
+repository release workflow and are not part of the v0.3.1 public CLI contract.
+Public users should run `switchloom doctor <host>` to check host availability,
+version, and host-specific readiness diagnostics, then review `preview` output
+before `apply`. For Codex, doctor reports exact 0.145.0 support, repository-local
+V2 activation conflicts, and trust/reload guidance without mutating global
+Codex state.
 
 ## Planr Consumer Handoff
 

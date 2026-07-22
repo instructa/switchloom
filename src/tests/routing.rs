@@ -1,6 +1,6 @@
 use crate::*;
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[test]
 fn compiled_bundle_carries_typed_adapter_contract() {
@@ -73,7 +73,17 @@ fn compiled_bundle_carries_typed_adapter_contract() {
             .capability
             .runtime_behavior
             .installed_host_version_source,
-        "codex-cli 0.144.5 via codex --version"
+        format!(
+            "{} via {}",
+            codex_v2_runtime_evidence()
+                .unwrap()
+                .installed_version
+                .stdout,
+            codex_v2_runtime_evidence()
+                .unwrap()
+                .installed_version
+                .command
+        )
     );
     assert_eq!(
         contract
@@ -423,6 +433,37 @@ fn codex_and_mixed_bindings_keep_native_bounded_fork_topology() {
     assert!(mixed.contains("fable-5"));
     assert!(mixed.contains("gpt-5.6-terra"));
     assert_ne!(codex, mixed);
+}
+
+#[test]
+fn built_in_codex_routed_agent_types_use_no_fork_dispatch() {
+    for policy in ["low-usage", "balanced", "max-quality", "read-only-audit"] {
+        let bundle = compile_policy(policy, "codex-openai", Integration::Standalone).unwrap();
+        let mut routed_profiles = bundle
+            .routes
+            .iter()
+            .map(|route| route.profile.as_str())
+            .collect::<BTreeSet<_>>();
+        routed_profiles.insert(bundle.route_default.as_ref().unwrap().profile.as_str());
+
+        for profile_id in routed_profiles {
+            let profile = bundle.profiles.get(profile_id).unwrap();
+            if profile.client == "codex" && profile.agent_type.is_some() {
+                let fork_turns = profile
+                    .fork_turns
+                    .as_ref()
+                    .unwrap_or_else(|| panic!("{policy} profile {profile_id} omitted fork_turns"));
+                assert_eq!(
+                    fork_turns.mode, "none",
+                    "{policy} profile {profile_id} must dispatch Codex role with fork_turns none"
+                );
+                assert_eq!(
+                    fork_turns.turns, None,
+                    "{policy} profile {profile_id} fork_turns none must not declare turns"
+                );
+            }
+        }
+    }
 }
 
 #[test]

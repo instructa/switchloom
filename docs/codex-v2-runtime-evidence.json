@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "evidence_id": "codex-cli-0.144.5-native-v2",
-  "observed_at": "2026-07-20T00:00:00Z",
+  "evidence_id": "codex-0.145.0-native-v2",
+  "observed_at": "2026-07-21T21:12:00+02:00",
   "installed_version": {
-    "command": "codex --version",
-    "stdout": "codex-cli 0.144.5",
-    "stdout_sha256": "7dad51bb7d583ef2fa4162db23022b589b630f7187b091ba6f4015a5958994ab"
+    "command": "npx -y @openai/codex@0.145.0 --version",
+    "stdout": "codex-cli 0.145.0",
+    "stdout_sha256": "f9eb0c462cdded1fb971b33c647ff1b8b491dfe962a1506026e07a06f634f651"
   },
   "runtime_class": "native-subagent",
   "backend_selection_owner": "installed Codex backend selected by the authenticated host account and workspace; Switchloom only declares repository-local project agent model and effort requests",
@@ -49,16 +49,16 @@
     "installed_version": [
       {
         "kind": "host-command",
-        "source": "codex --version",
+        "source": "npx -y @openai/codex@0.145.0 --version",
         "observed_at": "2026-07-20T00:00:00Z",
-        "codex_version": "codex-cli 0.144.5",
-        "observed_value": "codex-cli 0.144.5",
+        "codex_version": "codex-cli 0.145.0",
+        "observed_value": "codex-cli 0.145.0",
         "required_raw_fragments": [
-          "codex-cli 0.144.5"
+          "codex-cli 0.145.0"
         ],
-        "source_path": "local-shell:codex --version",
-        "raw_output": "codex-cli 0.144.5\n",
-        "raw_output_sha256": "7dad51bb7d583ef2fa4162db23022b589b630f7187b091ba6f4015a5958994ab"
+        "source_path": "docs/codex-0.145-exact-version-capture.txt",
+        "raw_output": "codex-cli 0.145.0\n",
+        "raw_output_sha256": "f9eb0c462cdded1fb971b33c647ff1b8b491dfe962a1506026e07a06f634f651"
       }
     ],
     "backend_selection_owner": [
@@ -66,7 +66,7 @@
         "kind": "source-document",
         "source": "OpenAI Codex configuration reference: project-scoped config cannot override machine-local provider, auth, host-owned app request metadata, configuration profile selection, or telemetry routing keys.",
         "observed_at": "2026-07-20T00:00:00Z",
-        "codex_version": "codex-cli 0.144.5",
+        "codex_version": "codex-cli 0.145.0",
         "observed_value": "installed Codex backend selected by the authenticated host account and workspace; Switchloom only declares repository-local project agent model and effort requests",
         "required_raw_fragments": [
           "Project-scoped config cannot override machine-local provider, auth",
@@ -82,7 +82,7 @@
         "kind": "source-document",
         "source": "OpenAI Codex configuration and subagents references: trusted project-scoped config plus project-scoped .codex/agents custom agent files.",
         "observed_at": "2026-07-20T00:00:00Z",
-        "codex_version": "codex-cli 0.144.5",
+        "codex_version": "codex-cli 0.145.0",
         "observed_value": {
           "trust_boundary": "trusted project repository plus generated .codex/config.toml [agents.*] registrations; global Codex configuration is outside Switchloom ownership",
           "discovery_behavior": "Codex discovers repository-local agent files through .codex/config.toml registration entries after project trust and host reload/restart"
@@ -102,7 +102,7 @@
         "kind": "session-runtime-contract",
         "source": "Codex session developer runtime contract for this workspace declares the active collaboration slot budget.",
         "observed_at": "2026-07-20T00:00:00Z",
-        "codex_version": "codex-cli 0.144.5",
+        "codex_version": "codex-cli 0.145.0",
         "observed_value": {
           "max_parallel_children": 3,
           "source": "Codex V2 collaboration host exposes four active agent slots including the root, leaving three parallel child slots in the current runtime"
@@ -122,7 +122,7 @@
         "kind": "source-document",
         "source": "OpenAI Codex subagents reference: parent live sandbox and approval overrides are reapplied to children; omitted custom-agent model and model_reasoning_effort inherit from the parent session.",
         "observed_at": "2026-07-20T00:00:00Z",
-        "codex_version": "codex-cli 0.144.5",
+        "codex_version": "codex-cli 0.145.0",
         "observed_value": [
           "spawn_agent agent_type selects the registered project agent file",
           "the selected project agent file declares requested child model and model_reasoning_effort fields when present",
@@ -145,7 +145,7 @@
         "kind": "session-runtime-contract",
         "source": "Codex session developer runtime contract for this workspace declares shared filesystem behavior for team agents.",
         "observed_at": "2026-07-20T00:00:00Z",
-        "codex_version": "codex-cli 0.144.5",
+        "codex_version": "codex-cli 0.145.0",
         "observed_value": true,
         "required_raw_fragments": [
           "All agents share the same container and filesystem",
@@ -161,7 +161,7 @@
         "kind": "source-document",
         "source": "OpenAI Codex subagents and models references: Ultra can proactively delegate; most intelligence levels require explicit delegation.",
         "observed_at": "2026-07-20T00:00:00Z",
-        "codex_version": "codex-cli 0.144.5",
+        "codex_version": "codex-cli 0.145.0",
         "observed_value": {
           "explicit_agent_type_dispatch": true,
           "ultra_auto_delegation": true,

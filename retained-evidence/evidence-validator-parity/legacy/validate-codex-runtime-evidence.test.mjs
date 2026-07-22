@@ -11,7 +11,7 @@ const worker = "22222222-2222-4222-8222-222222222222";
 const reviewer = "33333333-3333-4333-8333-333333333333";
 const workdir = "/tmp/switchloom-fresh-repo";
 const packageDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const hostVersion = "codex 0.144.0";
+const hostVersion = "codex-cli 0.145.0";
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");

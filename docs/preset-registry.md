@@ -9,7 +9,7 @@ cargo run -p xtask -- release verify --inventory-only
 ```
 
 Detached Ed25519 signing and verification are owned by the `model-routing`
-library API. They are not standalone public CLI operations in v0.3.0.
+library API. They are not standalone public CLI operations in v0.3.1.
 
 Unsigned catalog entries remain experimental.
 
