@@ -1,8 +1,12 @@
-export const ROLE_IDS = ["orchestrator", "implementer", "reviewer", "verifier"] as const;
+export const PRIMARY_RECOMMENDATION_ID = "orchestrator" as const;
+export const CHILD_ROLE_IDS = ["implementer", "reviewer", "verifier"] as const;
+export const ROLE_IDS = [PRIMARY_RECOMMENDATION_ID, ...CHILD_ROLE_IDS] as const;
 export const HOST_IDS = ["codex", "cursor", "claude-code", "opencode", "pi"] as const;
 export const PRESET_IDS = ["light", "balanced", "high"] as const;
-const SWITCHLOOM_VERSION = "0.3.1";
+export const SWITCHLOOM_VERSION = "0.3.1";
 
+export type PrimaryRecommendationId = typeof PRIMARY_RECOMMENDATION_ID;
+export type ChildRoleId = (typeof CHILD_ROLE_IDS)[number];
 export type RoleId = (typeof ROLE_IDS)[number];
 export type HostId = (typeof HOST_IDS)[number];
 export type PresetId = (typeof PRESET_IDS)[number];
@@ -14,6 +18,7 @@ export type ModelOption = {
   provider?: string;
   efforts: readonly string[];
   tier: "standard" | "premium";
+  disabledReason?: string;
 };
 
 export type RoleAssignment = { model: string; effort?: string };
@@ -21,10 +26,17 @@ export type GeneratorConfig = {
   host: HostId;
   integration: SetupIntegration;
   usagePolicy: string;
-  roles: RoleId[];
+  roles: ChildRoleId[];
   assignments: Record<RoleId, RoleAssignment>;
 };
+export type PresetSelection = {
+  selected: PresetId | "custom";
+  lastSelected: PresetId;
+};
 export type HostCatalog = Record<HostId, { binding: string; models: ModelOption[] }>;
+export type HostCapabilities = {
+  nativeParentRecommendation: boolean;
+};
 
 export const ROLES: Record<RoleId, { label: string; short: string; instructions: string; writable: boolean }> = {
   orchestrator: {
@@ -58,6 +70,7 @@ export const HOSTS: Record<HostId, {
   note: string;
   runtime: string;
   effortLabel: string | null;
+  capabilities: HostCapabilities;
   defaults: Record<RoleId, RoleAssignment>;
 }> = {
   codex: {
@@ -65,6 +78,7 @@ export const HOSTS: Record<HostId, {
     note: "Requires Codex 0.145+ and activates project-local Multi-Agent V2 roles; this release certifies exact 0.145.0 Terra and Sol routing, while Luna remains experimental/unverified. Codex remains orchestration and billing authority.",
     runtime: "V2 thread tree",
     effortLabel: "Reasoning",
+    capabilities: { nativeParentRecommendation: true },
     defaults: {
       orchestrator: { model: "gpt-5.6-sol", effort: "medium" },
       implementer: { model: "gpt-5.6-terra", effort: "high" },
@@ -77,6 +91,7 @@ export const HOSTS: Record<HostId, {
     note: "Native Cursor project agents with live nonce-correlated requested-routing evidence; effective model claims stay advisory unless Cursor exposes them.",
     runtime: "native subagent",
     effortLabel: "Reasoning",
+    capabilities: { nativeParentRecommendation: true },
     defaults: {
       orchestrator: { model: "fable-5", effort: "high" },
       implementer: { model: "composer-2.5" },
@@ -89,6 +104,7 @@ export const HOSTS: Record<HostId, {
     note: "Native subagents using Claude model aliases and role prompts; this release keeps Claude unavailable/unverified until live host receipts exist.",
     runtime: "native subagent",
     effortLabel: "Effort",
+    capabilities: { nativeParentRecommendation: true },
     defaults: {
       orchestrator: { model: "opus", effort: "high" },
       implementer: { model: "sonnet", effort: "medium" },
@@ -101,6 +117,7 @@ export const HOSTS: Record<HostId, {
     note: "Project-local OpenCode agents with Task permissions and provider-qualified models; not part of the current live release gate.",
     runtime: "native subagent",
     effortLabel: "Variant",
+    capabilities: { nativeParentRecommendation: true },
     defaults: {
       orchestrator: { model: "opencode/gpt-5-nano", effort: "medium" },
       implementer: { model: "opencode/gpt-5-nano", effort: "low" },
@@ -113,6 +130,7 @@ export const HOSTS: Record<HostId, {
     note: "External runner workflows using isolated print-mode process execution; separate from host-native child threads.",
     runtime: "external runner",
     effortLabel: "Thinking",
+    capabilities: { nativeParentRecommendation: false },
     defaults: {
       orchestrator: { model: "openai/gpt-4o-mini", effort: "medium" },
       implementer: { model: "openai/gpt-4o-mini", effort: "low" },
@@ -125,7 +143,7 @@ export const HOSTS: Record<HostId, {
 export const PRESETS: Record<PresetId, { label: string; short: string }> = {
   light: { label: "Light", short: "Prioritizes lower-cost models and effort." },
   balanced: { label: "Balanced", short: "A practical quality and cost mix for daily work." },
-  high: { label: "High", short: "Prioritizes stronger models and deeper reasoning." },
+  high: { label: "High", short: "Prioritizes the strongest model and a larger execution budget." },
 };
 
 const PRESET_USAGE_POLICIES: Record<PresetId, string> = {
@@ -212,7 +230,7 @@ const PRESET_ASSIGNMENTS: Record<HostId, Record<PresetId, Record<RoleId, RoleAss
   },
 };
 
-function modelLabel(host: HostId, model: string) {
+function modelLabel(model: string) {
   const labels: Record<string, string> = {
     "gpt-5.6-sol": "Sol",
     "gpt-5.6-terra": "Terra",
@@ -231,14 +249,7 @@ function modelLabel(host: HostId, model: string) {
     opus: "Opus",
     sonnet: "Sonnet",
   };
-  const label = labels[model] ?? model;
-  if (host === "codex" && (model === "gpt-5.6-sol" || model === "gpt-5.6-terra")) {
-    return `${label} (certified)`;
-  }
-  if (host === "codex" && model === "gpt-5.6-luna") {
-    return `${label} (experimental)`;
-  }
-  return label;
+  return labels[model] ?? model;
 }
 
 function modelProvider(model: string) {
@@ -266,8 +277,9 @@ type CatalogShape = {
 
 export function hostCatalogFrom(catalog: CatalogShape): HostCatalog {
   const result = {} as HostCatalog;
+  const setupHosts = new Map(catalog.setupContract?.hosts?.map((entry) => [entry.id, entry]) ?? []);
   for (const host of HOST_IDS) {
-    const setupHost = catalog.setupContract?.hosts?.find((entry) => entry.id === host);
+    const setupHost = setupHosts.get(host);
     if (!setupHost?.binding) throw new Error(`canonical setup contract has no ${host} binding`);
     const models = setupHost.models?.map((model) => {
       if (!model.id || !Array.isArray(model.efforts) || (model.tier !== "standard" && model.tier !== "premium")) {
@@ -276,20 +288,25 @@ export function hostCatalogFrom(catalog: CatalogShape): HostCatalog {
       const tier: ModelOption["tier"] = model.tier === "premium" ? "premium" : "standard";
       return {
         id: model.id,
-        label: modelLabel(host, model.id),
+        label: modelLabel(model.id),
         provider: modelProvider(model.id),
         efforts: model.efforts,
         tier,
+        ...(host === "codex" && model.id === "gpt-5.6-luna"
+          ? { disabledReason: "not supported yet in v2" }
+          : {}),
       };
     }) ?? [];
     result[host] = { binding: setupHost.binding, models };
   }
   for (const host of HOST_IDS) {
     if (result[host].models.length === 0) throw new Error(`canonical setup contract has no ${host} model profiles`);
+    const modelById = new Map(result[host].models.map((model) => [model.id, model]));
     for (const [role, assignment] of Object.entries(HOSTS[host].defaults)) {
-      const model = result[host].models.find((candidate) => candidate.id === assignment.model);
+      const model = modelById.get(assignment.model);
       if (!model) throw new Error(`canonical setup contract has no ${host} default model for ${role}: ${assignment.model}`);
-      if (assignment.effort && !model.efforts.includes(assignment.effort)) {
+      const modelEfforts = new Set(model.efforts);
+      if (assignment.effort && !modelEfforts.has(assignment.effort)) {
         throw new Error(`canonical setup contract has no ${host} default effort for ${role}: ${assignment.effort}`);
       }
     }
@@ -309,13 +326,74 @@ export function createConfig(host: HostId = "codex"): GeneratorConfig {
     host,
     integration: "standalone",
     usagePolicy: "balanced",
-    roles: [...ROLE_IDS],
+    roles: [...CHILD_ROLE_IDS],
     assignments: structuredClone(HOSTS[host].defaults),
   };
 }
 
+export function isPrimaryRecommendationId(role: string): role is PrimaryRecommendationId {
+  return role === PRIMARY_RECOMMENDATION_ID;
+}
+
+export function isChildRoleId(role: string): role is ChildRoleId {
+  return CHILD_ROLE_IDS.includes(role as ChildRoleId);
+}
+
+export function primaryRecommendation(config: GeneratorConfig) {
+  return {
+    id: PRIMARY_RECOMMENDATION_ID,
+    assignment: config.assignments[PRIMARY_RECOMMENDATION_ID],
+  };
+}
+
+export function canRenderParentRecommendation(config: GeneratorConfig) {
+  return HOSTS[config.host].capabilities.nativeParentRecommendation;
+}
+
+function effortDisplayName(effort: string) {
+  const labels: Record<string, string> = {
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+    xhigh: "XHigh",
+    max: "Max",
+    ultra: "Ultra",
+  };
+  return labels[effort] ?? effort;
+}
+
+export function parentRecommendationEffortCopy(config: GeneratorConfig, preset: PresetId) {
+  const host = HOSTS[config.host];
+  const recommendation = primaryRecommendation(config);
+  const effortLabel = host.effortLabel?.toLowerCase();
+  if (!recommendation.assignment.effort || !effortLabel) {
+    return `${PRESETS[preset].label} keeps ${host.label} parent orchestration host-managed.`;
+  }
+  return `Set ${host.label} ${effortLabel} to ${effortDisplayName(recommendation.assignment.effort)}.`;
+}
+
+export function selectedChildRoleIds(config: GeneratorConfig): ChildRoleId[] {
+  return [...config.roles];
+}
+
+export function setupSpecRoleIds(config: GeneratorConfig): RoleId[] {
+  return canRenderParentRecommendation(config) ? selectedChildRoleIds(config) : [PRIMARY_RECOMMENDATION_ID, ...config.roles];
+}
+
+export function createPresetSelection(initial: PresetId = "balanced"): PresetSelection {
+  return { selected: initial, lastSelected: initial };
+}
+
+export function choosePreset(selection: PresetSelection, preset: PresetId): PresetSelection {
+  return { ...selection, selected: preset, lastSelected: preset };
+}
+
+export function markPresetCustom(selection: PresetSelection): PresetSelection {
+  return { ...selection, selected: "custom" };
+}
+
 export function changeHost(config: GeneratorConfig, host: HostId): GeneratorConfig {
-  return { ...createConfig(host), integration: config.integration, usagePolicy: config.usagePolicy, roles: [...config.roles] };
+  return { ...createConfig(host), integration: config.integration, roles: [...config.roles] };
 }
 
 export function setIntegration(config: GeneratorConfig, integration: SetupIntegration): GeneratorConfig {
@@ -324,10 +402,12 @@ export function setIntegration(config: GeneratorConfig, integration: SetupIntegr
 
 export function applyPreset(config: GeneratorConfig, preset: PresetId, catalog: HostCatalog): GeneratorConfig {
   const assignments = structuredClone(PRESET_ASSIGNMENTS[config.host][preset]);
+  const modelById = new Map(catalog[config.host].models.map((model) => [model.id, model]));
   for (const [role, assignment] of Object.entries(assignments)) {
-    const model = catalog[config.host].models.find((candidate) => candidate.id === assignment.model);
+    const model = modelById.get(assignment.model);
     if (!model) throw new Error(`${preset} preset has no ${config.host} model for ${role}: ${assignment.model}`);
-    if (assignment.effort && !model.efforts.includes(assignment.effort)) {
+    const modelEfforts = new Set(model.efforts);
+    if (assignment.effort && !modelEfforts.has(assignment.effort)) {
       throw new Error(`${preset} preset has no ${config.host} effort for ${role}: ${assignment.effort}`);
     }
   }
@@ -335,8 +415,36 @@ export function applyPreset(config: GeneratorConfig, preset: PresetId, catalog: 
 }
 
 export function setRoles(config: GeneratorConfig, roles: readonly string[]): GeneratorConfig {
-  const valid = ROLE_IDS.filter((role) => role === "orchestrator" || roles.includes(role));
-  return { ...config, roles: valid.slice(0, 4) };
+  const selected = new Set(roles);
+  const valid = CHILD_ROLE_IDS.filter((role) => selected.has(role));
+  return { ...config, roles: valid.length > 0 ? valid : config.roles };
+}
+
+export function removeChildRole(config: GeneratorConfig, role: ChildRoleId): GeneratorConfig {
+  const childRoles = selectedChildRoleIds(config);
+  if (childRoles.length <= 1 || !childRoles.includes(role)) return config;
+  return setRoles(config, childRoles.filter((candidate) => candidate !== role));
+}
+
+export function resetRolesToPreset(config: GeneratorConfig, preset: PresetId, catalog: HostCatalog): GeneratorConfig {
+  return applyPreset(setRoles(config, CHILD_ROLE_IDS), preset, catalog);
+}
+
+function roleAssignmentEquals(left: RoleAssignment, right: RoleAssignment) {
+  return left.model === right.model && left.effort === right.effort;
+}
+
+function roleListEquals(left: readonly ChildRoleId[], right: readonly ChildRoleId[]) {
+  return left.length === right.length && left.every((role, index) => role === right[index]);
+}
+
+export function isPresetDirty(config: GeneratorConfig, preset: PresetId, catalog: HostCatalog): boolean {
+  const baseline = resetRolesToPreset(config, preset, catalog);
+  return (
+    config.usagePolicy !== baseline.usagePolicy ||
+    !roleListEquals(config.roles, baseline.roles) ||
+    ROLE_IDS.some((role) => !roleAssignmentEquals(config.assignments[role], baseline.assignments[role]))
+  );
 }
 
 export function setModel(config: GeneratorConfig, role: RoleId, modelId: string, catalog: HostCatalog): GeneratorConfig {
@@ -373,16 +481,22 @@ export type SetupSpecV1 = {
     };
   }>;
   routes: Array<{ work_type: string; role: string; fallbacks: string[] }>;
-  route_default: { role: string; fallbacks: string[] };
+  route_default?: { role: string; fallbacks: string[] };
 };
 
-function routingRole(config: GeneratorConfig, preferred: RoleId, fallback: RoleId = "orchestrator") {
-  return config.roles.includes(preferred) ? preferred : fallback;
+function routingRole(config: GeneratorConfig, preferred: ChildRoleId, fallbacks: readonly ChildRoleId[] = []) {
+  const selectedRoles = selectedChildRoleIds(config);
+  const selected = new Set(selectedRoles);
+  for (const role of [preferred, ...fallbacks]) {
+    if (selected.has(role)) return role;
+  }
+  return selectedRoles[0];
 }
 
 export function setupSpec(config: GeneratorConfig, catalog: HostCatalog): SetupSpecV1 {
+  const hasNativeParentRecommendation = canRenderParentRecommendation(config);
   const selected_roles: SetupSpecV1["selected_roles"] = {};
-  for (const role of config.roles) {
+  for (const role of setupSpecRoleIds(config)) {
     const assignment = config.assignments[role];
     selected_roles[role] = {
       model: assignment.model,
@@ -398,7 +512,26 @@ export function setupSpec(config: GeneratorConfig, catalog: HostCatalog): SetupS
         : {}),
     };
   }
-  const reviewFallback = routingRole(config, "reviewer");
+  if (!hasNativeParentRecommendation) {
+    const reviewFallback = routingRole(config, "reviewer");
+    return {
+      schema_version: 1,
+      host: catalog[config.host].binding,
+      integration: config.integration,
+      usage_policy: config.usagePolicy,
+      selected_roles,
+      routes: [
+        { work_type: "planning", role: PRIMARY_RECOMMENDATION_ID, fallbacks: [] },
+        { work_type: "code", role: routingRole(config, "implementer"), fallbacks: [] },
+        { work_type: "review", role: reviewFallback, fallbacks: [] },
+        { work_type: "verification", role: routingRole(config, "verifier", [reviewFallback]), fallbacks: [] },
+      ],
+      route_default: { role: PRIMARY_RECOMMENDATION_ID, fallbacks: [] },
+    };
+  }
+  const codeRole = routingRole(config, "implementer", ["reviewer", "verifier"]);
+  const reviewRole = routingRole(config, "reviewer", ["verifier", "implementer"]);
+  const verificationRole = routingRole(config, "verifier", ["reviewer", "implementer"]);
   return {
     schema_version: 1,
     host: catalog[config.host].binding,
@@ -406,12 +539,10 @@ export function setupSpec(config: GeneratorConfig, catalog: HostCatalog): SetupS
     usage_policy: config.usagePolicy,
     selected_roles,
     routes: [
-      { work_type: "planning", role: "orchestrator", fallbacks: [] },
-      { work_type: "code", role: routingRole(config, "implementer"), fallbacks: [] },
-      { work_type: "review", role: reviewFallback, fallbacks: [] },
-      { work_type: "verification", role: routingRole(config, "verifier", reviewFallback), fallbacks: [] },
+      { work_type: "code", role: codeRole, fallbacks: [] },
+      { work_type: "review", role: reviewRole, fallbacks: [] },
+      { work_type: "verification", role: verificationRole, fallbacks: [] },
     ],
-    route_default: { role: "orchestrator", fallbacks: [] },
   };
 }
 
@@ -449,8 +580,10 @@ export function setupConfigToml(config: GeneratorConfig, catalog: HostCatalog) {
   for (const route of spec.routes) {
     lines.push("[[routes]]", `work_type = ${tomlString(route.work_type)}`, `role = ${tomlString(route.role)}`, `fallbacks = ${tomlArray(route.fallbacks)}`, "");
   }
-  lines.push("[route_default]", `role = ${tomlString(spec.route_default.role)}`, `fallbacks = ${tomlArray(spec.route_default.fallbacks)}`, "");
-  for (const role of config.roles) {
+  if (spec.route_default) {
+    lines.push("[route_default]", `role = ${tomlString(spec.route_default.role)}`, `fallbacks = ${tomlArray(spec.route_default.fallbacks)}`, "");
+  }
+  for (const role of setupSpecRoleIds(config)) {
     const selection = spec.selected_roles[role];
     lines.push(`[selected_roles.${role}]`, `model = ${tomlString(selection.model)}`);
     if (selection.effort) lines.push(`effort = ${tomlString(selection.effort)}`);
@@ -478,25 +611,79 @@ export function recipeApplyCommand(config: GeneratorConfig, catalog: HostCatalog
   return `npx switchloom@${SWITCHLOOM_VERSION} apply --recipe ${shellQuote(setupRecipe(config, catalog, recipePrefix))} --repository .`;
 }
 
-export function lifecycleCommands(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_") {
+export type LifecycleCommand = {
+  id: string;
+  title: string;
+  description: string;
+  command: string;
+};
+
+export function lifecycleCommands(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_"): LifecycleCommand[] {
   const recipe = shellQuote(setupRecipe(config, catalog, recipePrefix));
   const host = config.host;
   return [
-    `npm install -g switchloom@${SWITCHLOOM_VERSION}`,
-    `switchloom preview --recipe ${recipe} --repository .`,
-    `switchloom apply --recipe ${recipe} --repository .`,
-    `switchloom doctor ${host}`,
-    "switchloom update --repository .",
-    "switchloom status --repository .",
-    "switchloom rollback --repository .",
-    "switchloom uninstall --repository .",
+    {
+      id: "install",
+      title: "Install",
+      description: "Install the Switchloom CLI globally.",
+      command: `npm install -g switchloom@${SWITCHLOOM_VERSION}`,
+    },
+    {
+      id: "preview",
+      title: "Preview",
+      description: "Dry-run the recipe and list files that would be written.",
+      command: `switchloom preview --recipe ${recipe} --repository .`,
+    },
+    {
+      id: "apply",
+      title: "Apply",
+      description: "Write the team setup into this repository.",
+      command: `switchloom apply --recipe ${recipe} --repository .`,
+    },
+    {
+      id: "doctor",
+      title: "Doctor",
+      description: "Check that the host setup looks healthy.",
+      command: `switchloom doctor ${host}`,
+    },
+    {
+      id: "update",
+      title: "Update",
+      description: "Refresh an existing Switchloom install in place.",
+      command: "switchloom update --repository .",
+    },
+    {
+      id: "status",
+      title: "Status",
+      description: "Show the current repository install state.",
+      command: "switchloom status --repository .",
+    },
+    {
+      id: "rollback",
+      title: "Rollback",
+      description: "Restore the previous Switchloom snapshot.",
+      command: "switchloom rollback --repository .",
+    },
+    {
+      id: "uninstall",
+      title: "Uninstall",
+      description: "Remove Switchloom files from the repository.",
+      command: "switchloom uninstall --repository .",
+    },
   ];
 }
 
 export function setupSummary(config: GeneratorConfig) {
+  const summaryRoles = setupSpecRoleIds(config);
   return [
     `${HOSTS[config.host].label} ${config.integration === "planr" ? "with Planr" : "standalone"} team`,
-    ...config.roles.map((role) => {
+    ...(canRenderParentRecommendation(config)
+      ? [`${config.roles.length} generated child ${config.roles.length === 1 ? "role" : "roles"}`]
+      : [`${summaryRoles.length} focused ${summaryRoles.length === 1 ? "role" : "roles"}`]),
+    ...(canRenderParentRecommendation(config)
+      ? [`Host-managed parent: ${ROLES.orchestrator.label}${config.assignments.orchestrator.effort ? ` (${config.assignments.orchestrator.effort})` : ""}`]
+      : []),
+    ...summaryRoles.map((role) => {
       const value = config.assignments[role];
       return `${ROLES[role].label}: ${value.model}${value.effort ? ` · ${value.effort}` : ""}`;
     }),

@@ -51,7 +51,7 @@ For Codex, the runtime behavior contract freezes official Codex CLI `0.145.0`
 as both the minimum and maximum supported capability version for this contract
 slice.
 The digest-bound source artifact is
-`docs/codex-v2-runtime-evidence.json#sha256:<digest>`. That artifact records
+`evidence/codex/0.145.0/runtime-evidence.json#sha256:<digest>`. That artifact records
 the `codex --version` observation, Codex account/workspace state as the actual
 backend selection owner, a three-child limit derived from four active agents
 including the root session, shared repository filesystem behavior, explicit
@@ -67,9 +67,10 @@ dispatch, Ultra behavior, and role precedence:
 
 Native Codex setup is repository-local only: it writes managed `.codex`
 project config and role files, including `[features.multi_agent_v2]` with
-`enabled = true` and `hide_spawn_agent_metadata = false`. It preserves unrelated
-project and global Codex configuration, and does not generate or instruct
-nested `codex exec` dispatch. After apply/update/rollback, Codex may require
+`enabled = true` and `hide_spawn_agent_metadata = true`. The latter preserves
+Codex 0.145's backend-compatible reserved `collaboration.spawn_agent` schema.
+It preserves unrelated project and global Codex configuration, and does not
+generate or instruct nested `codex exec` dispatch. After apply/update/rollback, Codex may require
 trusting the project and reloading or restarting the host session before the
 generated role registrations are discoverable.
 

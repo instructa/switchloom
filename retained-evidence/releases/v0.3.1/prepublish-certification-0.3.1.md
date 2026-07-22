@@ -128,7 +128,7 @@ failing closed with `parent must contain exactly 2 V2 spawn_agent calls`.
   `f9920edf6c71288ee3e266c3e884647bc7df17c512a5038b0f9eb7c5d7881ede`.
 
 The protected global-config snapshots match before and after both runs. The
-capability boundary remains frozen in `docs/codex-v2-runtime-evidence.json`:
+capability boundary remains frozen in `evidence/codex/0.145.0/runtime-evidence.json`:
 Codex owns effective backend selection and orchestration; Switchloom owns the
 repository-local role declarations and requested-versus-effective contract.
 
@@ -149,7 +149,7 @@ unavailable/unverified wording.
 
 ## Protection And Limits
 
-- `/Users/kregenrek/projects/planr` remained at
+- `${HOME}/projects/planr` remained at
   `bbc877d40191b2cbb289ed26df5e6fee25e4326d` with `-uall` status SHA-256
   `d6c56495c7e2a78aed2e641b0e928bc8a579bf31335db36456a9f05726827927`.
 - The global Codex config remained SHA-256

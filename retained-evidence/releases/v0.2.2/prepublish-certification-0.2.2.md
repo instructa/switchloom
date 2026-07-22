@@ -48,7 +48,7 @@ Publish Planr item: `i-publish-and-post-publish-verify-de77`
 - `bash -n scripts/release.sh scripts/build-release.sh scripts/npm-pack-check.sh scripts/secleak-check.sh scripts/codex-standalone-oracle.sh scripts/native-host-certification-oracle.sh`
 - `git diff --check`
 - `git check-ignore -v reports/native-host-certification/current/certification-summary.json dist/website/index.html target/release/model-routing npm/native/darwin-arm64/model-routing .planr`
-- `/Users/kregenrek/.agents/skills/secleak-check/scripts/secleak-check.sh` passed after removing generated `node_modules`; BetterLeaks found no leaks and Trivy reported zero Cargo vulnerabilities.
+- `${HOME}/.agents/skills/secleak-check/scripts/secleak-check.sh` passed after removing generated `node_modules`; BetterLeaks found no leaks and Trivy reported zero Cargo vulnerabilities.
 - `scripts/build-release.sh`
 - `target/release/model-routing --version`
 - `SWITCHLOOM_NATIVE_BIN="$PWD/target/release/model-routing" node npm/bin/model-routing.js --version`

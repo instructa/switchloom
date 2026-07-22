@@ -261,11 +261,11 @@
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e"
+            "sha256": "36150ae4d6e37a56c4911b5888fb1939446a9eab1c9cba173c79cc6e85f776eb"
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "da329ed10bbf9be4cc136173eb2702237662d6c13ad9e0f995e531535a0bc603",
+        "manifestSha256": "723133c65d9687f46ccfe3af8c1c846d7c49e466926e3aebddfbe4ab67a986e9",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
@@ -1317,7 +1317,7 @@
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "62c632cf3eb279cd1f82c71a527559b2a40c75f2646307d5a1df3523dd12d016"
+            "sha256": "1068d38f406cf4ca7160557d8a16cfbe6fc8684e89245ffba823cb510b47e594"
           },
           {
             "path": ".cursor/agents/model-routing-fable-driver.md",
@@ -1325,7 +1325,7 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "6516747d43ceebe030e139b68771b67066de7a0c95e0ed6e4ae7cbbe9dce714c",
+        "manifestSha256": "9f3e19c9e241aee058cc76ad812539cf6dd660a0b36f0dd01f23ec744985e2f2",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
@@ -1596,11 +1596,11 @@
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e"
+            "sha256": "36150ae4d6e37a56c4911b5888fb1939446a9eab1c9cba173c79cc6e85f776eb"
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "efa00a0b8992660fa77d57ace0221f43893893089a8864e4105ae1b218b46904",
+        "manifestSha256": "a5b7d8e85e3bedbb057899c5bbdf56a694c0deb5478aa00e3dc80b52395582ea",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
@@ -2652,7 +2652,7 @@
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "62c632cf3eb279cd1f82c71a527559b2a40c75f2646307d5a1df3523dd12d016"
+            "sha256": "1068d38f406cf4ca7160557d8a16cfbe6fc8684e89245ffba823cb510b47e594"
           },
           {
             "path": ".cursor/agents/model-routing-fable-driver.md",
@@ -2660,7 +2660,7 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "12a776041f4e7dd723029c5ebb8a38317952d12b1ad30b0e3e9d88f7a7fe727e",
+        "manifestSha256": "c55098b862389b5edb4f41ac620a3d4817af2633d95f290cb401e55978ed921e",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
@@ -2931,11 +2931,11 @@
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e"
+            "sha256": "36150ae4d6e37a56c4911b5888fb1939446a9eab1c9cba173c79cc6e85f776eb"
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "9886185283a2c96c661375d6b784673c2cb6a62bd1978a087c84de1dab214be6",
+        "manifestSha256": "23c135e044113ce8a6f8b048fbf96710fa16d465940bc89154bd291f38912d2a",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
@@ -3987,7 +3987,7 @@
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "62c632cf3eb279cd1f82c71a527559b2a40c75f2646307d5a1df3523dd12d016"
+            "sha256": "1068d38f406cf4ca7160557d8a16cfbe6fc8684e89245ffba823cb510b47e594"
           },
           {
             "path": ".cursor/agents/model-routing-fable-driver.md",
@@ -3995,7 +3995,7 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "67b12f790864b4018428ef357c99c7512022cd5bc0d0a33a047ad256122b1c45",
+        "manifestSha256": "0290603ce5c40440533235f99b021abfd807269c07285996a033198d3460354c",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
@@ -4261,11 +4261,11 @@
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e"
+            "sha256": "36150ae4d6e37a56c4911b5888fb1939446a9eab1c9cba173c79cc6e85f776eb"
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "4fae4ee77b4408b96da09d2e07aebaf29d4357d18fab26022ab8587a16202b32",
+        "manifestSha256": "73176db7f008ea637b9959e9261f7d38abde11a30defdc52ace3c9e33ed8cd83",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
@@ -5287,7 +5287,7 @@
           },
           {
             "path": ".codex/config.toml",
-            "sha256": "62c632cf3eb279cd1f82c71a527559b2a40c75f2646307d5a1df3523dd12d016"
+            "sha256": "1068d38f406cf4ca7160557d8a16cfbe6fc8684e89245ffba823cb510b47e594"
           },
           {
             "path": ".cursor/agents/model-routing-fable-driver.md",
@@ -5295,7 +5295,7 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "7be221d1d4262414ad9067671ad1dd535b2a4fb45925f67e59f2160633d32f97",
+        "manifestSha256": "179e020fe418ffd91f2c033d1f591c70a342103555f4128cde8ff1e08aeee535",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
@@ -5437,6 +5437,7 @@
               "medium",
               "high",
               "xhigh",
+              "max",
               "ultra"
             ],
             "id": "gpt-5.6-sol",
@@ -5448,6 +5449,7 @@
               "medium",
               "high",
               "xhigh",
+              "max",
               "ultra"
             ],
             "id": "gpt-5.6-terra",
@@ -5458,7 +5460,8 @@
               "low",
               "medium",
               "high",
-              "xhigh"
+              "xhigh",
+              "max"
             ],
             "id": "gpt-5.6-luna",
             "tier": "standard"

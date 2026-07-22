@@ -65,15 +65,22 @@ const scriptMatches = [...html.matchAll(/(?:src|component-url)="([^"]*Generator[
 if (scriptMatches.length === 0) throw new Error("deployed homepage missing generator client script");
 const generatorScript = new TextDecoder().decode(await fetchOk(scriptMatches.at(-1)[1]));
 for (const required of [
-  "Copy npx recipe command",
-  "Download .switchloom/config.toml",
+  "Get your agent team",
+  "Check your Codex version",
+  "Check Cursor Agent",
   "Standalone or With Planr",
   "switchloom preview --recipe",
   "switchloom rollback --repository .",
 ]) {
   if (!generatorScript.includes(required)) throw new Error(`deployed generator missing ${required}`);
 }
-for (const removed of ["jszip", "Download setup (.zip)", "switchloom.config.json"]) {
+for (const removed of [
+  "jszip",
+  "Download setup (.zip)",
+  "switchloom.config.json",
+  "Copy npx recipe command",
+  "Download .switchloom/config.toml",
+]) {
   if (generatorScript.toLowerCase().includes(removed.toLowerCase())) {
     throw new Error(`deployed generator still contains removed browser artifact path: ${removed}`);
   }

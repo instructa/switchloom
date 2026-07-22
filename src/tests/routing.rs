@@ -317,6 +317,99 @@ fn fully_custom_setup_compiles_as_unverified_host_native_bundle() {
 }
 
 #[test]
+fn child_only_setup_does_not_reintroduce_parent_profiles_routes_or_artifacts() {
+    let spec = SetupSpecV1 {
+        schema_version: 1,
+        host: "codex-openai".to_string(),
+        integration: Integration::Planr,
+        usage_policy: "balanced".to_string(),
+        selected_roles: BTreeMap::from([
+            (
+                "implementer".to_string(),
+                SetupRoleSelection {
+                    model: "gpt-5.6-terra".to_string(),
+                    effort: Some("high".to_string()),
+                    spawn: Some(SetupSpawnPolicy {
+                        agent_type: "switchloom_implementer".to_string(),
+                        task_name: "implementer".to_string(),
+                        fork_turns: ForkPolicy {
+                            mode: "none".to_string(),
+                            turns: None,
+                        },
+                    }),
+                },
+            ),
+            (
+                "verifier".to_string(),
+                SetupRoleSelection {
+                    model: "gpt-5.6-terra".to_string(),
+                    effort: Some("medium".to_string()),
+                    spawn: Some(SetupSpawnPolicy {
+                        agent_type: "switchloom_verifier".to_string(),
+                        task_name: "verifier".to_string(),
+                        fork_turns: ForkPolicy {
+                            mode: "none".to_string(),
+                            turns: None,
+                        },
+                    }),
+                },
+            ),
+        ]),
+        routes: vec![
+            SetupRouteMapping {
+                work_type: "code".to_string(),
+                role: "implementer".to_string(),
+                fallbacks: Vec::new(),
+            },
+            SetupRouteMapping {
+                work_type: "review".to_string(),
+                role: "verifier".to_string(),
+                fallbacks: Vec::new(),
+            },
+            SetupRouteMapping {
+                work_type: "verification".to_string(),
+                role: "verifier".to_string(),
+                fallbacks: Vec::new(),
+            },
+        ],
+        route_default: None,
+    };
+
+    let bundle = compile_setup_spec(&spec).unwrap();
+    validate_bundle(&bundle).unwrap();
+    assert!(!bundle.profiles.contains_key("orchestrator"));
+    assert!(bundle.route_default.is_none());
+    assert!(
+        bundle
+            .routes
+            .iter()
+            .all(|route| route.profile != "orchestrator")
+    );
+    assert!(
+        bundle
+            .artifacts
+            .iter()
+            .all(|artifact| !artifact.path.contains("orchestrator")
+                && !artifact.content.contains("switchloom_orchestrator"))
+    );
+
+    let contract = bundle.adapter_contract.as_ref().unwrap();
+    assert!(
+        !contract
+            .routing_intent
+            .semantic_roles
+            .contains(&"orchestrator".to_string())
+    );
+    assert!(
+        contract
+            .routing_intent
+            .role_requests
+            .iter()
+            .all(|request| request.semantic_role != "orchestrator")
+    );
+}
+
+#[test]
 fn successful_custom_setups_validate_final_bundles_for_each_host_family() {
     for (host, role, model, effort) in [
         ("claude-code", "implementer", "sonnet", Some("medium")),

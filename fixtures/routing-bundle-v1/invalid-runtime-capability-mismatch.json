@@ -351,7 +351,7 @@
           "automatic_delegation_requires_ultra": true
         },
         "source_references": [
-          "docs/codex-v2-runtime-evidence.json#sha256:1ca8b20e2e8b2c57f741d905bbfed6971a54e0520b3e9a2e9e8e5eefc0aa123d"
+          "evidence/codex/0.145.0/runtime-evidence.json#sha256:2c3b2fe9cb99a94d7a7c32f54dc5afd9f51449e9a0d56b711a8321bc55d7bd31"
         ]
       },
       "discovery_artifacts": [

@@ -3,9 +3,6 @@
   <title>Pi</title>
   <style>
     .logo-mark { fill: #000; }
-    @media (prefers-color-scheme: dark) {
-      .logo-mark { fill: #fff; }
-    }
   </style>
   <!-- P shape: outer boundary clockwise, inner hole counter-clockwise -->
   <path class="logo-mark" fill-rule="evenodd" d="

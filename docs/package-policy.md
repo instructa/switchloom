@@ -8,12 +8,25 @@ The repository must be safe to publish from a dirty local coordination environme
 - `.claude/`, `.codex/`, and `.cursor/` host-local state.
 - Credentials, private keys, `.env` files except `.env.example`, generated reports, and build output.
 - Regenerated website/package output such as `dist/`, `coverage/`, `tmp/`, and `.crate` files.
+- Historical migration, handoff, and release records under `retained-evidence/`.
 
 The policy is enforced by `.gitignore`, `Cargo.toml` `exclude`, and the CI package-content audit.
 
 ## Publishable Inputs
 
-Only source, fixtures, docs, CI metadata, and deterministic generator inputs should enter the package. Live verification receipts and authenticated-host evidence belong in release notes or reviewed handoff docs after secret scrubbing, not in the crate payload.
+The npm tarball contains only package metadata, README, LICENSE, the launcher,
+and supported native binaries. The Cargo source package additionally retains
+the versioned Codex runtime evidence embedded by `src/evidence.rs`, plus source,
+fixtures, current maintainer docs, CI metadata, and deterministic generator
+inputs. Live verification receipts and authenticated-host evidence belong in
+reviewed retained records after secret scrubbing, not in either payload.
+
+## Documentation Owners
+
+README and switchloom.ai own end-user setup and usage. Current maintainer
+contracts remain in `docs/`; immutable runtime inputs live under `evidence/`;
+historical migration, handoff, and release records live under
+`retained-evidence/`.
 
 ## v0.3.1 Public Boundary
 

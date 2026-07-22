@@ -15,7 +15,6 @@ const FORBIDDEN_PUBLIC_PATHS: &[&str] = &[
     "scripts/",
     "reports/",
     "retained-evidence/",
-    "evidence/",
     ".planr/",
     ".codex/",
     ".claude/",
@@ -23,6 +22,42 @@ const FORBIDDEN_PUBLIC_PATHS: &[&str] = &[
     "tmp/",
 ];
 const FORBIDDEN_PUBLIC_WORDS: &[&str] = &["credential", "secret", "receipt"];
+const REQUIRED_CARGO_EVIDENCE_FILES: &[&str] = &[
+    "evidence/codex/0.145.0/exact-version-capture.txt",
+    "evidence/codex/0.145.0/runtime-evidence.json",
+];
+const CURRENT_MAINTAINER_DOCS: &[&str] = &[
+    "model-routing-policy.md",
+    "ownership.md",
+    "package-policy.md",
+    "preset-composition.md",
+    "preset-evaluation.md",
+    "preset-registry.md",
+];
+const REQUIRED_RETAINED_RECORDS: &[&str] = &[
+    "retained-evidence/handoffs/v0.3.1/planr-hard-cut-handoff.md",
+    "retained-evidence/migrations/v0.3.0/migration-baseline.md",
+    "retained-evidence/migrations/v0.3.0/migration-manifest.tsv",
+    "retained-evidence/migrations/v0.3.0/v0.3.0-migration-characterization.md",
+    "retained-evidence/releases/v0.2.2/prepublish-certification-0.2.2.md",
+    "retained-evidence/releases/v0.3.0/prepublish-certification-0.3.0.md",
+    "retained-evidence/releases/v0.3.1/prepublish-certification-0.3.1.md",
+];
+const REMOVED_BROWSER_ARTIFACT_WORDING: &[&str] = &[
+    "download .switchloom/config.toml",
+    "download setup (.zip)",
+    "download host-native project files",
+    "downloadable `.switchloom/config.toml`",
+    "secondary action downloads",
+    "secondary result is a readable setup config",
+];
+const REQUIRED_NPM_PUBLIC_FILES: &[&str] = &[
+    "LICENSE",
+    "README.md",
+    "npm/bin/model-routing.js",
+    "package.json",
+];
+const OPTIONAL_NPM_PUBLIC_FILES: &[&str] = &["npm/native/provenance.json"];
 
 pub(crate) struct PrepareOptions {
     pub root: PathBuf,
@@ -112,6 +147,7 @@ pub(crate) fn verify(options: VerifyOptions) -> Result<()> {
         println!("release contract passed for v{version}");
         return Ok(());
     }
+    verify_documentation_boundary(&options.root)?;
     verify_catalog(&options.root)?;
     verify_public_inventories(&options.root)?;
     if options.require_provenance {
@@ -425,6 +461,52 @@ fn verify_catalog(root: &Path) -> Result<()> {
     Ok(())
 }
 
+fn verify_documentation_boundary(root: &Path) -> Result<()> {
+    let mut actual_docs = Vec::new();
+    for entry in fs::read_dir(root.join("docs"))? {
+        let entry = entry?;
+        ensure!(
+            entry.file_type()?.is_file(),
+            "docs may contain current maintainer files only: {}",
+            entry.path().display()
+        );
+        actual_docs.push(entry.file_name().to_string_lossy().into_owned());
+    }
+    actual_docs.sort();
+    ensure!(
+        actual_docs == CURRENT_MAINTAINER_DOCS,
+        "docs ownership mismatch: expected {CURRENT_MAINTAINER_DOCS:?}, found {actual_docs:?}"
+    );
+    for record in REQUIRED_RETAINED_RECORDS {
+        ensure!(
+            root.join(record).is_file(),
+            "required retained record is missing: {record}"
+        );
+    }
+    verify_current_document_wording("README.md", &fs::read_to_string(root.join("README.md"))?)?;
+    for document in CURRENT_MAINTAINER_DOCS {
+        let path = format!("docs/{document}");
+        verify_current_document_wording(&path, &fs::read_to_string(root.join(&path))?)?;
+    }
+    println!(
+        "documentation boundary passed: {} current docs, {} retained records",
+        actual_docs.len(),
+        REQUIRED_RETAINED_RECORDS.len()
+    );
+    Ok(())
+}
+
+fn verify_current_document_wording(path: &str, content: &str) -> Result<()> {
+    let normalized = content.to_ascii_lowercase();
+    for removed in REMOVED_BROWSER_ARTIFACT_WORDING {
+        ensure!(
+            !normalized.contains(removed),
+            "current documentation {path} contains removed browser artifact wording: {removed}"
+        );
+    }
+    Ok(())
+}
+
 fn verify_public_inventories(root: &Path) -> Result<()> {
     verify_publication_boundary(root)?;
     let cargo = output(
@@ -441,7 +523,7 @@ fn verify_public_inventories(root: &Path) -> Result<()> {
         ],
     )?;
     let cargo_files = lines(&cargo.stdout);
-    verify_inventory("Cargo", &cargo_files)?;
+    verify_cargo_inventory(&cargo_files)?;
     let npm = output(root, "npm", &["pack", "--dry-run", "--json"])?;
     let npm_value: Value = serde_json::from_slice(&npm.stdout)?;
     let npm_files = npm_value
@@ -451,16 +533,10 @@ fn verify_public_inventories(root: &Path) -> Result<()> {
         .iter()
         .map(|entry| entry["path"].as_str().unwrap_or_default().to_owned())
         .collect::<Vec<_>>();
-    verify_inventory("npm", &npm_files)?;
+    verify_npm_inventory(&npm_files)?;
     ensure!(
         cargo_files.iter().any(|path| path == "src/lib.rs"),
         "Cargo package omitted src/lib.rs"
-    );
-    ensure!(
-        npm_files
-            .iter()
-            .any(|path| path == "npm/bin/model-routing.js"),
-        "npm package omitted launcher"
     );
     println!(
         "public inventories passed: {} Cargo files, {} npm files",
@@ -561,6 +637,51 @@ fn verify_inventory(kind: &str, files: &[String]) -> Result<()> {
         {
             bail!("{kind} public artifact contains forbidden path {file}");
         }
+    }
+    Ok(())
+}
+
+fn verify_cargo_inventory(files: &[String]) -> Result<()> {
+    verify_inventory("Cargo", files)?;
+    let actual = files.iter().map(String::as_str).collect::<BTreeSet<_>>();
+    for required in REQUIRED_CARGO_EVIDENCE_FILES {
+        ensure!(
+            actual.contains(required),
+            "Cargo package omitted required runtime evidence path {required}"
+        );
+    }
+    Ok(())
+}
+
+fn verify_npm_inventory(files: &[String]) -> Result<()> {
+    verify_inventory("npm", files)?;
+    let actual = files.iter().map(String::as_str).collect::<BTreeSet<_>>();
+    ensure!(
+        actual.len() == files.len(),
+        "npm package inventory contains duplicate paths"
+    );
+    for required in REQUIRED_NPM_PUBLIC_FILES {
+        ensure!(
+            actual.contains(required),
+            "npm package omitted required path {required}"
+        );
+    }
+    for file in files {
+        if REQUIRED_NPM_PUBLIC_FILES.contains(&file.as_str())
+            || OPTIONAL_NPM_PUBLIC_FILES.contains(&file.as_str())
+        {
+            continue;
+        }
+        let components = file.split('/').collect::<Vec<_>>();
+        if components.len() == 4
+            && components[0] == "npm"
+            && components[1] == "native"
+            && valid_target(components[2])
+            && components[3] == "model-routing"
+        {
+            continue;
+        }
+        bail!("npm public artifact contains path outside positive allowlist: {file}");
     }
     Ok(())
 }
@@ -961,6 +1082,103 @@ mod tests {
             );
         }
         verify_inventory("test", &["src/lib.rs".into(), "README.md".into()]).unwrap();
+    }
+
+    #[test]
+    fn npm_inventory_accepts_only_the_minimal_positive_allowlist() {
+        let minimal = [
+            "LICENSE",
+            "README.md",
+            "npm/bin/model-routing.js",
+            "package.json",
+        ]
+        .map(str::to_owned);
+        verify_npm_inventory(&minimal).unwrap();
+
+        let with_native = minimal
+            .into_iter()
+            .chain(["npm/native/darwin-arm64/model-routing".to_owned()])
+            .collect::<Vec<_>>();
+        verify_npm_inventory(&with_native).unwrap();
+
+        let with_provenance = with_native
+            .into_iter()
+            .chain(["npm/native/provenance.json".to_owned()])
+            .collect::<Vec<_>>();
+        verify_npm_inventory(&with_provenance).unwrap();
+
+        for unexpected in [
+            "CHANGELOG.md",
+            "docs/package-policy.md",
+            "evidence/codex/0.145.0/runtime.json",
+            "npm/native/darwin-arm64/debug.log",
+            "npm/native/unsupported/model-routing",
+        ] {
+            let mut inventory = with_provenance.clone();
+            inventory.push(unexpected.to_owned());
+            assert!(
+                verify_npm_inventory(&inventory).is_err(),
+                "accepted {unexpected}"
+            );
+        }
+    }
+
+    #[test]
+    fn cargo_inventory_requires_versioned_runtime_evidence() {
+        let complete = REQUIRED_CARGO_EVIDENCE_FILES
+            .iter()
+            .map(|path| (*path).to_owned())
+            .collect::<Vec<_>>();
+        verify_cargo_inventory(&complete).unwrap();
+
+        for omitted in REQUIRED_CARGO_EVIDENCE_FILES {
+            let inventory = REQUIRED_CARGO_EVIDENCE_FILES
+                .iter()
+                .filter(|path| *path != omitted)
+                .map(|path| (*path).to_owned())
+                .collect::<Vec<_>>();
+            assert!(
+                verify_cargo_inventory(&inventory).is_err(),
+                "accepted Cargo inventory without {omitted}"
+            );
+        }
+    }
+
+    #[test]
+    fn current_documentation_rejects_removed_browser_artifact_wording() {
+        verify_current_document_wording(
+            "README.md",
+            "Use the provider onboarding flow, apply from the CLI, then run doctor.",
+        )
+        .unwrap();
+
+        for removed in REMOVED_BROWSER_ARTIFACT_WORDING {
+            assert!(
+                verify_current_document_wording("README.md", removed).is_err(),
+                "accepted removed wording: {removed}"
+            );
+        }
+    }
+
+    #[test]
+    fn npm_inventory_requires_metadata_launcher_readme_and_license() {
+        let complete = [
+            "LICENSE",
+            "README.md",
+            "npm/bin/model-routing.js",
+            "package.json",
+        ];
+        for omitted in complete {
+            let inventory = complete
+                .into_iter()
+                .filter(|path| *path != omitted)
+                .map(str::to_owned)
+                .collect::<Vec<_>>();
+            assert!(
+                verify_npm_inventory(&inventory).is_err(),
+                "accepted inventory without {omitted}"
+            );
+        }
     }
 
     #[test]

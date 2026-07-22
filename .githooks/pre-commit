@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
 set -eu
 node scripts/hooks/block-forbidden-staged-files.mjs
+node scripts/hooks/block-sensitive-diff-content.mjs

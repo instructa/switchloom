@@ -255,8 +255,8 @@
       "path": ".codex/config.toml",
       "media_type": "application/toml",
       "mode": "replace",
-      "content": "[agents.model_routing_luna_xhigh]\nconfig_file = \"./agents/model-routing-luna-xhigh.toml\"\n\n[agents.model_routing_sol_high]\nconfig_file = \"./agents/model-routing-sol-high.toml\"\n\n[agents.model_routing_sol_medium]\nconfig_file = \"./agents/model-routing-sol-medium.toml\"\n\n[agents.model_routing_sol_ultra]\nconfig_file = \"./agents/model-routing-sol-ultra.toml\"\n\n[agents.model_routing_terra_high]\nconfig_file = \"./agents/model-routing-terra-high.toml\"\n\n[agents.model_routing_terra_mechanical]\nconfig_file = \"./agents/model-routing-terra-mechanical.toml\"\n\n[agents.model_routing_terra_medium]\nconfig_file = \"./agents/model-routing-terra-medium.toml\"\n\n[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = false\n",
-      "sha256": "5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e"
+      "content": "[agents.model_routing_luna_xhigh]\nconfig_file = \"./agents/model-routing-luna-xhigh.toml\"\n\n[agents.model_routing_sol_high]\nconfig_file = \"./agents/model-routing-sol-high.toml\"\n\n[agents.model_routing_sol_medium]\nconfig_file = \"./agents/model-routing-sol-medium.toml\"\n\n[agents.model_routing_sol_ultra]\nconfig_file = \"./agents/model-routing-sol-ultra.toml\"\n\n[agents.model_routing_terra_high]\nconfig_file = \"./agents/model-routing-terra-high.toml\"\n\n[agents.model_routing_terra_mechanical]\nconfig_file = \"./agents/model-routing-terra-mechanical.toml\"\n\n[agents.model_routing_terra_medium]\nconfig_file = \"./agents/model-routing-terra-medium.toml\"\n\n[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = true\n",
+      "sha256": "36150ae4d6e37a56c4911b5888fb1939446a9eab1c9cba173c79cc6e85f776eb"
     }
   ],
   "evidence": {
@@ -357,7 +357,7 @@
           "automatic_delegation_requires_ultra": true
         },
         "source_references": [
-          "docs/codex-v2-runtime-evidence.json#sha256:1ca8b20e2e8b2c57f741d905bbfed6971a54e0520b3e9a2e9e8e5eefc0aa123d"
+          "evidence/codex/0.145.0/runtime-evidence.json#sha256:2c3b2fe9cb99a94d7a7c32f54dc5afd9f51449e9a0d56b711a8321bc55d7bd31"
         ]
       },
       "discovery_artifacts": [

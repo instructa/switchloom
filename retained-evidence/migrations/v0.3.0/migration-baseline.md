@@ -4,11 +4,11 @@ This document records the immutable extraction baseline for the standalone Switc
 
 ## Frozen Source
 
-- Source repository: `/Users/kregenrek/projects/planr`
+- Source repository: `${HOME}/projects/planr`
 - Frozen tag: `v1.5.0`
 - Frozen commit: `7a01ad54cb41fd755f368a79339a96a997f693d0`
-- Baseline command: `git -C /Users/kregenrek/projects/planr rev-list -n 1 v1.5.0`
-- Current standalone repository rule: do not edit `/Users/kregenrek/projects/planr` product code during Goal A.
+- Baseline command: `git -C "${HOME}/projects/planr" rev-list -n 1 v1.5.0`
+- Current standalone repository rule: do not edit `${HOME}/projects/planr` product code during Goal A.
 
 ## Ownership Disposition Manifest
 

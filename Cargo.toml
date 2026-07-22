@@ -53,7 +53,6 @@ exclude = [
   "xtask/**",
   "scripts/**",
   "dist/**",
-  "docs/prepublish-certification-*.md",
   "reports/**",
   "retained-evidence/**",
   "tmp/**",

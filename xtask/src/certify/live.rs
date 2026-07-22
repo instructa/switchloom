@@ -1010,7 +1010,7 @@ fn codex_host_spec(
             "-c",
             &sol_override,
             "-c",
-            "multi_agent_v2.hide_spawn_agent_metadata=false",
+            "features.multi_agent_v2.hide_spawn_agent_metadata=true",
             "-c",
             "cli_auth_credentials_store=\"file\"",
             "-c",
@@ -1303,6 +1303,23 @@ mod tests {
                     owned.workdir.display()
                 )
             }));
+            assert!(
+                spec.args
+                    .iter()
+                    .any(|arg| arg == "features.multi_agent_v2.hide_spawn_agent_metadata=true")
+            );
+            assert!(
+                !spec
+                    .args
+                    .iter()
+                    .any(|arg| arg == "multi_agent_v2.hide_spawn_agent_metadata=false")
+            );
+            assert!(
+                !spec
+                    .args
+                    .iter()
+                    .any(|arg| arg == "features.multi_agent_v2.hide_spawn_agent_metadata=false")
+            );
         }
 
         let negative = codex_negative_prompt();
