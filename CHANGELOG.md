@@ -2,6 +2,16 @@
 
 All notable changes to Switchloom are recorded here.
 
+## [0.3.2] - 2026-07-22
+
+- Redesigned the multi-agent generator around a host-managed orchestrator and
+  directly editable child-role cards with provider-specific onboarding.
+- Updated the Codex model catalog to expose Max accurately, distinguish it from
+  Ultra delegation, and keep Luna outside certified V2 presets.
+- Hardened release evidence, public package inventories, secret scanning, and
+  retained migration records while regenerating catalogs, bundles, and live UI
+  evidence.
+
 ## [0.3.1] - 2026-07-22
 
 - Added repository-local Codex Multi-Agent V2 activation and ownership-safe
