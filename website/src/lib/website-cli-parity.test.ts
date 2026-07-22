@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
   applyPreset,
+  CHILD_ROLE_IDS,
   createConfig,
   HOST_IDS,
   hostCatalogFrom,
@@ -21,7 +22,7 @@ import {
   setupTransportFrom,
   shellQuote,
 } from "./generator";
-import type { GeneratorConfig, RoleId } from "./generator";
+import type { ChildRoleId, GeneratorConfig } from "./generator";
 
 type LifecycleReport = {
   repository: string;
@@ -122,15 +123,13 @@ async function validateCliParity(name: string, config: GeneratorConfig) {
   }
 }
 
-function roleSubsets(): RoleId[][] {
-  const optionalRoles = ROLE_IDS.filter((role) => role !== "orchestrator");
-  return Array.from({ length: 1 << optionalRoles.length }, (_, mask) => [
-    "orchestrator",
-    ...optionalRoles.filter((_, index) => (mask & (1 << index)) !== 0),
-  ] as RoleId[]);
+function roleSubsets(): ChildRoleId[][] {
+  return Array.from({ length: 1 << CHILD_ROLE_IDS.length }, (_, mask) =>
+    CHILD_ROLE_IDS.filter((_, index) => (mask & (1 << index)) !== 0),
+  ).filter((roles) => roles.length > 0);
 }
 
-function withRoles(config: GeneratorConfig, roles: readonly RoleId[]): GeneratorConfig {
+function withRoles(config: GeneratorConfig, roles: readonly ChildRoleId[]): GeneratorConfig {
   return { ...config, roles: [...roles] };
 }
 
@@ -158,7 +157,7 @@ describe("website SetupSpec to CLI parity", () => {
   it("validates every website-selectable per-role model and effort through Rust config and recipe compilation", async () => {
     for (const host of HOST_IDS) {
       for (const role of ROLE_IDS) {
-        const roleSet = role === "orchestrator" ? ["orchestrator"] as RoleId[] : ["orchestrator", role] as RoleId[];
+        const roleSet = role === "orchestrator" ? CHILD_ROLE_IDS : [role] as ChildRoleId[];
         for (const model of hostCatalog[host].models) {
           const efforts = model.efforts.length > 0 ? model.efforts : [undefined];
           for (const effort of efforts) {
@@ -176,6 +175,36 @@ describe("website SetupSpec to CLI parity", () => {
       }
     }
   }, 180_000);
+
+  it("compiles child-only Codex setup without emitting native parent artifacts", async () => {
+    const config = setIntegration(
+      withRoles(setEffort(createConfig("codex"), "orchestrator", "ultra", hostCatalog), ["reviewer"]),
+      "planr",
+    );
+    await validateCliParity("codex-parent-recommendation-child-only-planr", config);
+
+    const { repository } = await tempRepo("switchloom-website-child-only-codex-");
+    const applied = report(run([
+      "apply",
+      "--recipe",
+      setupRecipe(config, hostCatalog, setupTransport.recipePrefix),
+      "--repository",
+      repository,
+      "--yes",
+    ]));
+    const paths = applied.artifacts.map((artifact) => artifact.path);
+    expect(paths).toContain(".codex/agents/switchloom_reviewer.toml");
+    expect(paths).toContain(".planr/agents.toml");
+    expect(paths).not.toContain(".codex/agents/switchloom_orchestrator.toml");
+
+    const configToml = await readFile(join(repository, ".switchloom/config.toml"), "utf8");
+    const planrAgents = await readFile(join(repository, ".planr/agents.toml"), "utf8");
+    expect(configToml).toContain("[selected_roles.reviewer]");
+    expect(configToml).not.toContain("[selected_roles.orchestrator]");
+    expect(configToml).not.toContain("[route_default]");
+    expect(planrAgents).toContain("switchloom_reviewer");
+    expect(planrAgents).not.toContain("switchloom_orchestrator");
+  }, 60_000);
 
   it("keeps preset coverage over all roles as a compact smoke for copied website defaults", async () => {
     for (const host of HOST_IDS) {
@@ -215,7 +244,7 @@ describe("website SetupSpec to CLI parity", () => {
   it("executes a Planr-mode website command and writes Planr declarations plus thin native roles", async () => {
     const config = setIntegration(applyPreset(createConfig("codex"), "balanced", hostCatalog), "planr");
     const commands = lifecycleCommands(config, hostCatalog, setupTransport.recipePrefix);
-    const recipe = commands[2].match(/--recipe '([^']+)'/)?.[1];
+    const recipe = commands[2].command.match(/--recipe '([^']+)'/)?.[1];
     expect(recipe).toBeTruthy();
 
     const { repository } = await tempRepo("switchloom-website-planr-");

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applyPreset, changeHost, createConfig, HOST_IDS, hostCatalogFrom, lifecycleCommands, recipeApplyCommand, setEffort, setIntegration, setModel, setRoles, setupConfigToml, setupRecipe, setupSpec, setupTransportFrom } from "./generator";
+import { applyPreset, canRenderParentRecommendation, changeHost, CHILD_ROLE_IDS, choosePreset, createConfig, createPresetSelection, HOST_IDS, hostCatalogFrom, isChildRoleId, isPresetDirty, isPrimaryRecommendationId, lifecycleCommands, markPresetCustom, parentRecommendationEffortCopy, PRESETS, primaryRecommendation, PRIMARY_RECOMMENDATION_ID, recipeApplyCommand, removeChildRole, resetRolesToPreset, ROLE_IDS, selectedChildRoleIds, setEffort, setIntegration, setModel, setRoles, setupConfigToml, setupRecipe, setupSpec, setupSummary, setupTransportFrom } from "./generator";
 
 const generatedCatalog = {
   setupContract: {
@@ -11,9 +11,9 @@ const generatedCatalog = {
         id: "codex",
         binding: "codex-openai",
         models: [
-          { id: "gpt-5.6-sol", efforts: ["low", "medium", "high", "xhigh", "ultra"], tier: "premium" as const },
-          { id: "gpt-5.6-terra", efforts: ["low", "medium", "high", "xhigh", "ultra"], tier: "standard" as const },
-          { id: "gpt-5.6-luna", efforts: ["low", "medium", "high", "xhigh"], tier: "standard" as const },
+          { id: "gpt-5.6-sol", efforts: ["low", "medium", "high", "xhigh", "max", "ultra"], tier: "premium" as const },
+          { id: "gpt-5.6-terra", efforts: ["low", "medium", "high", "xhigh", "max", "ultra"], tier: "standard" as const },
+          { id: "gpt-5.6-luna", efforts: ["low", "medium", "high", "xhigh", "max"], tier: "standard" as const },
         ],
       },
       {
@@ -63,15 +63,81 @@ const generatedCatalog = {
 const hostCatalog = hostCatalogFrom(generatedCatalog);
 
 describe("Switchloom generator", () => {
-  it("always keeps the orchestrator and caps the team at four roles", () => {
+  it("splits the primary recommendation id from generated child role ids", () => {
+    expect(PRIMARY_RECOMMENDATION_ID).toBe("orchestrator");
+    expect(CHILD_ROLE_IDS).toEqual(["implementer", "reviewer", "verifier"]);
+    expect(ROLE_IDS).toEqual([PRIMARY_RECOMMENDATION_ID, ...CHILD_ROLE_IDS]);
+    expect(isPrimaryRecommendationId("orchestrator")).toBe(true);
+    expect(isChildRoleId("orchestrator")).toBe(false);
+    expect(isChildRoleId("reviewer")).toBe(true);
+  });
+
+  it("keeps generated child roles separate from the parent recommendation", () => {
     const config = setRoles(createConfig(), ["implementer", "reviewer", "verifier", "not-a-role"]);
-    expect(config.roles).toEqual(["orchestrator", "implementer", "reviewer", "verifier"]);
+    expect(config.roles).toEqual(["implementer", "reviewer", "verifier"]);
+  });
+
+  it("tracks the parent recommendation separately from selected children", () => {
+    const config = setRoles(createConfig(), ["reviewer", "not-a-role"]);
+    expect(primaryRecommendation(config)).toEqual({
+      id: "orchestrator",
+      assignment: { model: "gpt-5.6-sol", effort: "medium" },
+    });
+    expect(selectedChildRoleIds(config)).toEqual(["reviewer"]);
+    expect(selectedChildRoleIds(config)).not.toContain("orchestrator");
+  });
+
+  it("remembers the last selected preset through custom edits", () => {
+    const balanced = createPresetSelection();
+    expect(balanced).toEqual({ selected: "balanced", lastSelected: "balanced" });
+
+    const high = choosePreset(balanced, "high");
+    expect(high).toEqual({ selected: "high", lastSelected: "high" });
+    expect(markPresetCustom(high)).toEqual({ selected: "custom", lastSelected: "high" });
+  });
+
+  it("detects dirty team state against a preset baseline", () => {
+    const balanced = applyPreset(createConfig("cursor"), "balanced", hostCatalog);
+    expect(isPresetDirty(balanced, "balanced", hostCatalog)).toBe(false);
+    expect(isPresetDirty(setEffort(balanced, "reviewer", "max", hostCatalog), "balanced", hostCatalog)).toBe(true);
+    expect(isPresetDirty(setRoles(balanced, ["implementer", "reviewer"]), "balanced", hostCatalog)).toBe(true);
+  });
+
+  it("removes selected children without dropping the final child", () => {
+    const config = createConfig();
+    const withoutReviewer = removeChildRole(config, "reviewer");
+    expect(withoutReviewer.roles).toEqual(["implementer", "verifier"]);
+    expect(removeChildRole(setRoles(config, ["verifier"]), "verifier").roles).toEqual(["verifier"]);
+  });
+
+  it("resets roles and assignments to the last selected preset", () => {
+    const custom = setRoles(
+      setEffort(applyPreset(createConfig("codex"), "high", hostCatalog), "reviewer", "ultra", hostCatalog),
+      ["reviewer"],
+    );
+
+    const reset = resetRolesToPreset(custom, "high", hostCatalog);
+    expect(reset.roles).toEqual(["implementer", "reviewer", "verifier"]);
+    expect(reset.usagePolicy).toBe("max-quality");
+    expect(reset.assignments.reviewer).toEqual({ model: "gpt-5.6-sol", effort: "medium" });
+    expect(isPresetDirty(reset, "high", hostCatalog)).toBe(false);
   });
 
   it("resets incompatible assignments when the host changes", () => {
-    const changed = changeHost(createConfig("codex"), "claude-code");
+    const changed = changeHost(applyPreset(createConfig("codex"), "high", hostCatalog), "claude-code");
     expect(changed.assignments.orchestrator).toEqual({ model: "opus", effort: "high" });
-    expect(changed.roles).toHaveLength(4);
+    expect(changed.roles).toHaveLength(3);
+    expect(changed.usagePolicy).toBe("balanced");
+    expect(isPresetDirty(changed, "balanced", hostCatalog)).toBe(false);
+  });
+
+  it("keeps the selected child roster while applying Balanced host assignments", () => {
+    const high = setRoles(applyPreset(createConfig("codex"), "high", hostCatalog), ["reviewer", "verifier"]);
+    const changed = changeHost(high, "cursor");
+    expect(changed.roles).toEqual(["reviewer", "verifier"]);
+    expect(changed.usagePolicy).toBe("balanced");
+    expect(changed.assignments.reviewer).toEqual({ model: "gpt-5.6-sol", effort: "high" });
+    expect(isPresetDirty(changed, "balanced", hostCatalog)).toBe(true);
   });
 
   it("derives host models from the generated setup contract", () => {
@@ -110,9 +176,14 @@ describe("Switchloom generator", () => {
     expect(hostCatalog.cursor.models.find((model) => model.id === "gpt-5.6-luna")?.label).toBe("Luna");
     expect(hostCatalog.cursor.models.find((model) => model.id === "gpt-5.6-luna")?.disabledReason).toBeUndefined();
     expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-sol")?.efforts).toEqual([
-      "low", "medium", "high", "xhigh", "ultra",
+      "low", "medium", "high", "xhigh", "max", "ultra",
     ]);
-    expect(hostCatalog.codex.models.flatMap((model) => model.efforts)).not.toContain("max");
+    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-terra")?.efforts).toEqual([
+      "low", "medium", "high", "xhigh", "max", "ultra",
+    ]);
+    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-luna")?.efforts).toEqual([
+      "low", "medium", "high", "xhigh", "max",
+    ]);
     expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-luna")?.efforts).not.toContain("ultra");
   });
 
@@ -144,7 +215,7 @@ describe("Switchloom generator", () => {
     });
   });
 
-  it("keeps Light genuinely low and Ultra out of every preset", () => {
+  it("keeps Codex Light genuinely low and Max or Ultra out of Codex presets", () => {
     const codexLight = applyPreset(createConfig("codex"), "light", hostCatalog);
     expect(Object.values(codexLight.assignments).map((assignment) => assignment.effort)).toEqual([
       "low", "low", "low", "low",
@@ -157,6 +228,10 @@ describe("Switchloom generator", () => {
         expect(Object.values(applyPreset(createConfig(host), preset, hostCatalog).assignments))
           .not.toContainEqual(expect.objectContaining({ effort: "ultra" }));
       }
+    }
+    for (const preset of ["light", "balanced", "high"] as const) {
+      expect(Object.values(applyPreset(createConfig("codex"), preset, hostCatalog).assignments))
+        .not.toContainEqual(expect.objectContaining({ effort: "max" }));
     }
   });
 
@@ -175,22 +250,59 @@ describe("Switchloom generator", () => {
       { model: "gpt-5.6-sol", effort: "medium" },
       { model: "gpt-5.6-sol", effort: "medium" },
     ]);
+    expect(PRESETS.high.short).toBe("Prioritizes the strongest model and a larger execution budget.");
   });
 
-  it("allows Ultra only as an explicit Codex role choice", () => {
+  it("keeps explicit Codex Orchestrator choices parent-only", () => {
     const configured = setEffort(createConfig("codex"), "orchestrator", "ultra", hostCatalog);
     expect(configured.assignments.orchestrator.effort).toBe("ultra");
-    expect(setupSpec(configured, hostCatalog).selected_roles.orchestrator.effort).toBe("ultra");
+    expect(setupSpec(configured, hostCatalog).selected_roles.orchestrator).toBeUndefined();
   });
 
-  it("writes a selected Cursor frontier model into the generated agent", () => {
+  it("derives parent-card effort copy from each Codex preset without recommending a parent model", () => {
+    expect(parentRecommendationEffortCopy(applyPreset(createConfig("codex"), "light", hostCatalog), "light"))
+      .toBe("Set Codex reasoning to Low.");
+    expect(parentRecommendationEffortCopy(applyPreset(createConfig("codex"), "balanced", hostCatalog), "balanced"))
+      .toBe("Set Codex reasoning to Medium.");
+    expect(parentRecommendationEffortCopy(applyPreset(createConfig("codex"), "high", hostCatalog), "high"))
+      .toBe("Set Codex reasoning to Medium.");
+  });
+
+  it("summarizes native parents separately from generated child roles", () => {
+    const nativeSummary = setupSummary(setRoles(createConfig("codex"), ["reviewer"]));
+    expect(nativeSummary).toContain("1 generated child role");
+    expect(nativeSummary).toContain("Host-managed parent: Orchestrator");
+    expect(nativeSummary).toContain("Reviewer:");
+    expect(nativeSummary).not.toContain("\nOrchestrator:");
+
+    const externalSummary = setupSummary(setRoles(createConfig("pi"), ["reviewer"]));
+    expect(externalSummary).toContain("2 focused roles");
+    expect(externalSummary).not.toContain("Host-managed parent");
+    expect(externalSummary).toContain("\nOrchestrator: openai/gpt-4o-mini · medium");
+  });
+
+  it("summarizes native parent ownership without recommending a parent model", () => {
+    const summary = setupSummary(setRoles(createConfig("cursor"), ["implementer"]));
+    expect(summary).toContain("Host-managed parent: Orchestrator (high)");
+    expect(summary).toContain("Implementer: composer-2.5");
+    expect(summary).not.toContain("fable-5");
+  });
+
+  it("gates the parent-card ownership treatment away from Pi external-runner configs", () => {
+    expect(canRenderParentRecommendation(createConfig("codex"))).toBe(true);
+    expect(canRenderParentRecommendation(createConfig("pi"))).toBe(false);
+    expect(parentRecommendationEffortCopy(applyPreset(createConfig("pi"), "balanced", hostCatalog), "balanced"))
+      .toBe("Set Pi thinking to Medium.");
+  });
+
+  it("does not write a selected Cursor parent model into generated agents", () => {
     const config = setModel(createConfig("cursor"), "orchestrator", "grok-4.5", hostCatalog);
-    expect(setupSpec(setRoles(config, ["orchestrator"]), hostCatalog).selected_roles.orchestrator.model).toBe("grok-4.5");
+    expect(setupSpec(setRoles(config, ["reviewer"]), hostCatalog).selected_roles).not.toHaveProperty("orchestrator");
   });
 
   it("writes selected Cursor reasoning effort into the generated agent", () => {
     const config = setEffort(createConfig("cursor"), "reviewer", "max", hostCatalog);
-    expect(setupSpec(setRoles(config, ["orchestrator", "reviewer"]), hostCatalog).selected_roles.reviewer.effort).toBe("max");
+    expect(setupSpec(setRoles(config, ["reviewer"]), hostCatalog).selected_roles.reviewer.effort).toBe("max");
   });
 
   it("moves effort to a supported value when the model changes", () => {
@@ -205,8 +317,8 @@ describe("Switchloom generator", () => {
     expect(applyPreset(createConfig("codex"), "high", hostCatalog).usagePolicy).toBe("max-quality");
   });
 
-  it("serializes only SetupSpecV1 with Codex spawn identities", () => {
-    const config = setRoles(createConfig("codex"), ["orchestrator", "reviewer"]);
+  it("serializes only child SetupSpecV1 roles with Codex spawn identities", () => {
+    const config = setRoles(createConfig("codex"), ["reviewer"]);
     const spec = setupSpec(config, hostCatalog);
     expect(spec).toEqual({
       schema_version: 1,
@@ -214,11 +326,6 @@ describe("Switchloom generator", () => {
       integration: "standalone",
       usage_policy: "balanced",
       selected_roles: {
-        orchestrator: {
-          model: "gpt-5.6-sol",
-          effort: "medium",
-          spawn: { agent_type: "switchloom_orchestrator", task_name: "orchestrator", fork_turns: { mode: "none" } },
-        },
         reviewer: {
           model: "gpt-5.6-sol",
           effort: "high",
@@ -226,8 +333,33 @@ describe("Switchloom generator", () => {
         },
       },
       routes: [
+        { work_type: "code", role: "reviewer", fallbacks: [] },
+        { work_type: "review", role: "reviewer", fallbacks: [] },
+        { work_type: "verification", role: "reviewer", fallbacks: [] },
+      ],
+    });
+  });
+
+  it("preserves Pi external-runner orchestrator routing in SetupSpecV1", () => {
+    const spec = setupSpec(setRoles(createConfig("pi"), ["reviewer"]), hostCatalog);
+    expect(spec).toEqual({
+      schema_version: 1,
+      host: "pi-external",
+      integration: "standalone",
+      usage_policy: "balanced",
+      selected_roles: {
+        orchestrator: {
+          model: "openai/gpt-4o-mini",
+          effort: "medium",
+        },
+        reviewer: {
+          model: "anthropic/claude-sonnet-4-5",
+          effort: "high",
+        },
+      },
+      routes: [
         { work_type: "planning", role: "orchestrator", fallbacks: [] },
-        { work_type: "code", role: "orchestrator", fallbacks: [] },
+        { work_type: "code", role: "reviewer", fallbacks: [] },
         { work_type: "review", role: "reviewer", fallbacks: [] },
         { work_type: "verification", role: "reviewer", fallbacks: [] },
       ],
@@ -235,16 +367,49 @@ describe("Switchloom generator", () => {
     });
   });
 
+  it("writes Pi external-runner orchestrator routing to setup TOML", () => {
+    const toml = setupConfigToml(setRoles(createConfig("pi"), ["reviewer"]), hostCatalog);
+    expect(toml).toContain("[route_default]");
+    expect(toml).toContain('role = "orchestrator"');
+    expect(toml).toContain("[selected_roles.orchestrator]");
+    expect(toml).toContain('model = "openai/gpt-4o-mini"');
+    expect(toml).toContain("[selected_roles.reviewer]");
+  });
+
+  it("keeps deterministic review fallback on verifier when reviewer is removed", () => {
+    const spec = setupSpec(setRoles(createConfig("codex"), ["implementer", "verifier"]), hostCatalog);
+    expect(spec.selected_roles).toHaveProperty("implementer");
+    expect(spec.selected_roles).toHaveProperty("verifier");
+    expect(spec.selected_roles).not.toHaveProperty("reviewer");
+    expect(spec.routes).toEqual([
+      { work_type: "code", role: "implementer", fallbacks: [] },
+      { work_type: "review", role: "verifier", fallbacks: [] },
+      { work_type: "verification", role: "verifier", fallbacks: [] },
+    ]);
+  });
+
+  it("keeps deterministic verification fallback on reviewer when verifier is removed", () => {
+    const spec = setupSpec(setRoles(createConfig("codex"), ["implementer", "reviewer"]), hostCatalog);
+    expect(spec.selected_roles).toHaveProperty("implementer");
+    expect(spec.selected_roles).toHaveProperty("reviewer");
+    expect(spec.selected_roles).not.toHaveProperty("verifier");
+    expect(spec.routes).toEqual([
+      { work_type: "code", role: "implementer", fallbacks: [] },
+      { work_type: "review", role: "reviewer", fallbacks: [] },
+      { work_type: "verification", role: "reviewer", fallbacks: [] },
+    ]);
+  });
+
   it("serializes Planr as an explicit setup mode before role tuning", () => {
     const spec = setupSpec(setIntegration(createConfig("claude-code"), "planr"), hostCatalog);
     expect(spec.integration).toBe("planr");
     expect(spec.host).toBe("claude-native");
-    expect(spec.selected_roles.orchestrator).not.toHaveProperty("spawn");
+    expect(spec.selected_roles.orchestrator).toBeUndefined();
   });
 
   it("creates a shell-safe npx recipe command and readable setup TOML", () => {
     const transport = setupTransportFrom(generatedCatalog);
-    const config = setRoles(createConfig("codex"), ["orchestrator", "implementer"]);
+    const config = setRoles(createConfig("codex"), ["implementer"]);
     const recipe = setupRecipe(config, hostCatalog, transport.recipePrefix);
     expect(recipe).toMatch(/^sw1_[A-Za-z0-9_-]+$/);
     const command = recipeApplyCommand(config, hostCatalog, transport.recipePrefix);
@@ -253,13 +418,16 @@ describe("Switchloom generator", () => {
     expect(toml).toContain('host = "codex-openai"');
     expect(toml).toContain('integration = "standalone"');
     expect(toml).toContain("[selected_roles.implementer.spawn]");
+    expect(toml).not.toContain("[route_default]");
+    expect(toml).not.toContain("[selected_roles.orchestrator]");
+    expect(toml).not.toContain("switchloom_orchestrator");
     expect(toml).not.toContain(".codex/agents");
     expect(toml).not.toContain("switchloom.config.json");
   });
 
   it("shows the full CLI lifecycle without claiming custom setup verification", () => {
     const commands = lifecycleCommands(createConfig("cursor"), hostCatalog);
-    expect(commands).toEqual([
+    expect(commands.map((entry) => entry.command)).toEqual([
       "npm install -g switchloom@0.3.1",
       expect.stringMatching(/^switchloom preview --recipe 'sw1_/),
       expect.stringMatching(/^switchloom apply --recipe 'sw1_/),
@@ -269,6 +437,7 @@ describe("Switchloom generator", () => {
       "switchloom rollback --repository .",
       "switchloom uninstall --repository .",
     ]);
-    expect(commands.join("\n")).not.toMatch(/recommend/i);
+    expect(commands.every((entry) => entry.title && entry.description)).toBe(true);
+    expect(commands.map((entry) => entry.command).join("\n")).not.toMatch(/recommend/i);
   });
 });

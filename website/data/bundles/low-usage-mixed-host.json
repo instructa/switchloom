@@ -195,8 +195,8 @@
       "path": ".codex/config.toml",
       "media_type": "application/toml",
       "mode": "replace",
-      "content": "[agents.model_routing_luna_xhigh]\nconfig_file = \"./agents/model-routing-luna-xhigh.toml\"\n\n[agents.model_routing_sol_high]\nconfig_file = \"./agents/model-routing-sol-high.toml\"\n\n[agents.model_routing_terra_high]\nconfig_file = \"./agents/model-routing-terra-high.toml\"\n\n[agents.model_routing_terra_mechanical]\nconfig_file = \"./agents/model-routing-terra-mechanical.toml\"\n\n[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = false\n",
-      "sha256": "62c632cf3eb279cd1f82c71a527559b2a40c75f2646307d5a1df3523dd12d016"
+      "content": "[agents.model_routing_luna_xhigh]\nconfig_file = \"./agents/model-routing-luna-xhigh.toml\"\n\n[agents.model_routing_sol_high]\nconfig_file = \"./agents/model-routing-sol-high.toml\"\n\n[agents.model_routing_terra_high]\nconfig_file = \"./agents/model-routing-terra-high.toml\"\n\n[agents.model_routing_terra_mechanical]\nconfig_file = \"./agents/model-routing-terra-mechanical.toml\"\n\n[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = true\n",
+      "sha256": "1068d38f406cf4ca7160557d8a16cfbe6fc8684e89245ffba823cb510b47e594"
     },
     {
       "path": ".cursor/agents/model-routing-fable-driver.md",
