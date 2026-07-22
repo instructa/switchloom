@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "host": "codex-openai-negative",
+  "success": true,
+  "live_verified": true,
+  "limitation": "negative fixture invoked exact Codex and failed closed on the expected missing-child evidence: parent must contain exactly 2 V2 spawn_agent calls",
+  "restoration": {
+    "status": "not_required"
+  },
+  "workdir": "/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai-negative/1784722125-40469-0/workdir",
+  "commands": [
+    {
+      "label": "compile",
+      "argv": [
+        "/Users/kregenrek/projects/model-routing/reports/release-ready-v0.3.1/public-npm/extracted/package/npm/native/darwin-arm64/model-routing",
+        "compile",
+        "balanced",
+        "--host",
+        "codex-openai",
+        "--output",
+        "bundle.json"
+      ],
+      "env_keys": [],
+      "stdout": "",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 15
+    },
+    {
+      "label": "apply",
+      "argv": [
+        "/Users/kregenrek/projects/model-routing/reports/release-ready-v0.3.1/public-npm/extracted/package/npm/native/darwin-arm64/model-routing",
+        "apply",
+        "bundle.json",
+        "--repository",
+        "."
+      ],
+      "env_keys": [],
+      "stdout": "{\n  \"action\": \"apply\",\n  \"bundle_id\": \"balanced-codex-openai@1.0.0+2.0.0\",\n  \"repository\": \"/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai-negative/1784722125-40469-0/workdir\",\n  \"artifacts\": [\n    {\n      \"path\": \".codex/agents/model-routing-luna-xhigh.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-sol-high.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-sol-medium.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"657975ea00e6363d52176969103234b2bfe119ee1fdc1d2a9c1332db7c3dbc35\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-sol-ultra.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"92597594c9f31ab54fc7a6fe66bce9618bbe47d88a0a430532e6a402ede4602e\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-terra-high.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-terra-mechanical.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-terra-medium.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464\"\n    },\n    {\n      \"path\": \".codex/config.toml\",\n      \"mode\": \"replace\",\n      \"status\": \"create\",\n      \"sha256\": \"5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e\"\n    }\n  ]\n}\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 130
+    },
+    {
+      "label": "codex-version",
+      "argv": [
+        "npx",
+        "-y",
+        "@openai/codex@0.145.0",
+        "--version"
+      ],
+      "env_keys": [
+        "CODEX_HOME"
+      ],
+      "stdout": "codex-cli 0.145.0\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 1949
+    },
+    {
+      "label": "codex-host",
+      "argv": [
+        "npx",
+        "-y",
+        "@openai/codex@0.145.0",
+        "exec",
+        "--json",
+        "--ignore-user-config",
+        "-C",
+        "/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai-negative/1784722125-40469-0/workdir",
+        "-s",
+        "workspace-write",
+        "-c",
+        "approval_policy=\"never\"",
+        "-c",
+        "projects.\"/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai-negative/1784722125-40469-0/workdir\".trust_level=\"trusted\"",
+        "-c",
+        "agents.model_routing_terra_high.config_file=\"/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai-negative/1784722125-40469-0/workdir/.codex/agents/model-routing-terra-high.toml\"",
+        "-c",
+        "agents.model_routing_sol_high.config_file=\"/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai-negative/1784722125-40469-0/workdir/.codex/agents/model-routing-sol-high.toml\"",
+        "-c",
+        "multi_agent_v2.hide_spawn_agent_metadata=false",
+        "-c",
+        "cli_auth_credentials_store=\"file\"",
+        "-c",
+        "mcp_oauth_credentials_store=\"auto\"",
+        "Inspect the generated repository without editing files. Do not call spawn_agent, do not create child agents, and do not edit files.\n\nReturn a short final answer containing:\nSWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE"
+      ],
+      "env_keys": [
+        "CODEX_HOME"
+      ],
+      "stdout": "{\"type\":\"thread.started\",\"thread_id\":\"019f89ba-82ac-74c0-987e-edbaf54e0f04\"}\n{\"type\":\"turn.started\"}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"agent_message\",\"text\":\"I’ll inspect the repository read-only and leave the workspace unchanged.\"}}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc \\\"pwd && rg --files -g '\\\"'!node_modules'\\\"' -g '\\\"'!target'\\\"' | sed -n '1,80p' && git status --short\\\"\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc \\\"pwd && rg --files -g '\\\"'!node_modules'\\\"' -g '\\\"'!target'\\\"' | sed -n '1,80p' && git status --short\\\"\",\"aggregated_output\":\"/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai-negative/1784722125-40469-0/workdir\\nbundle.json\\nexpected.json\\n?? .codex/\\n?? .model-routing/\\n?? bundle.json\\n?? expected.json\\n\",\"exit_code\":0,\"status\":\"completed\"}}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_2\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc \\\"sed -n '1,240p' bundle.json && sed -n '1,240p' expected.json\\\"\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_2\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc \\\"sed -n '1,240p' bundle.json && sed -n '1,240p' expected.json\\\"\",\"aggregated_output\":\"{\\n  \\\"schema_version\\\": 1,\\n  \\\"bundle_id\\\": \\\"balanced-codex-openai@1.0.0+2.0.0\\\",\\n  \\\"policy_id\\\": \\\"balanced\\\",\\n  \\\"policy_version\\\": \\\"1.0.0\\\",\\n  \\\"generated_at\\\": \\\"2026-07-16T00:00:00Z\\\",\\n  \\\"source\\\": {\\n    \\\"package\\\": \\\"model-routing\\\",\\n    \\\"package_version\\\": \\\"0.3.1\\\",\\n    \\\"integration\\\": \\\"standalone\\\"\\n  },\\n  \\\"policy\\\": {\\n    \\\"schema_version\\\": 1,\\n    \\\"id\\\": \\\"balanced\\\",\\n    \\\"version\\\": \\\"1.0.0\\\",\\n    \\\"usage\\\": {\\n      \\\"max_active_agents\\\": 3,\\n      \\\"max_parallel_readers\\\": 2,\\n      \\\"max_parallel_writers\\\": 1,\\n      \\\"max_depth\\\": 1,\\n      \\\"max_attempts\\\": 4,\\n      \\\"max_wall_time_seconds\\\": 3600,\\n      \\\"max_tool_calls\\\": 120,\\n      \\\"review_reserve_percent\\\": 20,\\n      \\\"budget_exhaustion\\\": \\\"stop\\\",\\n      \\\"metering\\\": \\\"estimated\\\"\\n    },\\n    \\\"transitions\\\": {\\n      \\\"retry\\\": {\\n        \\\"max_same_route_retries\\\": 1\\n      },\\n      \\\"availability_fallback\\\": {\\n        \\\"max_fallbacks\\\": 1,\\n        \\\"require_same_capability_class\\\": true\\n      },\\n      \\\"quality_escalation\\\": {\\n        \\\"max_escalations\\\": 1,\\n        \\\"require_verification_evidence\\\": true\\n      },\\n      \\\"quota_downgrade\\\": {\\n        \\\"enabled\\\": false,\\n        \\\"max_downgrades\\\": 0,\\n        \\\"noncritical_only\\\": true\\n      },\\n      \\\"safety_stop\\\": {\\n        \\\"enabled\\\": true\\n      }\\n    },\\n    \\\"materiality\\\": {\\n      \\\"changed_files_threshold\\\": 10,\\n      \\\"changed_lines_threshold\\\": 500\\n    },\\n    \\\"execution\\\": {\\n      \\\"max_read_scope_entries\\\": 8,\\n      \\\"max_write_scope_entries\\\": 4,\\n      \\\"roles\\\": {\\n        \\\"worker\\\": {\\n          \\\"tools\\\": [\\n            \\\"cargo\\\",\\n            \\\"git\\\",\\n            \\\"rg\\\"\\n          ],\\n          \\\"filesystem\\\": {\\n            \\\"read_roots\\\": [\\n              \\\"src\\\",\\n              \\\"tests\\\",\\n              \\\"docs\\\"\\n            ],\\n            \\\"write_roots\\\": [\\n              \\\"src\\\",\\n              \\\"tests\\\",\\n              \\\"docs\\\"\\n            ],\\n            \\\"allow_overwrite\\\": false\\n          }\\n        }\\n      }\\n    }\\n  },\\n  \\\"requirements\\\": [\\n    {\\n      \\\"host\\\": \\\"codex\\\",\\n      \\\"capabilities\\\": [\\n        \\\"model_override\\\",\\n        \\\"reasoning_effort\\\",\\n        \\\"fork_none\\\",\\n        \\\"bounded_context_fork\\\"\\n      ]\\n    }\\n  ],\\n  \\\"profiles\\\": {\\n    \\\"codex-luna-xhigh-experimental\\\": {\\n      \\\"client\\\": \\\"codex\\\",\\n      \\\"model\\\": \\\"gpt-5.6-luna\\\",\\n      \\\"agent_type\\\": \\\"model_routing_luna_xhigh\\\",\\n      \\\"effort\\\": \\\"xhigh\\\",\\n      \\\"cost_tier\\\": \\\"premium\\\",\\n      \\\"fork_turns\\\": {\\n        \\\"mode\\\": \\\"none\\\"\\n      }\\n    },\\n    \\\"codex-sol-high\\\": {\\n      \\\"client\\\": \\\"codex\\\",\\n      \\\"model\\\": \\\"gpt-5.6-sol\\\",\\n      \\\"agent_type\\\": \\\"model_routing_sol_high\\\",\\n      \\\"effort\\\": \\\"high\\\",\\n      \\\"cost_tier\\\": \\\"premium\\\",\\n      \\\"fork_turns\\\": {\\n        \\\"mode\\\": \\\"none\\\"\\n      }\\n    },\\n    \\\"codex-sol-medium\\\": {\\n      \\\"client\\\": \\\"codex\\\",\\n      \\\"model\\\": \\\"gpt-5.6-sol\\\",\\n      \\\"agent_type\\\": \\\"model_routing_sol_medium\\\",\\n      \\\"effort\\\": \\\"medium\\\",\\n      \\\"cost_tier\\\": \\\"standard\\\",\\n      \\\"fork_turns\\\": {\\n        \\\"mode\\\": \\\"none\\\"\\n      }\\n    },\\n    \\\"codex-sol-ultra\\\": {\\n      \\\"client\\\": \\\"codex\\\",\\n      \\\"model\\\": \\\"gpt-5.6-sol\\\",\\n      \\\"agent_type\\\": \\\"model_routing_sol_ultra\\\",\\n      \\\"effort\\\": \\\"ultra\\\",\\n      \\\"cost_tier\\\": \\\"premium\\\",\\n      \\\"fork_turns\\\": {\\n        \\\"mode\\\": \\\"none\\\"\\n      }\\n    },\\n    \\\"codex-terra-high\\\": {\\n      \\\"client\\\": \\\"codex\\\",\\n      \\\"model\\\": \\\"gpt-5.6-terra\\\",\\n      \\\"agent_type\\\": \\\"model_routing_terra_high\\\",\\n      \\\"effort\\\": \\\"high\\\",\\n      \\\"cost_tier\\\": \\\"standard\\\",\\n      \\\"fork_turns\\\": {\\n        \\\"mode\\\": \\\"none\\\"\\n      }\\n    },\\n    \\\"codex-terra-high-mechanical\\\": {\\n      \\\"client\\\": \\\"codex\\\",\\n      \\\"model\\\": \\\"gpt-5.6-terra\\\",\\n      \\\"agent_type\\\": \\\"model_routing_terra_mechanical\\\",\\n      \\\"effort\\\": \\\"high\\\",\\n      \\\"cost_tier\\\": \\\"standard\\\",\\n      \\\"fork_turns\\\": {\\n        \\\"mode\\\": \\\"none\\\"\\n      }\\n    },\\n    \\\"codex-terra-medium\\\": {\\n      \\\"client\\\": \\\"codex\\\",\\n      \\\"model\\\": \\\"gpt-5.6-terra\\\",\\n      \\\"agent_type\\\": \\\"model_routing_terra_medium\\\",\\n      \\\"effort\\\": \\\"medium\\\",\\n      \\\"cost_tier\\\": \\\"standard\\\",\\n      \\\"fork_turns\\\": {\\n        \\\"mode\\\": \\\"none\\\"\\n      }\\n    }\\n  },\\n  \\\"routes\\\": [\\n    {\\n      \\\"match\\\": {\\n        \\\"work_type\\\": \\\"exploration\\\"\\n      },\\n      \\\"profile\\\": \\\"codex-terra-medium\\\",\\n      \\\"fallbacks\\\": []\\n    },\\n    {\\n      \\\"match\\\": {\\n        \\\"work_type\\\": \\\"research\\\"\\n      },\\n      \\\"profile\\\": \\\"codex-terra-medium\\\",\\n      \\\"fallbacks\\\": []\\n    },\\n    {\\n      \\\"match\\\": {\\n        \\\"work_type\\\": \\\"code\\\"\\n      },\\n      \\\"profile\\\": \\\"codex-terra-high\\\",\\n      \\\"fallbacks\\\": []\\n    },\\n    {\\n      \\\"match\\\": {\\n        \\\"work_type\\\": \\\"mechanical\\\"\\n      },\\n      \\\"profile\\\": \\\"codex-terra-high-mechanical\\\",\\n      \\\"fallbacks\\\": []\\n    },\\n    {\\n      \\\"match\\\": {\\n        \\\"work_type\\\": \\\"review\\\"\\n      },\\n      \\\"profile\\\": \\\"codex-sol-high\\\",\\n      \\\"fallbacks\\\": []\\n    }\\n  ],\\n  \\\"route_default\\\": {\\n    \\\"profile\\\": \\\"codex-sol-medium\\\",\\n    \\\"fallbacks\\\": []\\n  },\\n  \\\"artifacts\\\": [\\n    {\\n      \\\"path\\\": \\\".codex/agents/model-routing-luna-xhigh.toml\\\",\\n      \\\"media_type\\\": \\\"application/toml\\\",\\n      \\\"mode\\\": \\\"create\\\",\\n      \\\"content\\\": \\\"name = \\\\\\\"model_routing_luna_xhigh\\\\\\\"\\\\ndescription = \\\\\\\"Experimental Luna role; not certified for deterministic Codex V2 routing.\\\\\\\"\\\\nmodel = \\\\\\\"gpt-5.6-luna\\\\\\\"\\\\nmodel_reasoning_effort = \\\\\\\"xhigh\\\\\\\"\\\\nsandbox_mode = \\\\\\\"workspace-write\\\\\\\"\\\\n\\\\ndeveloper_instructions = \\\\\\\"\\\\\\\"\\\\\\\"\\\\nUse only when explicitly selected as experimental/unverified. Do not treat this role as a certified Switchloom default.\\\\n\\\\\\\"\\\\\\\"\\\\\\\"\\\\n\\\",\\n      \\\"sha256\\\": \\\"b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7\\\"\\n    },\\n    {\\n      \\\"path\\\": \\\".codex/agents/model-routing-sol-high.toml\\\",\\n      \\\"media_type\\\": \\\"application/toml\\\",\\n      \\\"mode\\\": \\\"create\\\",\\n      \\\"content\\\": \\\"name = \\\\\\\"model_routing_sol_high\\\\\\\"\\\\ndescription = \\\\\\\"Independent final review.\\\\\\\"\\\\nmodel = \\\\\\\"gpt-5.6-sol\\\\\\\"\\\\nmodel_reasoning_effort = \\\\\\\"high\\\\\\\"\\\\nsandbox_mode = \\\\\\\"read-only\\\\\\\"\\\\n\\\\ndeveloper_instructions = \\\\\\\"\\\\\\\"\\\\\\\"\\\\nIndependently verify acceptance criteria and evidence, and report findings before the verdict.\\\\n\\\\\\\"\\\\\\\"\\\\\\\"\\\\n\\\",\\n      \\\"sha256\\\": \\\"b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752\\\"\\n    },\\n    {\\n      \\\"path\\\": \\\".codex/agents/model-routing-sol-medium.toml\\\",\\n      \\\"media_type\\\": \\\"application/toml\\\",\\n      \\\"mode\\\": \\\"create\\\",\\n      \\\"content\\\": \\\"name = \\\\\\\"model_routing_sol_medium\\\\\\\"\\\\ndescription = \\\\\\\"Normal Model Routing orchestration and synthesis.\\\\\\\"\\\\nmodel = \\\\\\\"gpt-5.6-sol\\\\\\\"\\\\nmodel_reasoning_effort = \\\\\\\"medium\\\\\\\"\\\\nsandbox_mode = \\\\\\\"workspace-write\\\\\\\"\\\\n\\\\ndeveloper_instructions = \\\\\\\"\\\\\\\"\\\\\\\"\\\\nOrchestrate the Model Routing workflow, delegate bounded work by agent type, and retain synthesis ownership.\\\\n\\\\\\\"\\\\\\\"\\\\\\\"\\\\n\\\",\\n      \\\"sha256\\\": \\\"657975ea00e6363d52176969103234b2bfe119ee1fdc1d2a9c1332db7c3dbc35\\\"\\n    },\\n    {\\n      \\\"path\\\": \\\".codex/agents/model-routing-sol-ultra.toml\\\",\\n      \\\"media_type\\\": \\\"application/toml\\\",\\n      \\\"mode\\\": \\\"create\\\",\\n      \\\"content\\\": \\\"name = \\\\\\\"model_routing_sol_ultra\\\\\\\"\\\\ndescription = \\\\\\\"Explicit moonshot planning only.\\\\\\\"\\\\nmodel = \\\\\\\"gpt-5.6-sol\\\\\\\"\\\\nmodel_reasoning_effort = \\\\\\\"ultra\\\\\\\"\\\\nsandbox_mode = \\\\\\\"read-only\\\\\\\"\\\\n\\\\ndeveloper_instructions = \\\\\\\"\\\\\\\"\\\\\\\"\\\\nWork only on an explicitly selected moonshot planning task; do not treat this role as the balanced default.\\\\n\\\\\\\"\\\\\\\"\\\\\\\"\\\\n\\\",\\n      \\\"sha256\\\": \\\"92597594c9f31ab54fc7a6fe66bce9618bbe47d88a0a430532e6a402ede4602e\\\"\\n    },\\n    {\\n      \\\"path\\\": \\\".codex/agents/model-routing-terra-high.toml\\\",\\n      \\\"media_type\\\": \\\"application/toml\\\",\\n      \\\"mode\\\": \\\"create\\\",\\n      \\\"content\\\": \\\"name = \\\\\\\"model_routing_terra_high\\\\\\\"\\\\ndescription = \\\\\\\"Normal implementation and testing.\\\\\\\"\\\\nmodel = \\\\\\\"gpt-5.6-terra\\\\\\\"\\\\nmodel_reasoning_effort = \\\\\\\"high\\\\\\\"\\\\nsandbox_mode = \\\\\\\"workspace-write\\\\\\\"\\\\n\\\\ndeveloper_instructions = \\\\\\\"\\\\\\\"\\\\\\\"\\\\nImplement one picked item, keep the slice small, and record real verification evidence.\\\\n\\\\\\\"\\\\\\\"\\\\\\\"\\\\n\\\",\\n      \\\"sha256\\\": \\\"8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d\\\"\\n    },\\n    {\\n{\\n  \\\"children\\\": [\\n    {\\n      \\\"agent_type\\\": \\\"model_routing_terra_high\\\",\\n      \\\"allow_encrypted_message\\\": true,\\n      \\\"canonical_task\\\": \\\"/root/standalone_maker\\\",\\n      \\\"completion_contains\\\": \\\"SWITCHLOOM_STANDALONE_MAKER_DONE\\\",\\n      \\\"effort\\\": \\\"high\\\",\\n      \\\"max_message_bytes\\\": 512,\\n      \\\"message_sha256\\\": \\\"4f3e7f3426ea3f83eb26b9935fbf9b09792ac3c512780688f74f3f221a8d755a\\\",\\n      \\\"model\\\": \\\"gpt-5.6-terra\\\",\\n      \\\"profile\\\": \\\"codex-terra-high\\\",\\n      \\\"semantic_role\\\": \\\"maker\\\",\\n      \\\"task_name\\\": \\\"standalone_maker\\\"\\n    },\\n    {\\n      \\\"agent_type\\\": \\\"model_routing_sol_high\\\",\\n      \\\"allow_encrypted_message\\\": true,\\n      \\\"canonical_task\\\": \\\"/root/standalone_reviewer\\\",\\n      \\\"completion_contains\\\": \\\"SWITCHLOOM_STANDALONE_REVIEWER_DONE\\\",\\n      \\\"effort\\\": \\\"high\\\",\\n      \\\"max_message_bytes\\\": 512,\\n      \\\"message_sha256\\\": \\\"1a6366f6f1f0a5a35c5a2b0849df9370bdebbddad073fe445a18ae47f8bf3834\\\",\\n      \\\"model\\\": \\\"gpt-5.6-sol\\\",\\n      \\\"profile\\\": \\\"codex-sol-high\\\",\\n      \\\"semantic_role\\\": \\\"reviewer\\\",\\n      \\\"task_name\\\": \\\"standalone_reviewer\\\"\\n    }\\n  ],\\n  \\\"host_version\\\": \\\"codex-cli 0.145.0\\\",\\n  \\\"package_digest\\\": \\\"sha256:5c0884da0dda7bdd87e8e3ce9530faa1cdea980acea49dadd0b8edd21367b5a4\\\"\\n}\\n\",\"exit_code\":0,\"status\":\"completed\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_3\",\"type\":\"agent_message\",\"text\":\"SWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE\"}}\n{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":54856,\"cached_input_tokens\":40192,\"cache_write_input_tokens\":0,\"output_tokens\":299,\"reasoning_output_tokens\":22}}\n",
+      "stderr": "Reading additional input from stdin...\n2026-07-22T12:08:50.431877Z  WARN codex_core_plugins::remote::remote_installed_plugin_sync: failed to download remote installed plugin bundle remote_plugin_id=plugin_asdk_app_6a0faef988b48191b843bac5cd170a9e plugin=convex marketplace=openai-curated-remote error=plugin.json name `app-6a0faef988b48191b843bac5cd170a9e` does not match marketplace plugin name `convex`\n",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 15838
+    }
+  ]
+}
