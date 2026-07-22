@@ -14,6 +14,7 @@ export type ModelOption = {
   provider?: string;
   efforts: readonly string[];
   tier: "standard" | "premium";
+  disabledReason?: string;
 };
 
 export type RoleAssignment = { model: string; effort?: string };
@@ -212,7 +213,7 @@ const PRESET_ASSIGNMENTS: Record<HostId, Record<PresetId, Record<RoleId, RoleAss
   },
 };
 
-function modelLabel(host: HostId, model: string) {
+function modelLabel(model: string) {
   const labels: Record<string, string> = {
     "gpt-5.6-sol": "Sol",
     "gpt-5.6-terra": "Terra",
@@ -231,14 +232,7 @@ function modelLabel(host: HostId, model: string) {
     opus: "Opus",
     sonnet: "Sonnet",
   };
-  const label = labels[model] ?? model;
-  if (host === "codex" && (model === "gpt-5.6-sol" || model === "gpt-5.6-terra")) {
-    return `${label} (certified)`;
-  }
-  if (host === "codex" && model === "gpt-5.6-luna") {
-    return `${label} (experimental)`;
-  }
-  return label;
+  return labels[model] ?? model;
 }
 
 function modelProvider(model: string) {
@@ -276,10 +270,13 @@ export function hostCatalogFrom(catalog: CatalogShape): HostCatalog {
       const tier: ModelOption["tier"] = model.tier === "premium" ? "premium" : "standard";
       return {
         id: model.id,
-        label: modelLabel(host, model.id),
+        label: modelLabel(model.id),
         provider: modelProvider(model.id),
         efforts: model.efforts,
         tier,
+        ...(host === "codex" && model.id === "gpt-5.6-luna"
+          ? { disabledReason: "not supported yet in v2" }
+          : {}),
       };
     }) ?? [];
     result[host] = { binding: setupHost.binding, models };

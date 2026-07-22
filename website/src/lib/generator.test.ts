@@ -102,10 +102,13 @@ describe("Switchloom generator", () => {
   });
 
   it("uses the complete current Codex GPT-5.6 effort manifest", () => {
-    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-sol")?.label).toBe("Sol (certified)");
-    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-terra")?.label).toBe("Terra (certified)");
-    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-luna")?.label).toBe("Luna (experimental)");
+    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-sol")?.label).toBe("Sol");
+    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-terra")?.label).toBe("Terra");
+    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-luna")?.label).toBe("Luna");
+    expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-luna")?.disabledReason)
+      .toBe("not supported yet in v2");
     expect(hostCatalog.cursor.models.find((model) => model.id === "gpt-5.6-luna")?.label).toBe("Luna");
+    expect(hostCatalog.cursor.models.find((model) => model.id === "gpt-5.6-luna")?.disabledReason).toBeUndefined();
     expect(hostCatalog.codex.models.find((model) => model.id === "gpt-5.6-sol")?.efforts).toEqual([
       "low", "medium", "high", "xhigh", "ultra",
     ]);

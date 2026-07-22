@@ -24,6 +24,7 @@ import {
 import { Field, FieldDescription, FieldGroup, FieldSet, FieldLegend, FieldTitle } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import {
@@ -98,6 +99,7 @@ export default function Generator({ hostCatalog, setupTransport }: { hostCatalog
   }
 
   return (
+    <TooltipProvider>
       <div className="min-h-svh">
         <header className="border-b">
           <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
@@ -348,6 +350,7 @@ export default function Generator({ hostCatalog, setupTransport }: { hostCatalog
           </div>
         </footer>
       </div>
+    </TooltipProvider>
   );
 }
 
@@ -407,7 +410,24 @@ function RoleCard({ role, config, hostCatalog, onModel, onEffort }: {
                 spacing={1}
                 className="flex w-full flex-wrap"
               >
-                {models.map((option) => <ToggleGroupItem key={option.id} value={option.id}>{option.label}</ToggleGroupItem>)}
+                {models.map((option) => {
+                  return option.disabledReason ? (
+                    <Tooltip key={option.id}>
+                      <TooltipTrigger render={<span className="inline-block w-fit" />}>
+                        <ToggleGroupItem value={option.id} disabled>
+                          {option.label}
+                        </ToggleGroupItem>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{option.disabledReason}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <ToggleGroupItem key={option.id} value={option.id}>
+                      {option.label}
+                    </ToggleGroupItem>
+                  );
+                })}
               </ToggleGroup>
             )}
           </Field>
