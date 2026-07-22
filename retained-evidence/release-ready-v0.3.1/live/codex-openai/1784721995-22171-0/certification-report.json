@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "host": "codex-openai",
+  "success": true,
+  "live_verified": true,
+  "limitation": null,
+  "restoration": {
+    "status": "not_required"
+  },
+  "workdir": "/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai/1784721995-22171-0/workdir",
+  "commands": [
+    {
+      "label": "compile",
+      "argv": [
+        "/Users/kregenrek/projects/model-routing/reports/release-ready-v0.3.1/public-npm/extracted/package/npm/native/darwin-arm64/model-routing",
+        "compile",
+        "balanced",
+        "--host",
+        "codex-openai",
+        "--output",
+        "bundle.json"
+      ],
+      "env_keys": [],
+      "stdout": "",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 15
+    },
+    {
+      "label": "apply",
+      "argv": [
+        "/Users/kregenrek/projects/model-routing/reports/release-ready-v0.3.1/public-npm/extracted/package/npm/native/darwin-arm64/model-routing",
+        "apply",
+        "bundle.json",
+        "--repository",
+        "."
+      ],
+      "env_keys": [],
+      "stdout": "{\n  \"action\": \"apply\",\n  \"bundle_id\": \"balanced-codex-openai@1.0.0+2.0.0\",\n  \"repository\": \"/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai/1784721995-22171-0/workdir\",\n  \"artifacts\": [\n    {\n      \"path\": \".codex/agents/model-routing-luna-xhigh.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"b74fdf83075f13012835ba556a8830dbac6e51f0cf61fc187a4831402b0ee7c7\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-sol-high.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"b900c979282e69851720aa3f6c1ca1fd64cc9fc508d85b5c16f8017ede8d6752\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-sol-medium.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"657975ea00e6363d52176969103234b2bfe119ee1fdc1d2a9c1332db7c3dbc35\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-sol-ultra.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"92597594c9f31ab54fc7a6fe66bce9618bbe47d88a0a430532e6a402ede4602e\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-terra-high.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"8a419febc4018ab64e840849f426c27d3cab268e9c579d5fa735e276e9e21c9d\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-terra-mechanical.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"7c67af7718ee98d276ae080c5bef27bc1871a58e942b75a1fe216759cf9c7c15\"\n    },\n    {\n      \"path\": \".codex/agents/model-routing-terra-medium.toml\",\n      \"mode\": \"create\",\n      \"status\": \"create\",\n      \"sha256\": \"458cdc1750b5fabe2fa81c502c1decf0ba346644a595ecf75bcd3ac63d471464\"\n    },\n    {\n      \"path\": \".codex/config.toml\",\n      \"mode\": \"replace\",\n      \"status\": \"create\",\n      \"sha256\": \"5734ff3444010de65901ea3efda663f26e1c240718898b5d96736f9550a83d3e\"\n    }\n  ]\n}\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 124
+    },
+    {
+      "label": "codex-version",
+      "argv": [
+        "npx",
+        "-y",
+        "@openai/codex@0.145.0",
+        "--version"
+      ],
+      "env_keys": [
+        "CODEX_HOME"
+      ],
+      "stdout": "codex-cli 0.145.0\n",
+      "stderr": "",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 2200
+    },
+    {
+      "label": "codex-host",
+      "argv": [
+        "npx",
+        "-y",
+        "@openai/codex@0.145.0",
+        "exec",
+        "--json",
+        "--ignore-user-config",
+        "-C",
+        "/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai/1784721995-22171-0/workdir",
+        "-s",
+        "workspace-write",
+        "-c",
+        "approval_policy=\"never\"",
+        "-c",
+        "projects.\"/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai/1784721995-22171-0/workdir\".trust_level=\"trusted\"",
+        "-c",
+        "agents.model_routing_terra_high.config_file=\"/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai/1784721995-22171-0/workdir/.codex/agents/model-routing-terra-high.toml\"",
+        "-c",
+        "agents.model_routing_sol_high.config_file=\"/Users/kregenrek/projects/model-routing/retained-evidence/release-ready-v0.3.1/live/codex-openai/1784721995-22171-0/workdir/.codex/agents/model-routing-sol-high.toml\"",
+        "-c",
+        "multi_agent_v2.hide_spawn_agent_metadata=false",
+        "-c",
+        "cli_auth_credentials_store=\"file\"",
+        "-c",
+        "mcp_oauth_credentials_store=\"auto\"",
+        "Use the native collaboration spawn_agent tool exactly twice, then wait for both child agents to finish.\n\nYour first tool call must be spawn_agent with exactly these fields:\n- agent_type: model_routing_terra_high\n- task_name: standalone_maker\n- fork_turns: none\n- message: Inspect the generated repository without editing files. End your final answer with SWITCHLOOM_STANDALONE_MAKER_DONE.\n\nYour second tool call must be spawn_agent with exactly these fields:\n- agent_type: model_routing_sol_high\n- task_name: standalone_reviewer\n- fork_turns: none\n- message: Independently inspect the generated repository without editing files. End your final answer with SWITCHLOOM_STANDALONE_REVIEWER_DONE.\n\nDo not omit agent_type. Do not change either message. Do not pass model or reasoning_effort in either spawn call. Do not call wait_agent or answer before both spawn_agent calls have succeeded.\n\nAfter both children finish, return a short final answer containing:\nSWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE"
+      ],
+      "env_keys": [
+        "CODEX_HOME"
+      ],
+      "stdout": "{\"type\":\"thread.started\",\"thread_id\":\"019f89b8-8cb6-74b3-bd94-77fd07a11d5a\"}\n{\"type\":\"turn.started\"}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_0\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"019f89b8-8cb6-74b3-bd94-77fd07a11d5a\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"019f89b8-8cb6-74b3-bd94-77fd07a11d5a\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"completed\"}}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_1\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"019f89b8-8cb6-74b3-bd94-77fd07a11d5a\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"019f89b8-8cb6-74b3-bd94-77fd07a11d5a\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"completed\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_2\",\"type\":\"agent_message\",\"text\":\"SWITCHLOOM_CODEX_RUNTIME_EVIDENCE_COMPLETE\"}}\n{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":88292,\"cached_input_tokens\":75520,\"cache_write_input_tokens\":0,\"output_tokens\":194,\"reasoning_output_tokens\":0}}\n",
+      "stderr": "Reading additional input from stdin...\n2026-07-22T12:06:41.481343Z  WARN codex_core_plugins::remote::remote_installed_plugin_sync: failed to download remote installed plugin bundle remote_plugin_id=plugin_asdk_app_6a0faef988b48191b843bac5cd170a9e plugin=convex marketplace=openai-curated-remote error=plugin.json name `app-6a0faef988b48191b843bac5cd170a9e` does not match marketplace plugin name `convex`\n2026-07-22T12:08:31.569034Z  WARN codex_core::responses_retry: stream disconnected - retrying sampling request (1/5 in 192ms)... turn_id=019f89b8-a678-77a1-a662-aead70f21509 retries=1 max_retries=5 sampling_error=stream disconnected before completion: WebSocket protocol error: Connection reset without closing handshake\n",
+      "status": 0,
+      "timed_out": false,
+      "elapsed_ms": 122929
+    }
+  ]
+}

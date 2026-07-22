@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "version": "0.3.1",
+  "observed_at": "2026-07-22T12:14:42Z",
+  "planr_item": "i-certify-public-bytes-and-finaliz-ad43",
+  "source": {
+    "candidate_commit": "2f8ba006df06b88bb602d0698696c73e5963ff86",
+    "release_commit": "d7165627e33be2fb17f2e2f8f1b289cc1a40bf83",
+    "reviewed_tree": "2016988ee6ddf3514024ed93fdc810c41b388ce1",
+    "release_tree": "2016988ee6ddf3514024ed93fdc810c41b388ce1",
+    "tag": "v0.3.1",
+    "tag_object": "a30cc81d17410075dad33ad68c39e1149c1b2bec",
+    "release_workflow_run": 29917032398,
+    "release_workflow_conclusion": "success"
+  },
+  "public_artifacts": {
+    "npm": {
+      "package": "switchloom@0.3.1",
+      "shasum": "4fb17ae575f9a77f5920524743f07b69da3c3ea4",
+      "integrity": "sha512-y+wz1NDEljOmXVGWkrjgy9QIXAnJ2w29d2rVntEmefDGyyR7D1q044pjHX3gdgrCIWFm/VJdwBRVSL/xytpPFA==",
+      "tarball_sha256": "52b8aa965ef81a3c9c8f94ffe4dfa62db1c92475bc6834f1366208ec72f52fba",
+      "native_provenance_sha256": "8f207afe26e609ca9ff1c9bc8a36595abaa0c92bfbd04409999b9eaff4a5ba44",
+      "provenance_git_sha": "d7165627e33be2fb17f2e2f8f1b289cc1a40bf83"
+    },
+    "github_release": {
+      "checksum_manifest_sha256": "c6443b222478f57d476867f35c36c6e15348d09424f0db40a079535e62471e9d",
+      "archives": {
+        "darwin-arm64": "1b5d022e6e9839ea16cdc51cd55283d3f116f7d52261f40a52b2b0c20d6797bf",
+        "darwin-x86_64": "e0a2e143d75b90651f714f144111c30e38cbfa3c8d407e0af45c70ea8fc519a4",
+        "linux-arm64": "2116b8cf934d24a04973c0fd76cbf88d9f17eaab9b032446e87d445bc8bb3b73",
+        "linux-x86_64": "836abf1689cc09e5254273cd379f285174be6886ce60932008e48732883af844"
+      },
+      "native_binaries": {
+        "darwin-arm64": "5c0884da0dda7bdd87e8e3ce9530faa1cdea980acea49dadd0b8edd21367b5a4",
+        "darwin-x86_64": "2da9107175c73e24de7790f5219041550f29674c6af9a5adfb056afcde2cc08b",
+        "linux-arm64": "1c3808749f941b9badb79c199025cac2c22678148a0b338220b1e7d12d65cd92",
+        "linux-x86_64": "ee44f2df0e59063a5feb1e438644c3fccdacfd443746dea5e184686709cbbebd"
+      }
+    },
+    "homebrew": {
+      "formula": "instructa/tap/switchloom",
+      "stable_version": "0.3.1",
+      "tap_commit": "e74da41afe58f76bb8d6aa2e115501679ae6a527",
+      "formula_source_sha256": "e064c8343a01b8456deeeb19d2faffb71205edb672fb0056a1d239b17bba2322",
+      "archive_sha256": "1b5d022e6e9839ea16cdc51cd55283d3f116f7d52261f40a52b2b0c20d6797bf"
+    },
+    "correlation": "npm provenance records the release commit and all four npm native hashes match binaries extracted from the checksum-verified GitHub release archives; Homebrew uses the matching darwin-arm64 archive"
+  },
+  "fresh_installs": {
+    "npm": {
+      "root": "/private/tmp/switchloom-public-v0.3.1-npm.ncczr0",
+      "install": "isolated npm global prefix and cache; npm install -g switchloom@0.3.1",
+      "installed_native_sha256": "5c0884da0dda7bdd87e8e3ce9530faa1cdea980acea49dadd0b8edd21367b5a4",
+      "version": "model-routing 0.3.1",
+      "help_commands": [
+        "policy",
+        "compile",
+        "inspect",
+        "preview",
+        "apply",
+        "update",
+        "status",
+        "uninstall",
+        "rollback",
+        "doctor"
+      ],
+      "lifecycle": "compile balanced and low-usage; inspect; preview; apply; status; update; rollback; missing-managed-file status; update repair; uninstall; empty final status",
+      "compatible_unmanaged_v2_preserved_sha256": "6600e0b0294d38fc8f9ab0b0b82d99fea32cc39d4f18053d67925a5344928b36",
+      "conflicting_false_preserved_sha256": "d4387757c44460f8fb3396a67c2d2298ef64e564cd88cb1c81930d73d50ca223",
+      "conflicting_false_result": "apply failed closed before partial managed state"
+    },
+    "homebrew": {
+      "root": "/private/tmp/switchloom-public-v0.3.1-brew.4i8hYg",
+      "install": "brew reinstall instructa/tap/switchloom",
+      "installed_native_sha256": "5c0884da0dda7bdd87e8e3ce9530faa1cdea980acea49dadd0b8edd21367b5a4",
+      "version": "model-routing 0.3.1",
+      "help_commands": [
+        "policy",
+        "compile",
+        "inspect",
+        "preview",
+        "apply",
+        "update",
+        "status",
+        "uninstall",
+        "rollback",
+        "doctor"
+      ],
+      "lifecycle": "compile balanced and low-usage; inspect; preview; apply; status; update; rollback; missing-managed-file status; update repair; uninstall; empty final status",
+      "compatible_unmanaged_v2_preserved_sha256": "6600e0b0294d38fc8f9ab0b0b82d99fea32cc39d4f18053d67925a5344928b36",
+      "conflicting_false_preserved_sha256": "d4387757c44460f8fb3396a67c2d2298ef64e564cd88cb1c81930d73d50ca223",
+      "conflicting_false_result": "apply failed closed before partial managed state"
+    },
+    "preserved_hashes": {
+      "unmanaged_sentinel": "60ba63428d6029222a9d092142fcdc64d045d93650e0c25cb25cd7f319351fae",
+      "unrelated_project_codex_config": "205154e65c71a9da37e8e88334441d3873369a2da943d6f8875c0ca2d27aa8f1",
+      "unrelated_project_role": "dc41b95480f42e96893940ea9621c0b4d941f9a2385abcc2c0692c5da947a0ce",
+      "global_codex_config": "106482691dcada0fe1e862bffe7c59e771e804636a64b7495c5434995e378293"
+    }
+  },
+  "codex_0_145_public_byte_oracle": {
+    "binary": "public npm darwin-arm64 native binary",
+    "binary_sha256": "5c0884da0dda7bdd87e8e3ce9530faa1cdea980acea49dadd0b8edd21367b5a4",
+    "host_version": "codex-cli 0.145.0",
+    "positive": {
+      "report": "retained-evidence/release-ready-v0.3.1/live/codex-openai/1784721995-22171-0/certification-report.json",
+      "report_sha256": "6c2c45f552db1961545f0bcd4119417517978eb2310d004f27265201e90a694a",
+      "runtime_evidence": "retained-evidence/release-ready-v0.3.1/live/codex-openai/1784721995-22171-0/codex-runtime-evidence.json",
+      "runtime_evidence_sha256": "30127910811f5a6906a09a1b08ba777c18d1f858821abe24d986c16b54d41f76",
+      "parent_thread_id": "019f89b8-8cb6-74b3-bd94-77fd07a11d5a",
+      "terra_high_nonce": "019f89b8-8cb6-74b3-bd94-77fd07a11d5a:019f89b8-9d85-71d3-bed8-4cf9f73cfc1f:call_E8YJ5duz3iKw7eBUi0qs7Sm1",
+      "sol_high_nonce": "019f89b8-8cb6-74b3-bd94-77fd07a11d5a:019f89b8-a64a-70e2-a6ef-50d04eabd4f5:call_ZXL8ZbYOTMa43wAA35DHeNpj",
+      "result": "exactly two V2 spawn_agent calls correlated registered agent_type, custom task_name, fork_turns none, child identity, effective model and high effort; both verdicts deterministic"
+    },
+    "negative": {
+      "report": "retained-evidence/release-ready-v0.3.1/live/codex-openai-negative/1784722125-40469-0/certification-report.json",
+      "report_sha256": "b291e1eab3535628c901576681bc14c5911a7b5c4a30170d539f4e2b2d212299",
+      "fail_closed_evidence": "retained-evidence/release-ready-v0.3.1/live/codex-openai-negative/1784722125-40469-0/codex-negative-fail-closed.txt",
+      "fail_closed_evidence_sha256": "f9920edf6c71288ee3e266c3e884647bc7df17c512a5038b0f9eb7c5d7881ede",
+      "result": "parent must contain exactly 2 V2 spawn_agent calls"
+    },
+    "protected_global_config_before_after_sha256": "2efa0e6ac9a28b7841b5b05a0e25b4eafd5c1deb3dced2fe79d88a0a55cf5432",
+    "protected_global_config_content_sha256": "106482691dcada0fe1e862bffe7c59e771e804636a64b7495c5434995e378293"
+  },
+  "website": {
+    "url": "https://switchloom.ai",
+    "catalog_sha256": "f879c6fdccca95abebcb65d521d9f115007165ec3c0e9fb1db47e81dae394026",
+    "balanced_codex_download_parity_sha256": "da329ed10bbf9be4cc136173eb2702237662d6c13ad9e0f995e531535a0bc603",
+    "compositions": 28,
+    "setup_hosts": 6,
+    "rendered_commands_sha256": "1d6a8d0771f736703d543514551589adcbba0897ead82c0de494385b014563cc",
+    "copied_npx_command_sha256": "3884062bd03a2d62afabdd70f755e66247ccb16f5919b667565062e4bf4268d5",
+    "rendered_host_guidance_sha256": "3ff0d74b16e59614c93ca1cb1feb52b932e6739a04c477c97c14a0e80e84c8f9",
+    "result": "rendered install/lifecycle commands and generated npx recipe use 0.3.1; exact Codex 0.145 Terra/Sol certification, Luna experimental, Cursor advisory, and Claude unavailable guidance are live"
+  },
+  "protected_state": {
+    "planr_head": "bbc877d40191b2cbb289ed26df5e6fee25e4326d",
+    "planr_status_porcelain_uall_sha256": "d6c56495c7e2a78aed2e641b0e928bc8a579bf31335db36456a9f05726827927",
+    "global_codex_config_sha256": "106482691dcada0fe1e862bffe7c59e771e804636a64b7495c5434995e378293",
+    "result": "unchanged"
+  },
+  "host_claims": {
+    "codex": "certified deterministic for exact 0.145.0 Terra High and Sol High public-byte dispatch",
+    "cursor": "advisory because effective model and effort telemetry is not exposed",
+    "claude_code": "unavailable/unverified without a live authenticated receipt",
+    "opencode": "unavailable/unverified without authentic nonce-bearing child evidence",
+    "pi": "unavailable/unverified without provider-authenticated child evidence",
+    "luna": "experimental/unverified and excluded from certified default routes"
+  },
+  "limitations": [
+    "Fresh install lifecycle execution was performed on darwin-arm64; other native targets are correlated by CI provenance and public archive extraction rather than executed on this host.",
+    "The initial unauthenticated isolated Codex attempt returned HTTP 401 and is intentionally excluded from the committed evidence set; the authenticated isolated positive and negative runs are the certification evidence.",
+    "The public release is immutable; remediation must use a newer version rather than overwrite v0.3.1."
+  ]
+}
