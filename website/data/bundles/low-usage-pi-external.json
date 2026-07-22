@@ -6,7 +6,7 @@
   "generated_at": "2026-07-16T00:00:00Z",
   "source": {
     "package": "model-routing",
-    "package_version": "0.3.1",
+    "package_version": "0.3.2",
     "integration": "standalone"
   },
   "policy": {
@@ -309,7 +309,7 @@
     },
     "planr_handoff": {
       "schema_version": 1,
-      "switchloom_package": "switchloom@0.3.1",
+      "switchloom_package": "switchloom@0.3.2",
       "semantic_role_contract": "Planr supplies usage policy `low-usage`, work_type routes, and semantic roles; Switchloom owns the selected host binding, model, effort, fork/context policy, and generated dispatch artifacts.",
       "required_consumer_behavior": [
         "Consume RoutingIntentV1 as the only source for semantic_role, work_type, selected profile, model, effort, agent_type, and fork_turns inputs.",
