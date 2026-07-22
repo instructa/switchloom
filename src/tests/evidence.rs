@@ -1,6 +1,26 @@
 use crate::*;
 
 #[test]
+fn codex_runtime_evidence_uses_only_the_versioned_evidence_owner() {
+    let evidence = codex_v2_runtime_evidence().unwrap();
+    let installed_version = evidence
+        .claim_provenance
+        .get("installed_version")
+        .unwrap()
+        .first()
+        .unwrap();
+
+    assert_eq!(
+        installed_version.source_path.as_deref(),
+        Some("evidence/codex/0.145.0/exact-version-capture.txt")
+    );
+    assert!(
+        codex_v2_runtime_evidence_reference()
+            .starts_with("evidence/codex/0.145.0/runtime-evidence.json#sha256:")
+    );
+}
+
+#[test]
 fn codex_runtime_evidence_fixtures_fail_for_named_provenance_reasons() {
     for (fixture, expected) in [
         (

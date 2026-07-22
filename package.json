@@ -16,11 +16,13 @@
   },
   "files": [
     "npm/bin/model-routing.js",
-    "npm/native",
+    "npm/native/darwin-arm64/model-routing",
+    "npm/native/darwin-x86_64/model-routing",
+    "npm/native/linux-arm64/model-routing",
+    "npm/native/linux-x86_64/model-routing",
+    "npm/native/provenance.json",
     "README.md",
-    "LICENSE",
-    "docs",
-    "!docs/prepublish-certification-*.md"
+    "LICENSE"
   ],
   "publishConfig": {
     "access": "public",
@@ -33,6 +35,7 @@
     "distribution:test": "node --test npm/*.test.mjs && bash scripts/npm-pack-check.sh",
     "destroy:test": "node scripts/cloudflare-test.mjs destroy",
     "hooks:install": "git config core.hooksPath .githooks",
+    "hooks:check-sensitive": "node scripts/hooks/block-sensitive-diff-content.mjs --worktree",
     "pack:check": "bash scripts/npm-pack-check.sh",
     "security:check": "bash scripts/secleak-check.sh",
     "site:build": "astro build && node scripts/build-site.mjs",

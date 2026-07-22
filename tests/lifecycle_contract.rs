@@ -72,7 +72,7 @@ fn assert_codex_v2_activation(content: &str) {
     );
     assert_eq!(
         parsed["features"]["multi_agent_v2"]["hide_spawn_agent_metadata"].as_bool(),
-        Some(false)
+        Some(true)
     );
 }
 
@@ -84,7 +84,7 @@ fn assert_codex_v2_disabled(content: &str) {
     );
     assert_eq!(
         parsed["features"]["multi_agent_v2"]["hide_spawn_agent_metadata"].as_bool(),
-        Some(false)
+        Some(true)
     );
 }
 
@@ -431,7 +431,7 @@ fn lifecycle_preserves_compatible_user_owned_codex_v2_activation_and_rejects_fal
     fs::create_dir_all(repository.join(".codex")).unwrap();
     fs::write(
         repository.join(".codex/config.toml"),
-        "[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = false\n",
+        "[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = true\n",
     )
     .unwrap();
 
@@ -474,7 +474,7 @@ fn lifecycle_preserves_compatible_user_owned_codex_v2_activation_and_rejects_fal
     fs::create_dir_all(conflict_repo.join(".codex")).unwrap();
     fs::write(
         conflict_repo.join(".codex/config.toml"),
-        "[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = false\n",
+        "[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = true\n",
     )
     .unwrap();
     apply_bundle_file_with_bundle(&conflict_repo, &codex).unwrap();
@@ -524,7 +524,7 @@ fn lifecycle_preserves_compatible_user_owned_codex_v2_activation_and_rejects_fal
     fs::create_dir_all(cross_host_repo.join(".codex")).unwrap();
     fs::write(
         cross_host_repo.join(".codex/config.toml"),
-        "[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = false\n",
+        "[features.multi_agent_v2]\nenabled = true\nhide_spawn_agent_metadata = true\n",
     )
     .unwrap();
     apply_bundle_file_with_bundle(&cross_host_repo, &codex).unwrap();

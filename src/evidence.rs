@@ -6,10 +6,14 @@ use serde_json::{Value, json};
 use std::collections::BTreeSet;
 use std::fs;
 
+pub(crate) const CODEX_V2_RUNTIME_EVIDENCE_PATH: &str =
+    "evidence/codex/0.145.0/runtime-evidence.json";
+const CODEX_0145_EXACT_VERSION_CAPTURE_PATH: &str =
+    "evidence/codex/0.145.0/exact-version-capture.txt";
 pub(crate) const CODEX_V2_RUNTIME_EVIDENCE_JSON: &str =
-    include_str!("../docs/codex-v2-runtime-evidence.json");
+    include_str!("../evidence/codex/0.145.0/runtime-evidence.json");
 const CODEX_0145_EXACT_VERSION_CAPTURE: &str =
-    include_str!("../docs/codex-0.145-exact-version-capture.txt");
+    include_str!("../evidence/codex/0.145.0/exact-version-capture.txt");
 
 pub(crate) fn codex_v2_runtime_evidence() -> Result<CodexV2RuntimeEvidence> {
     let evidence: CodexV2RuntimeEvidence = serde_json::from_str(CODEX_V2_RUNTIME_EVIDENCE_JSON)
@@ -216,7 +220,7 @@ pub(crate) fn validate_codex_claim_source_identity(
                 && record.source.contains("--version")
                 && source_path.is_some_and(|path| {
                     path == format!("local-shell:{}", record.source)
-                        || path == "docs/codex-0.145-exact-version-capture.txt"
+                        || path == CODEX_0145_EXACT_VERSION_CAPTURE_PATH
                 })
                 && source_url.is_none()
         }
@@ -267,9 +271,7 @@ pub(crate) fn validate_codex_retained_source_contains_raw_output(
         return Ok(());
     };
     let source_content = match source_path {
-        "docs/codex-0.145-exact-version-capture.txt" => {
-            CODEX_0145_EXACT_VERSION_CAPTURE.to_string()
-        }
+        CODEX_0145_EXACT_VERSION_CAPTURE_PATH => CODEX_0145_EXACT_VERSION_CAPTURE.to_string(),
         path if path.starts_with("fixtures/codex-v2-runtime-evidence/") => fs::read_to_string(path)
             .with_context(|| {
                 format!("failed to read Codex V2 evidence fixture source `{source_path}`")
@@ -723,7 +725,7 @@ pub(crate) fn validate_runtime_behavior(capability: &HostCapabilityV1) -> Result
 
 pub(crate) fn codex_v2_runtime_evidence_reference() -> String {
     format!(
-        "docs/codex-v2-runtime-evidence.json#sha256:{}",
+        "{CODEX_V2_RUNTIME_EVIDENCE_PATH}#sha256:{}",
         sha256(CODEX_V2_RUNTIME_EVIDENCE_JSON.as_bytes())
     )
 }

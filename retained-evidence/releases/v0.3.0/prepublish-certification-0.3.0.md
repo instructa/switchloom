@@ -15,7 +15,7 @@ Final handoff Planr item: `i-finalize-durable-release-and-pla-2dac`
 - Tag object: `8306c2533be0cbeb9c6801651cb08d0d244d7678`
 - Tag target: `45c15fed09786c9dee1167744b1c43b87b47d505`
 - Protected Planr repository:
-  `/Users/kregenrek/projects/planr`
+  `${HOME}/projects/planr`
 - Protected Planr HEAD:
   `bbc877d40191b2cbb289ed26df5e6fee25e4326d`
 - Protected Planr dirty-state hash:

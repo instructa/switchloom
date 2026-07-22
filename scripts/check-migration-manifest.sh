@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-manifest="${1:-docs/migration-manifest.tsv}"
-planr_root="${PLANR_ROOT:-/Users/kregenrek/projects/planr}"
+manifest="${1:-retained-evidence/migrations/v0.3.0/migration-manifest.tsv}"
+planr_root="${PLANR_ROOT:-${HOME}/projects/planr}"
 baseline_tag="${PLANR_BASELINE_TAG:-v1.5.0}"
 baseline_commit="${PLANR_BASELINE_COMMIT:-7a01ad54cb41fd755f368a79339a96a997f693d0}"
 baseline_source_hash="${PLANR_BASELINE_SOURCE_HASH:-d32166f38448fcc2cb5632b24214625b45ae6326}"

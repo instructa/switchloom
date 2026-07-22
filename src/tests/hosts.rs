@@ -110,6 +110,14 @@ hide_spawn_agent_metadata = false
             && diagnostic.repair.contains("enabled = true")
     }));
     assert!(exact_report.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_v2_metadata_conflict"
+            && diagnostic.message.contains("Codex 0.145")
+            && diagnostic.message.contains("collaboration.spawn_agent")
+            && diagnostic
+                .repair
+                .contains("hide_spawn_agent_metadata = true")
+    }));
+    assert!(exact_report.diagnostics.iter().any(|diagnostic| {
         diagnostic.code == "codex_trust_reload_required"
             && diagnostic.repair.contains("reload or restart")
     }));
@@ -139,7 +147,7 @@ config_file = "./agents/model-routing-sol-high.toml"
 
 [features.multi_agent_v2]
 enabled = true
-hide_spawn_agent_metadata = false
+hide_spawn_agent_metadata = true
 "#,
     )
     .unwrap();
@@ -151,6 +159,12 @@ hide_spawn_agent_metadata = false
             .diagnostics
             .iter()
             .any(|diagnostic| diagnostic.severity == "error")
+    );
+    assert!(
+        !ready_report
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "codex_v2_metadata_conflict")
     );
 }
 

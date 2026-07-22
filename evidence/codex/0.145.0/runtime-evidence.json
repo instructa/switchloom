@@ -56,7 +56,7 @@
         "required_raw_fragments": [
           "codex-cli 0.145.0"
         ],
-        "source_path": "docs/codex-0.145-exact-version-capture.txt",
+        "source_path": "evidence/codex/0.145.0/exact-version-capture.txt",
         "raw_output": "codex-cli 0.145.0\n",
         "raw_output_sha256": "f9eb0c462cdded1fb971b33c647ff1b8b491dfe962a1506026e07a06f634f651"
       }

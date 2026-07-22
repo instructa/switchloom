@@ -39,6 +39,10 @@ id_dsa
 # Node and deployment tooling
 /node_modules/
 /.astro/
+/.cache/
+/.vite/
+/.turbo/
+/.nyc_output/
 /.npm-package/
 /npm/native/
 /.pnpm-store/
@@ -46,6 +50,23 @@ id_dsa
 /.wrangler/
 pnpm-debug.log*
 *.log
+*.jsonl
+*.out
+*.stdout
+*.stderr
+*.trace
+*.pid
+*.pid.lock
+*.db
+*.db-*
+*.sqlite3
+*.sqlite3-*
+*.profraw
+*.profdata
+*.dSYM/
+core
+core.*
+/*.tgz
 
 # Infrastructure state
 *.tfstate

@@ -3,7 +3,7 @@
 Date: 2026-07-22
 
 This is the durable Goal A gate for the Planr Goal B hard cut. It does not
-modify `/Users/kregenrek/projects/planr`; it records the independently reviewed
+modify `${HOME}/projects/planr`; it records the independently reviewed
 and published Switchloom owner plus the exact Planr responsibilities to keep,
 replace, or delete.
 
@@ -152,7 +152,7 @@ wrapper, or second source of truth for removed routing bundle commands.
 
 ## Goal B Deletion Oracle
 
-Goal B may start in `/Users/kregenrek/projects/planr` only after certification
+Goal B may start in `${HOME}/projects/planr` only after certification
 item `i-certify-public-bytes-and-finaliz-ad43` and its independent review close,
 the approval list is empty, and `planr plan audit pln-45ebe887 --json` passes.
 

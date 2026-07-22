@@ -6,6 +6,17 @@
 (^|/)\.codex/
 (^|/)\.claude/
 (^|/)\.cursor/
+(^|/)\.astro/
+(^|/)\.cache/
+(^|/)\.vite/
+(^|/)\.turbo/
+(^|/)\.nyc_output/
+(^|/)(node_modules|target|dist|coverage|tmp)/
+(^|/)npm/native/
+
+# Generated reports stay local. The compact public byte certificate is the
+# single deliberate tracked exception; raw workdirs and host logs are blocked.
+(^|/)reports/(?!release-ready-v[0-9]+\.[0-9]+\.[0-9]+/public-byte-certification\.json$)
 
 # Environment and credential files
 (^|/)\.env$
@@ -45,3 +56,13 @@
 (^|/)\.idea/
 (^|/)\.vscode/settings\.json$
 (^|/)\.vscode/launch\.json$
+
+# Runtime transcripts, databases, and diagnostics
+\.log$
+\.jsonl$
+\.(stdout|stderr|trace|pid)$
+\.(sqlite|sqlite3|db)($|-)
+\.(profraw|profdata)$
+\.dSYM/
+(\.tgz|\.crate)$
+(^|/)core($|\.)

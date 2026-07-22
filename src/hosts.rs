@@ -190,18 +190,18 @@ pub(crate) fn codex_repository_diagnostics(repository: &Path) -> Result<Vec<Prob
         .and_then(|table| table.get("hide_spawn_agent_metadata"))
         .and_then(toml::Value::as_bool)
     {
-        Some(false) => {}
-        Some(true) => diagnostics.push(probe_diagnostic(
+        Some(true) => {}
+        Some(false) => diagnostics.push(probe_diagnostic(
             "codex_v2_metadata_conflict",
             "error",
-            "Repository-local features.multi_agent_v2.hide_spawn_agent_metadata is true; certified Switchloom evidence expects visible spawn metadata.",
-            "Set hide_spawn_agent_metadata = false for certified evidence capture, then reload or restart Codex.",
+            "Repository-local features.multi_agent_v2.hide_spawn_agent_metadata is false; Codex 0.145 rejects the resulting reserved collaboration.spawn_agent schema.",
+            "Set hide_spawn_agent_metadata = true for the backend-compatible Codex V2 spawn schema, then reload or restart Codex.",
         )),
         None => diagnostics.push(probe_diagnostic(
             "codex_v2_metadata_missing",
             "warning",
             "Repository-local features.multi_agent_v2.hide_spawn_agent_metadata is missing.",
-            "Run switchloom update/apply for a Codex 0.145 bundle to add hide_spawn_agent_metadata = false.",
+            "Run switchloom update/apply for a Codex 0.145 bundle to add hide_spawn_agent_metadata = true.",
         )),
     }
 
@@ -687,17 +687,17 @@ pub(crate) fn setup_model_catalog(host: &str) -> Vec<SetupModelOption> {
         "codex" => vec![
             SetupModelOption {
                 id: "gpt-5.6-sol",
-                efforts: &["low", "medium", "high", "xhigh", "ultra"],
+                efforts: &["low", "medium", "high", "xhigh", "max", "ultra"],
                 tier: "premium",
             },
             SetupModelOption {
                 id: "gpt-5.6-terra",
-                efforts: &["low", "medium", "high", "xhigh", "ultra"],
+                efforts: &["low", "medium", "high", "xhigh", "max", "ultra"],
                 tier: "standard",
             },
             SetupModelOption {
                 id: "gpt-5.6-luna",
-                efforts: &["low", "medium", "high", "xhigh"],
+                efforts: &["low", "medium", "high", "xhigh", "max"],
                 tier: "standard",
             },
         ],
@@ -1187,7 +1187,7 @@ pub(crate) fn render_codex_agent_registration_artifact(
         features: CodexFeaturesConfig {
             multi_agent_v2: CodexMultiAgentV2Config {
                 enabled: true,
-                hide_spawn_agent_metadata: false,
+                hide_spawn_agent_metadata: true,
             },
         },
     })?;
