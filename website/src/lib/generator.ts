@@ -1,9 +1,11 @@
+import packageMetadata from "../../../package.json";
+
 export const PRIMARY_RECOMMENDATION_ID = "orchestrator" as const;
 export const CHILD_ROLE_IDS = ["implementer", "reviewer", "verifier"] as const;
 export const ROLE_IDS = [PRIMARY_RECOMMENDATION_ID, ...CHILD_ROLE_IDS] as const;
 export const HOST_IDS = ["codex", "cursor", "claude-code", "opencode", "pi"] as const;
 export const PRESET_IDS = ["light", "balanced", "high"] as const;
-export const SWITCHLOOM_VERSION = "0.3.1";
+export const SWITCHLOOM_VERSION = packageMetadata.version;
 
 export type PrimaryRecommendationId = typeof PRIMARY_RECOMMENDATION_ID;
 export type ChildRoleId = (typeof CHILD_ROLE_IDS)[number];

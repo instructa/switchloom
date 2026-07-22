@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { HOST_IDS } from "./generator";
+import { HOST_IDS, SWITCHLOOM_VERSION } from "./generator";
 import { PROVIDER_ONBOARDING, providerOnboarding } from "./onboarding";
 
 describe("provider onboarding templates", () => {
@@ -19,7 +19,7 @@ describe("provider onboarding templates", () => {
   });
 
   it("injects the exact generated recipe command without mutating provider copy", () => {
-    const command = "npx switchloom@0.3.1 apply --recipe 'sw1_example' --repository .";
+    const command = `npx switchloom@${SWITCHLOOM_VERSION} apply --recipe 'sw1_example' --repository .`;
     const onboarding = providerOnboarding("codex", command);
 
     expect(onboarding.steps.find((step) => step.id === "install")?.command).toBe(command);
