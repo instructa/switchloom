@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { applyPreset, canRenderParentRecommendation, changeHost, CHILD_ROLE_IDS, choosePreset, createConfig, createPresetSelection, HOST_IDS, hostCatalogFrom, isChildRoleId, isPresetDirty, isPrimaryRecommendationId, lifecycleCommands, markPresetCustom, parentRecommendationEffortCopy, PRESETS, primaryRecommendation, PRIMARY_RECOMMENDATION_ID, recipeApplyCommand, removeChildRole, resetRolesToPreset, ROLE_IDS, selectedChildRoleIds, setEffort, setIntegration, setModel, setRoles, setupConfigToml, setupRecipe, setupSpec, setupSummary, setupTransportFrom } from "./generator";
+import packageMetadata from "../../../package.json";
+
+import { applyPreset, canRenderParentRecommendation, changeHost, CHILD_ROLE_IDS, choosePreset, createConfig, createPresetSelection, HOST_IDS, hostCatalogFrom, isChildRoleId, isPresetDirty, isPrimaryRecommendationId, lifecycleCommands, markPresetCustom, parentRecommendationEffortCopy, PRESETS, primaryRecommendation, PRIMARY_RECOMMENDATION_ID, recipeApplyCommand, removeChildRole, resetRolesToPreset, ROLE_IDS, selectedChildRoleIds, setEffort, setIntegration, setModel, setRoles, setupConfigToml, setupRecipe, setupSpec, setupSummary, setupTransportFrom, SWITCHLOOM_VERSION } from "./generator";
 
 const generatedCatalog = {
   setupContract: {
@@ -63,6 +65,10 @@ const generatedCatalog = {
 const hostCatalog = hostCatalogFrom(generatedCatalog);
 
 describe("Switchloom generator", () => {
+  it("derives the pinned CLI version from package metadata", () => {
+    expect(SWITCHLOOM_VERSION).toBe(packageMetadata.version);
+  });
+
   it("splits the primary recommendation id from generated child role ids", () => {
     expect(PRIMARY_RECOMMENDATION_ID).toBe("orchestrator");
     expect(CHILD_ROLE_IDS).toEqual(["implementer", "reviewer", "verifier"]);
@@ -413,7 +419,7 @@ describe("Switchloom generator", () => {
     const recipe = setupRecipe(config, hostCatalog, transport.recipePrefix);
     expect(recipe).toMatch(/^sw1_[A-Za-z0-9_-]+$/);
     const command = recipeApplyCommand(config, hostCatalog, transport.recipePrefix);
-    expect(command).toMatch(/^npx switchloom@0\.3\.1 apply --recipe 'sw1_[A-Za-z0-9_-]+' --repository \.$/);
+    expect(command).toBe(`npx switchloom@${SWITCHLOOM_VERSION} apply --recipe '${recipe}' --repository .`);
     const toml = setupConfigToml(config, hostCatalog);
     expect(toml).toContain('host = "codex-openai"');
     expect(toml).toContain('integration = "standalone"');
@@ -428,7 +434,7 @@ describe("Switchloom generator", () => {
   it("shows the full CLI lifecycle without claiming custom setup verification", () => {
     const commands = lifecycleCommands(createConfig("cursor"), hostCatalog);
     expect(commands.map((entry) => entry.command)).toEqual([
-      "npm install -g switchloom@0.3.1",
+      `npm install -g switchloom@${SWITCHLOOM_VERSION}`,
       expect.stringMatching(/^switchloom preview --recipe 'sw1_/),
       expect.stringMatching(/^switchloom apply --recipe 'sw1_/),
       "switchloom doctor cursor",
