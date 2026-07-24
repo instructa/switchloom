@@ -1,0 +1,26 @@
+{
+  "fixture_version": 1,
+  "package": "switchloom@0.3.2",
+  "scenario": "The current repository is also named switchloom and contains a stale ignored local native executable.",
+  "repository_local_npx": {
+    "command": "npx switchloom@0.3.2 --version",
+    "working_directory": "same-package Switchloom repository",
+    "resolved_executable": "npm/native/darwin-arm64/model-routing",
+    "reported_version": "0.3.1",
+    "classification": "stale repository-local native execution; not registry package evidence"
+  },
+  "registry_tarball": {
+    "command": "execute the directly packed registry tarball native binary",
+    "reported_version": "0.3.2",
+    "required_config_fragment": "hide_spawn_agent_metadata = true",
+    "classification": "registry artifact provenance oracle"
+  },
+  "neutral_directory_npx": {
+    "command": "npx switchloom@0.3.2 --version",
+    "working_directory": "neutral directory outside the repository",
+    "reported_version": "0.3.2",
+    "required_config_fragment": "hide_spawn_agent_metadata = true",
+    "classification": "registry package resolution contrast"
+  },
+  "acceptance_rule": "Do not treat same-package repository npx output as registry evidence unless the executed native path, version, and provenance digest are captured."
+}

@@ -2,6 +2,17 @@
 
 All notable changes to Switchloom are recorded here.
 
+## [0.3.3] - 2026-07-24
+
+- Made `doctor codex` validate the applied semantic role registration, role
+  file metadata, and managed-config consistency so drift is reported with a
+  specific repair path.
+- Bound each supported native release artifact to a CI-produced target, exact
+  CLI version, digest, runner, and commit receipt before npm packaging.
+- Added reproducible routing-pilot telemetry and narrow comparison inputs.
+  Their reports retain unavailable fields as unavailable and do not claim
+  currency savings, broad efficiency, or general quality improvements.
+
 ## [0.3.2] - 2026-07-22
 
 - Redesigned the multi-agent generator around a host-managed orchestrator and

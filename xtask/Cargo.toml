@@ -10,7 +10,7 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-model-routing = { path = "..", version = "0.3.2" }
+model-routing = { path = "..", version = "0.3.3" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "currency_policy": "unavailable_without_billable_evidence",
+  "arms": [
+    {"id":"single-sol-medium","parent":{"model":"gpt-5.6-sol","effort":"medium"},"children":[]},
+    {"id":"all-sol-multi-agent","parent":{"model":"gpt-5.6-sol","effort":"medium"},"children":[{"role":"implementer","model":"gpt-5.6-sol","effort":"medium"},{"role":"reviewer","model":"gpt-5.6-sol","effort":"medium"},{"role":"verifier","model":"gpt-5.6-sol","effort":"medium"}]},
+    {"id":"routed-sol-terra","parent":{"model":"gpt-5.6-sol","effort":"medium"},"children":[{"role":"implementer","model":"gpt-5.6-terra","effort":"medium"},{"role":"reviewer","model":"gpt-5.6-terra","effort":"medium"},{"role":"verifier","model":"gpt-5.6-terra","effort":"low"}]}
+  ],
+  "tasks": [
+    {"id":"doctor-semantic-role","prompt":"Repair the selected semantic role registration only.","seed_files":{"role.txt":"switchloom_reviewer\n"},"oracle":{"path":"role.txt","equals":"switchloom_implementer\n"}},
+    {"id":"v2-flag-repair","prompt":"Repair only the required Codex V2 flag.","seed_files":{"config.toml":"enabled = true\nhide_spawn_agent_metadata = false\n"},"oracle":{"path":"config.toml","equals":"enabled = true\nhide_spawn_agent_metadata = true\n"}},
+    {"id":"native-provenance","prompt":"Create native-report.txt reporting the registry and local native versions without changing unrelated files.","seed_files":{"provenance.txt":"registry=0.3.2\nlocal=0.3.1\n"},"oracle":{"kind":"produced_file","path":"native-report.txt","equals":"registry=0.3.2\nlocal=0.3.1\n"}}
+  ]
+}

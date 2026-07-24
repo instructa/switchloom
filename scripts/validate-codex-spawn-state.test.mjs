@@ -10,9 +10,8 @@ const parent = "11111111-1111-4111-8111-111111111111";
 const worker = "22222222-2222-4222-8222-222222222222";
 const reviewer = "33333333-3333-4333-8333-333333333333";
 const extra = "44444444-4444-4444-8444-444444444444";
-const workdir = "/tmp/switchloom-fresh-repo";
 const packageDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const hostVersion = "codex 0.144.0";
+const hostVersion = "codex-cli 0.145.0";
 const encryptedWorkerMessage = "gAAAAABqEncryptedWorkerMessageForSwitchloom1234567890";
 const changedEncryptedWorkerMessage = "gAAAAABqChangedWorkerMessageForSwitchloom1234567890";
 
@@ -51,8 +50,10 @@ function baseChildren() {
 
 async function writeFixture(overrides = {}) {
   const root = await mkdtemp(join(tmpdir(), "switchloom-codex-spawn-state-"));
+  const workdir = join(root, "workdir");
   const sessions = join(root, "sessions");
   await mkdir(sessions, { recursive: true });
+  await mkdir(workdir, { recursive: true });
   const stateDb = join(root, "state_5.sqlite");
   const eventsPath = join(root, "events.jsonl");
   const expectPath = join(root, "expected.json");
@@ -231,14 +232,14 @@ async function writeFixture(overrides = {}) {
   });
   assert.equal(sqlite.status, 0, sqlite.stderr);
 
-  return { root, eventsPath, expectPath, sessions, stateDb };
+  return { root, workdir, eventsPath, expectPath, sessions, stateDb };
 }
 
 function run(fixture) {
   return spawnSync(process.execPath, [
     "scripts/validate-codex-spawn-state.mjs",
     "--events", fixture.eventsPath,
-    "--workdir", workdir,
+    "--workdir", fixture.workdir,
     "--expect", fixture.expectPath,
     "--state-db", fixture.stateDb,
     "--sessions-dir", fixture.sessions,

@@ -1,0 +1,7 @@
+# Routing quality comparison
+
+Run `node scripts/compare-routing-pilot.mjs --report-root /private/tmp/routing-pilot-live` to produce a durable resource-proxy comparison and blind audit bundles. It verifies the 9-row receipt/route/oracle matrix, separates delegation overhead from Sol/Terra routing effect, and never converts tokens into currency.
+
+For one authenticated blind Sol Medium audit, run the printed `audit_command`. It uses a clean trusted public audit workspace with explicit workspace-write, approval-never, Sol, and medium-effort settings; that workspace contains only bundles, schema, prompt, and later raw/result receipts. The opaque mapping lives separately in `blind-audit-private/` and is never available to the auditor. Then run the printed `import_command`, which requires both `audit-result.json` and raw JSONL, discovers the persisted session, and accepts it only when the observed session is completed `gpt-5.6-sol` at `medium` effort and its final cumulative usage exactly matches raw `turn.completed` usage. The report stores hashes and a sanitized session receipt, never prompts. The audit schema requires acceptance, critical findings, major findings, and rationale for every opaque candidate.
+
+An accepted audit proves only `benchmark_quality_parity` for these three narrow tasks. `general_quality` remains `not-proven`. Resource proxies are not currency, and broad efficiency savings remain `not-proven` without billable evidence and consistently favorable token, elapsed, and incident results.

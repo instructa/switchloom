@@ -1,0 +1,15 @@
+# Intentionally broken state. Keep this separate from the valid semantic-role
+# fixture so a later Doctor repair can assert one diagnostic at a time.
+
+[agents.switchloom_implementer]
+config_file = "./agents/switchloom_implementer.toml"
+
+[agents.switchloom_reviewer]
+config_file = "./agents/switchloom_reviewer.toml"
+
+[agents.switchloom_verifier]
+config_file = "./agents/switchloom_verifier.toml"
+
+[features.multi_agent_v2]
+enabled = false
+hide_spawn_agent_metadata = false

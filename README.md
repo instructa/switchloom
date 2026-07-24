@@ -17,7 +17,7 @@ brew install instructa/tap/switchloom
 ### npm
 
 ```sh
-npm install --global switchloom@0.3.2
+npm install --global switchloom@0.3.3
 ```
 
 Both channels install the branded `switchloom` command and the compatibility
@@ -42,7 +42,7 @@ the browser. After choosing a provider and team, open the provider onboarding
 flow, run the copied apply command from the target repository, then run doctor:
 
 ```sh
-npx switchloom@0.3.2 apply --recipe 'sw1_...' --repository .
+npx switchloom@0.3.3 apply --recipe 'sw1_...' --repository .
 npx switchloom doctor codex
 ```
 
@@ -71,7 +71,7 @@ apply when setup depends on a locally installed host CLI.
 
 ## Current Status
 
-The v0.3.2 public CLI compiles independently and hard-cuts maintainer-only
+The v0.3.3 public CLI compiles independently and hard-cuts maintainer-only
 evaluation, catalog, registry, and live-verification operations from the
 public command surface.
 
@@ -104,7 +104,7 @@ pnpm site:dev
 ```
 
 The website setup contract is the provider onboarding flow: the copied
-`npx switchloom@0.3.2 apply --recipe 'sw1_...' --repository .` command runs the
+`npx switchloom@0.3.3 apply --recipe 'sw1_...' --repository .` command runs the
 CLI-owned preview and confirmation before writing repository-local artifacts,
 and the provider-specific doctor command verifies the resulting host setup.
 
@@ -131,11 +131,11 @@ pnpm security:check
 ## Releases
 
 Releases are created only through the repository-owned script. Prepare and
-commit a bracketed changelog section such as `## [0.3.2]`, then run:
+commit a bracketed changelog section such as `## [0.3.3]`, then run:
 
 ```sh
-RELEASE_DRY_RUN=1 scripts/release.sh 0.3.2 "Multi-agent generator and Codex V2 catalog"
-scripts/release.sh 0.3.2 "Multi-agent generator and Codex V2 catalog"
+RELEASE_DRY_RUN=1 scripts/release.sh 0.3.3 "Doctor diagnostics and native provenance receipts"
+scripts/release.sh 0.3.3 "Doctor diagnostics and native provenance receipts"
 ```
 
 The script requires a clean, synchronized `main`, runs the complete local

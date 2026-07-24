@@ -1,0 +1,30 @@
+{
+  "fixture_version": 1,
+  "observed_command": "cargo run --quiet --bin switchloom -- doctor codex",
+  "observed_on": "2026-07-24",
+  "host_version": "codex-cli 0.145.0",
+  "valid_applied_state": "applied-semantic-recipe.toml",
+  "intentionally_broken_state": "intentionally-broken-v2-flags.toml",
+  "v0_3_2_false_warnings": [
+    {
+      "code": "codex_role_registration_missing",
+      "legacy_role": "model_routing_terra_high",
+      "message": "Repository-local .codex/config.toml does not register required role `model_routing_terra_high`."
+    },
+    {
+      "code": "codex_role_registration_missing",
+      "legacy_role": "model_routing_terra_mechanical",
+      "message": "Repository-local .codex/config.toml does not register required role `model_routing_terra_mechanical`."
+    },
+    {
+      "code": "codex_role_registration_missing",
+      "legacy_role": "model_routing_sol_high",
+      "message": "Repository-local .codex/config.toml does not register required role `model_routing_sol_high`."
+    }
+  ],
+  "expected_v2_flag_diagnostics_for_intentionally_broken_state": [
+    "codex_v2_activation_conflict",
+    "codex_v2_metadata_conflict"
+  ],
+  "non_goal": "This fixture records current behavior. It does not assert the repaired Doctor behavior."
+}
