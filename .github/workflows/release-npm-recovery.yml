@@ -1,0 +1,103 @@
+name: Recover npm publication from release assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Immutable public release tag to package
+        required: true
+        default: v0.3.3
+        type: string
+      confirm_publish:
+        description: Type publish-v0.3.3 to enable publication
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: npm-recovery-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Verify public assets and publish npm package
+    if: ${{ inputs.tag == 'v0.3.3' && inputs.confirm_publish == 'publish-v0.3.3' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout immutable release tag
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Refuse an existing npm version
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          version="${TAG#v}"
+          if npm view "switchloom@$version" version >/dev/null 2>&1; then
+            echo "switchloom@$version is already published" >&2
+            exit 1
+          fi
+      - name: Download and verify immutable public release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          mkdir assets
+          gh release download "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'switchloom-*.tar.gz' \
+            --pattern SHA256SUMS \
+            --dir assets
+          cd assets
+          sha256sum -c SHA256SUMS
+      - name: Reconstruct package provenance from verified assets
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          version="${TAG#v}"
+          git_sha="$(git rev-parse HEAD)"
+          mkdir -p recovery-receipts
+          for target in darwin-arm64 darwin-x86_64 linux-arm64 linux-x86_64; do
+            sh scripts/verify-release-archive.sh "assets/switchloom-$target.tar.gz"
+            mkdir -p "extract/$target" "npm/native/$target"
+            tar -xzf "assets/switchloom-$target.tar.gz" -C "extract/$target"
+            install -m 755 "extract/$target/model-routing" "npm/native/$target/model-routing"
+            case "$target" in
+              darwin-arm64) rust_target=aarch64-apple-darwin; runner=macos-14 ;;
+              darwin-x86_64) rust_target=x86_64-apple-darwin; runner=macos-15-intel ;;
+              linux-arm64) rust_target=aarch64-unknown-linux-gnu; runner=ubuntu-24.04-arm ;;
+              linux-x86_64) rust_target=x86_64-unknown-linux-gnu; runner=ubuntu-24.04 ;;
+            esac
+            sha256="$(sha256sum "npm/native/$target/model-routing" | awk '{print $1}')"
+            jq -n \
+              --arg target "$target" \
+              --arg rust_target "$rust_target" \
+              --arg runner "$runner" \
+              --arg version "model-routing $version" \
+              --arg sha256 "$sha256" \
+              --arg git_sha "$git_sha" \
+              '{target: $target, rust_target: $rust_target, runner: $runner, path: ("npm/native/" + $target + "/model-routing"), version: $version, sha256: $sha256, git_sha: $git_sha, built_at: "recovered-from-public-release"}' \
+              > "recovery-receipts/switchloom-$target.provenance.json"
+          done
+          test "$(./npm/native/linux-x86_64/model-routing --version)" = "model-routing $version"
+          cargo run --quiet -p xtask -- release package \
+            --assemble-provenance \
+            --provenance-dir recovery-receipts \
+            --git-sha "$git_sha" \
+            --built-at "recovery-$TAG" \
+            --generated-by github-actions-release-recovery
+          cargo run --quiet -p xtask -- release verify --inventory-only --require-provenance
+          SWITCHLOOM_NATIVE_BIN="$PWD/npm/native/linux-x86_64/model-routing" node npm/bin/model-routing.js --version
+      - name: Publish npm package
+        run: npm publish --access public --provenance
