@@ -99,9 +99,12 @@ jobs:
             mkdir -p "npm/native/$target"
             install -m 755 "rc-artifacts/switchloom-native-$target/npm/native/$target/model-routing" \
               "npm/native/$target/model-routing"
+            cp "rc-artifacts/switchloom-native-$target/native-provenance/$target/provenance.json" \
+              "rc-artifacts/switchloom-$target.provenance.json"
           done
           cargo run --quiet -p xtask -- release package \
             --assemble-provenance \
+            --provenance-dir rc-artifacts \
             --git-sha "$(git rev-parse HEAD)" \
             --built-at github-actions-release-candidate \
             --generated-by github-actions-release-candidate
