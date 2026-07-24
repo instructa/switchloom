@@ -90,11 +90,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
+          cp "dist/provenance/${{ matrix.target }}/provenance.json" \
+            "dist/switchloom-${{ matrix.target }}.provenance.json"
           gh release upload "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber \
             "dist/switchloom-${{ matrix.target }}.tar.gz" \
-            "dist/provenance/${{ matrix.target }}/provenance.json#switchloom-${{ matrix.target }}.provenance.json"
+            "dist/switchloom-${{ matrix.target }}.provenance.json"
 
   finalize:
     name: Publish checksums and release
