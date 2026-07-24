@@ -52,7 +52,7 @@ jobs:
             runner: macos-14
           - target: darwin-x86_64
             rust_target: x86_64-apple-darwin
-            runner: macos-14
+            runner: macos-15-intel
           - target: linux-x86_64
             rust_target: x86_64-unknown-linux-gnu
             runner: ubuntu-24.04
@@ -70,13 +70,21 @@ jobs:
       - name: Install Rust target
         run: rustup target add ${{ matrix.rust_target }}
       - name: Build release archive
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
           cargo run --quiet -p xtask -- release package \
             --target "${{ matrix.target }}" \
-            --cargo-target "${{ matrix.rust_target }}"
+            --cargo-target "${{ matrix.rust_target }}" \
+            --stage-npm \
+            --provenance-dir dist/provenance \
+            --runner "github-actions-${{ matrix.runner }}" \
+            --git-sha "$GITHUB_SHA" \
+            --built-at "release-$TAG"
       - name: Smoke-test native binary
-        if: matrix.target != 'darwin-x86_64'
-        run: ./target/${{ matrix.rust_target }}/release/model-routing --version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: test "$(./target/${{ matrix.rust_target }}/release/model-routing --version)" = "model-routing ${TAG#v}"
       - name: Upload release archive
         env:
           GH_TOKEN: ${{ github.token }}
@@ -85,7 +93,8 @@ jobs:
           gh release upload "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber \
-            "dist/switchloom-${{ matrix.target }}.tar.gz"
+            "dist/switchloom-${{ matrix.target }}.tar.gz" \
+            "dist/provenance/${{ matrix.target }}/provenance.json#switchloom-${{ matrix.target }}.provenance.json"
 
   finalize:
     name: Publish checksums and release
@@ -149,6 +158,7 @@ jobs:
           gh release download "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --pattern 'switchloom-*.tar.gz' \
+            --pattern 'switchloom-*.provenance.json' \
             --pattern SHA256SUMS \
             --dir assets
           cd assets
@@ -165,6 +175,7 @@ jobs:
           done
           cargo run --quiet -p xtask -- release package \
             --assemble-provenance \
+            --provenance-dir assets \
             --git-sha "$(git rev-parse HEAD)" \
             --built-at "release-$TAG" \
             --generated-by github-actions-release

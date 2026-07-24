@@ -33,6 +33,8 @@ const CURRENT_MAINTAINER_DOCS: &[&str] = &[
     "preset-composition.md",
     "preset-evaluation.md",
     "preset-registry.md",
+    "routing-efficiency-pilot.md",
+    "routing-quality-comparison.md",
 ];
 const REQUIRED_RETAINED_RECORDS: &[&str] = &[
     "retained-evidence/handoffs/v0.3.1/planr-hard-cut-handoff.md",
@@ -348,6 +350,11 @@ fn assemble_native_provenance(options: &PackageOptions, version: &str) -> Result
         is_git_sha(&git_sha),
         "git SHA must be 40 lowercase hex characters"
     );
+    let receipts_dir = options
+        .provenance_dir
+        .as_deref()
+        .map(|path| absolute(&options.root, path))
+        .context("--provenance-dir is required when assembling native provenance")?;
     let targets = [
         "darwin-arm64",
         "darwin-x86_64",
@@ -356,7 +363,6 @@ fn assemble_native_provenance(options: &PackageOptions, version: &str) -> Result
     ]
     .into_iter()
     .map(|target| {
-        let (rust_target, runner) = target_metadata(target)?;
         let relative = format!("npm/native/{target}/model-routing");
         let binary = options.root.join(&relative);
         ensure!(
@@ -364,16 +370,22 @@ fn assemble_native_provenance(options: &PackageOptions, version: &str) -> Result
             "native binary missing at {}",
             binary.display()
         );
-        Ok(serde_json::json!({
-            "target": target,
-            "rust_target": rust_target,
-            "runner": runner,
-            "path": relative,
-            "version": format!("model-routing {version}"),
-            "sha256": sha256_file(&binary)?,
-            "git_sha": git_sha,
-            "built_at": options.built_at,
-        }))
+        let receipt_path = receipts_dir.join(format!("switchloom-{target}.provenance.json"));
+        let receipt: NativeTarget =
+            serde_json::from_slice(&fs::read(&receipt_path).with_context(|| {
+                format!(
+                    "native provenance receipt missing: {}",
+                    receipt_path.display()
+                )
+            })?)
+            .with_context(|| {
+                format!(
+                    "invalid native provenance receipt: {}",
+                    receipt_path.display()
+                )
+            })?;
+        verify_native_target(&options.root, &receipt, version, &git_sha)?;
+        Ok(serde_json::to_value(receipt)?)
     })
     .collect::<Result<Vec<_>>>()?;
     let provenance = serde_json::json!({
@@ -782,6 +794,7 @@ fn ensure_clean_worktree(root: &Path) -> Result<()> {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct NativeProvenance {
     schema_version: String,
     package_version: String,
@@ -790,7 +803,8 @@ struct NativeProvenance {
     targets: Vec<NativeTarget>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
 struct NativeTarget {
     target: String,
     rust_target: String,
@@ -834,50 +848,12 @@ fn verify_native_provenance(root: &Path) -> Result<()> {
         .collect::<BTreeSet<_>>();
     ensure!(actual == expected, "native provenance target set mismatch");
     for target in provenance.targets {
-        let (expected_rust_target, _) = target_metadata(&target.target)?;
-        ensure!(
-            target.git_sha == provenance.git_sha,
-            "target git SHA mismatch"
-        );
-        ensure!(
-            target.version == format!("model-routing {}", provenance.package_version),
-            "target version mismatch"
-        );
-        ensure!(
-            target.rust_target == expected_rust_target,
-            "target Rust triple mismatch"
-        );
-        ensure!(!target.runner.trim().is_empty(), "target runner missing");
-        ensure!(
-            !target.built_at.trim().is_empty(),
-            "target build identity missing"
-        );
-        ensure!(
-            target.sha256.len() == 64
-                && target.sha256.chars().all(|character| {
-                    character.is_ascii_hexdigit() && !character.is_ascii_uppercase()
-                }),
-            "invalid target digest"
-        );
-        ensure!(
-            target.path == format!("npm/native/{}/model-routing", target.target),
-            "native path does not match target"
-        );
-        let path = root.join(&target.path);
-        ensure!(
-            path.starts_with(root.join("npm/native")),
-            "native path escapes npm/native"
-        );
-        ensure!(
-            path.is_file(),
-            "native binary missing at {}",
-            path.display()
-        );
-        ensure!(
-            sha256_file(&path)? == target.sha256,
-            "native digest mismatch for {}",
-            target.target
-        );
+        verify_native_target(
+            root,
+            &target,
+            &provenance.package_version,
+            &provenance.git_sha,
+        )?;
     }
     let current_target = detect_target();
     if valid_target(&current_target) {
@@ -901,6 +877,69 @@ fn verify_native_provenance(root: &Path) -> Result<()> {
     println!(
         "native provenance validated for {}",
         provenance.package_version
+    );
+    Ok(())
+}
+
+fn verify_native_target(
+    root: &Path,
+    target: &NativeTarget,
+    version: &str,
+    git_sha: &str,
+) -> Result<()> {
+    let (expected_rust_target, _) = target_metadata(&target.target)?;
+    ensure!(
+        target.git_sha == git_sha,
+        "target git SHA mismatch for {}",
+        target.target
+    );
+    ensure!(
+        target.version == format!("model-routing {version}"),
+        "target version mismatch for {}",
+        target.target
+    );
+    ensure!(
+        target.rust_target == expected_rust_target,
+        "target Rust triple mismatch for {}",
+        target.target
+    );
+    ensure!(
+        !target.runner.trim().is_empty(),
+        "target runner missing for {}",
+        target.target
+    );
+    ensure!(
+        !target.built_at.trim().is_empty(),
+        "target build identity missing for {}",
+        target.target
+    );
+    ensure!(
+        target.sha256.len() == 64
+            && target.sha256.chars().all(|character| {
+                character.is_ascii_hexdigit() && !character.is_ascii_uppercase()
+            }),
+        "invalid target digest for {}",
+        target.target
+    );
+    ensure!(
+        target.path == format!("npm/native/{}/model-routing", target.target),
+        "native path does not match target {}",
+        target.target
+    );
+    let path = root.join(&target.path);
+    ensure!(
+        path.starts_with(root.join("npm/native")),
+        "native path escapes npm/native"
+    );
+    ensure!(
+        path.is_file(),
+        "native binary missing at {}",
+        path.display()
+    );
+    ensure!(
+        sha256_file(&path)? == target.sha256,
+        "native digest mismatch for {}",
+        target.target
     );
     Ok(())
 }
@@ -1197,5 +1236,41 @@ mod tests {
             validate_package_target("linux-x86_64", Some("aarch64-apple-darwin"), "darwin-arm64")
                 .is_err()
         );
+    }
+
+    #[test]
+    fn native_receipt_binds_target_version_sha_and_digest() {
+        let root = std::env::temp_dir().join(format!(
+            "switchloom-release-receipt-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let binary = root.join("npm/native/linux-x86_64/model-routing");
+        fs::create_dir_all(binary.parent().unwrap()).unwrap();
+        fs::write(&binary, b"native bytes").unwrap();
+        let receipt = NativeTarget {
+            target: "linux-x86_64".to_owned(),
+            rust_target: "x86_64-unknown-linux-gnu".to_owned(),
+            runner: "ubuntu-24.04".to_owned(),
+            path: "npm/native/linux-x86_64/model-routing".to_owned(),
+            version: "model-routing 0.3.3".to_owned(),
+            sha256: sha256_file(&binary).unwrap(),
+            git_sha: "a".repeat(40),
+            built_at: "release-v0.3.3".to_owned(),
+        };
+        verify_native_target(&root, &receipt, "0.3.3", &"a".repeat(40)).unwrap();
+
+        let mut wrong_version = receipt;
+        wrong_version.version = "model-routing 0.3.2".to_owned();
+        assert!(verify_native_target(&root, &wrong_version, "0.3.3", &"a".repeat(40)).is_err());
+
+        wrong_version.version = "model-routing 0.3.3".to_owned();
+        wrong_version.sha256 = "b".repeat(64);
+        assert!(verify_native_target(&root, &wrong_version, "0.3.3", &"a".repeat(40)).is_err());
+
+        fs::remove_dir_all(root).unwrap();
     }
 }

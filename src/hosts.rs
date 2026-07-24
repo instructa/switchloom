@@ -11,6 +11,7 @@ use std::process::Command;
 
 pub(crate) const NPM_PACKAGE_JSON: &str = include_str!("../package.json");
 const CODEX_PROJECT_CONFIG_PATH: &str = ".codex/config.toml";
+const SWITCHLOOM_CONFIG_PATH: &str = ".switchloom/config.toml";
 pub(crate) const BINDINGS: [(&str, &str); 7] = [
     (
         "codex-openai",
@@ -113,7 +114,10 @@ pub(crate) fn probe_diagnostics_for_binding(
             "codex_exact_version_ready",
             "info",
             "Codex reports exact version 0.145.0 for the certified V2 contract.",
-            "No version action required for Switchloom v0.3.1 certification.",
+            format!(
+                "No version action required for Switchloom v{} certification.",
+                switchloom_package_version()?
+            ),
         )),
         Some([major, minor, patch]) if available => diagnostics.push(probe_diagnostic(
             "codex_exact_version_mismatch",
@@ -205,20 +209,59 @@ pub(crate) fn codex_repository_diagnostics(repository: &Path) -> Result<Vec<Prob
         )),
     }
 
+    let (roles, role_diagnostics) = applied_codex_roles(repository)?;
+    diagnostics.extend(role_diagnostics);
     let agents = parsed.get("agents").and_then(toml::Value::as_table);
-    for agent in [
-        "model_routing_terra_high",
-        "model_routing_terra_mechanical",
-        "model_routing_sol_high",
-    ] {
-        if agents.and_then(|agents| agents.get(agent)).is_none() {
+    for role in roles {
+        let expected_config_file = format!("./agents/{}.toml", role.agent_type);
+        let Some(registration) = agents.and_then(|agents| agents.get(&role.agent_type)) else {
             diagnostics.push(probe_diagnostic(
                 "codex_role_registration_missing",
                 "warning",
-                format!("Repository-local .codex/config.toml does not register required role `{agent}`."),
-                "Run switchloom update/apply for a Codex bundle, then reload or restart Codex before dispatching by agent_type.",
+                format!(
+                    "Repository-local .codex/config.toml does not register applied role `{}` (agent_type `{}`).",
+                    role.role, role.agent_type
+                ),
+                "Run switchloom update/apply for this recipe, then reload or restart Codex before dispatching by agent_type.",
             ));
+            continue;
+        };
+        let configured_file = registration
+            .as_table()
+            .and_then(|entry| entry.get("config_file"))
+            .and_then(toml::Value::as_str);
+        if configured_file != Some(expected_config_file.as_str()) {
+            diagnostics.push(probe_diagnostic(
+                "codex_role_config_mismatch",
+                "error",
+                format!(
+                    "Applied role `{}` (agent_type `{}`) must register config_file `{expected_config_file}`, found `{}`.",
+                    role.role,
+                    role.agent_type,
+                    configured_file.unwrap_or("missing or non-string")
+                ),
+                "Regenerate the applied Switchloom recipe so .codex/config.toml and the selected role agree.",
+            ));
+            continue;
         }
+        let role_file = repository.join(".codex").join(&expected_config_file[2..]);
+        if !role_file.is_file() {
+            diagnostics.push(probe_diagnostic(
+                "codex_role_file_missing",
+                "warning",
+                format!(
+                    "Applied role `{}` expects `{}`, but that role file is missing.",
+                    role.role,
+                    role_file
+                        .strip_prefix(repository)
+                        .unwrap_or(&role_file)
+                        .display()
+                ),
+                "Run switchloom update/apply for this recipe, then reload or restart Codex.",
+            ));
+            continue;
+        }
+        diagnostics.extend(codex_role_file_diagnostics(&role, &role_file)?);
     }
     diagnostics.push(probe_diagnostic(
         "codex_trust_reload_required",
@@ -227,6 +270,201 @@ pub(crate) fn codex_repository_diagnostics(repository: &Path) -> Result<Vec<Prob
         "Trust this repository in Codex if prompted, then reload or restart the Codex session before relying on newly applied roles.",
     ));
     Ok(diagnostics)
+}
+
+#[derive(Debug)]
+struct AppliedCodexRole {
+    role: String,
+    agent_type: String,
+    model: String,
+    effort: Option<String>,
+}
+
+fn applied_codex_roles(repository: &Path) -> Result<(Vec<AppliedCodexRole>, Vec<ProbeDiagnostic>)> {
+    let config_path = repository.join(SWITCHLOOM_CONFIG_PATH);
+    if !config_path.exists() {
+        return Ok((
+            Vec::new(),
+            vec![probe_diagnostic(
+                "codex_applied_recipe_missing",
+                "warning",
+                "Repository-local .switchloom/config.toml is missing, so Doctor cannot determine the applied semantic Codex roles.",
+                "Run switchloom apply for the intended Codex recipe before relying on Doctor role diagnostics.",
+            )],
+        ));
+    }
+    let content = fs::read_to_string(&config_path)
+        .with_context(|| format!("failed to read `{}`", config_path.display()))?;
+    let spec: SetupSpecV1 = match toml::from_str(&content) {
+        Ok(spec) => spec,
+        Err(error) => {
+            return Ok((
+                Vec::new(),
+                vec![probe_diagnostic(
+                    "codex_applied_recipe_invalid",
+                    "error",
+                    format!("Repository-local .switchloom/config.toml is invalid: {error}"),
+                    "Repair the applied Switchloom recipe, then rerun switchloom doctor codex.",
+                )],
+            ));
+        }
+    };
+    let mut diagnostics = manifest_recipe_diagnostics(repository, &content)?;
+    let mut roles = Vec::new();
+    for (role, selection) in spec.selected_roles {
+        let Some(spawn) = selection.spawn else {
+            diagnostics.push(probe_diagnostic(
+                "codex_role_spawn_metadata_invalid",
+                "error",
+                format!("Applied Codex role `{role}` has no spawn metadata."),
+                "Declare agent_type, task_name, and fork_turns for the selected role, then reapply the recipe.",
+            ));
+            continue;
+        };
+        if let Some(reason) = invalid_spawn_metadata(&role, &spawn) {
+            diagnostics.push(probe_diagnostic(
+                "codex_role_spawn_metadata_invalid",
+                "error",
+                format!("Applied Codex role `{role}` has invalid spawn metadata: {reason}"),
+                "Repair the selected role's agent_type, task_name, and fork_turns, then reapply the recipe.",
+            ));
+            continue;
+        }
+        roles.push(AppliedCodexRole {
+            role,
+            agent_type: spawn.agent_type,
+            model: selection.model,
+            effort: selection.effort,
+        });
+    }
+    Ok((roles, diagnostics))
+}
+
+fn invalid_spawn_metadata(role: &str, spawn: &SetupSpawnPolicy) -> Option<String> {
+    if spawn.agent_type.trim().is_empty() {
+        return Some("agent_type is blank".to_string());
+    }
+    if spawn.agent_type.len() > 64
+        || !spawn
+            .agent_type
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
+    {
+        return Some("agent_type must use lowercase ASCII letters, digits, or `_`".to_string());
+    }
+    let expected_task_name = identifier_token(role);
+    if spawn.task_name != expected_task_name {
+        return Some(format!(
+            "task_name `{}` must equal `{expected_task_name}`",
+            spawn.task_name
+        ));
+    }
+    match spawn.fork_turns.mode.as_str() {
+        "none" if spawn.fork_turns.turns.is_none() => None,
+        "bounded" if spawn.fork_turns.turns.is_some_and(|turns| turns > 0) => None,
+        "none" => Some("fork_turns none must not declare turns".to_string()),
+        "bounded" => Some("bounded fork_turns requires positive turns".to_string()),
+        "all" => Some("fork_turns all is not supported for Codex role overrides".to_string()),
+        other => Some(format!("unsupported fork_turns mode `{other}`")),
+    }
+}
+
+fn manifest_recipe_diagnostics(
+    repository: &Path,
+    applied_config: &str,
+) -> Result<Vec<ProbeDiagnostic>> {
+    let manifest_path = repository.join(".model-routing/manifest.json");
+    if !manifest_path.exists() {
+        return Ok(Vec::new());
+    }
+    let manifest: Value = match serde_json::from_slice(
+        &fs::read(&manifest_path)
+            .with_context(|| format!("failed to read `{}`", manifest_path.display()))?,
+    ) {
+        Ok(manifest) => manifest,
+        Err(error) => {
+            return Ok(vec![probe_diagnostic(
+                "codex_applied_manifest_invalid",
+                "warning",
+                format!(
+                    "Managed manifest `{}` is invalid JSON: {error}",
+                    manifest_path.display()
+                ),
+                "Regenerate the applied Switchloom recipe before treating Doctor output as managed-state certification.",
+            )]);
+        }
+    };
+    let managed_config = manifest
+        .get("artifacts")
+        .and_then(Value::as_array)
+        .and_then(|artifacts| {
+            artifacts.iter().find(|artifact| {
+                artifact.get("path").and_then(Value::as_str) == Some(SWITCHLOOM_CONFIG_PATH)
+            })
+        })
+        .and_then(|artifact| artifact.get("content"))
+        .and_then(Value::as_str);
+    if managed_config == Some(applied_config) {
+        return Ok(Vec::new());
+    }
+    Ok(vec![probe_diagnostic(
+        "codex_applied_manifest_mismatch",
+        "warning",
+        "The managed manifest does not contain the current applied .switchloom/config.toml content.",
+        "Run switchloom update/apply for the intended recipe before treating Doctor output as a managed-state certification.",
+    )])
+}
+
+fn codex_role_file_diagnostics(
+    role: &AppliedCodexRole,
+    role_file: &Path,
+) -> Result<Vec<ProbeDiagnostic>> {
+    let content = fs::read_to_string(role_file)
+        .with_context(|| format!("failed to read `{}`", role_file.display()))?;
+    let parsed: toml::Value = match toml::from_str(&content) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            return Ok(vec![probe_diagnostic(
+                "codex_role_config_mismatch",
+                "error",
+                format!(
+                    "Applied role `{}` file `{}` is invalid TOML: {error}",
+                    role.role,
+                    role_file.display()
+                ),
+                "Regenerate the applied role file from the Switchloom recipe.",
+            )]);
+        }
+    };
+    let actual_name = parsed.get("name").and_then(toml::Value::as_str);
+    let actual_model = parsed.get("model").and_then(toml::Value::as_str);
+    let actual_effort = parsed
+        .get("model_reasoning_effort")
+        .and_then(toml::Value::as_str);
+    if actual_name == Some(role.agent_type.as_str())
+        && actual_model == Some(role.model.as_str())
+        && actual_effort == role.effort.as_deref()
+    {
+        return Ok(Vec::new());
+    }
+    Ok(vec![probe_diagnostic(
+        "codex_role_config_mismatch",
+        "error",
+        format!(
+            "Applied role `{}` metadata does not match its selected spawn/model/effort contract.",
+            role.role
+        ),
+        "Regenerate the applied role file from the Switchloom recipe so name, model, and model_reasoning_effort match.",
+    )])
+}
+
+fn switchloom_package_version() -> Result<String> {
+    let package: Value = serde_json::from_str(NPM_PACKAGE_JSON)?;
+    package
+        .get("version")
+        .and_then(Value::as_str)
+        .context("package.json must declare string version")
+        .map(ToOwned::to_owned)
 }
 
 fn probe_diagnostic(

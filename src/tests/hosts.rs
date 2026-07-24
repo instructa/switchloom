@@ -27,6 +27,81 @@ fn codex_version_stub(repository: &Path, output: &str) -> PathBuf {
     script
 }
 
+#[cfg(unix)]
+fn write_semantic_codex_recipe(repository: &Path) {
+    fs::create_dir_all(repository.join(".switchloom")).unwrap();
+    fs::create_dir_all(repository.join(".codex/agents")).unwrap();
+    fs::write(
+        repository.join(".switchloom/config.toml"),
+        r#"schema_version = 1
+host = "codex-openai"
+integration = "planr"
+usage_policy = "balanced"
+
+[selected_roles.implementer]
+model = "gpt-5.6-terra"
+effort = "medium"
+[selected_roles.implementer.spawn]
+agent_type = "switchloom_implementer"
+task_name = "implementer"
+[selected_roles.implementer.spawn.fork_turns]
+mode = "none"
+
+[selected_roles.reviewer]
+model = "gpt-5.6-terra"
+effort = "medium"
+[selected_roles.reviewer.spawn]
+agent_type = "switchloom_reviewer"
+task_name = "reviewer"
+[selected_roles.reviewer.spawn.fork_turns]
+mode = "none"
+
+[selected_roles.verifier]
+model = "gpt-5.6-terra"
+effort = "low"
+[selected_roles.verifier.spawn]
+agent_type = "switchloom_verifier"
+task_name = "verifier"
+[selected_roles.verifier.spawn.fork_turns]
+mode = "none"
+
+[[routes]]
+work_type = "code"
+role = "implementer"
+fallbacks = []
+"#,
+    )
+    .unwrap();
+    fs::write(
+        repository.join(".codex/config.toml"),
+        r#"[agents.switchloom_implementer]
+config_file = "./agents/switchloom_implementer.toml"
+[agents.switchloom_reviewer]
+config_file = "./agents/switchloom_reviewer.toml"
+[agents.switchloom_verifier]
+config_file = "./agents/switchloom_verifier.toml"
+
+[features.multi_agent_v2]
+enabled = true
+hide_spawn_agent_metadata = true
+"#,
+    )
+    .unwrap();
+    for (agent_type, model, effort) in [
+        ("switchloom_implementer", "gpt-5.6-terra", "medium"),
+        ("switchloom_reviewer", "gpt-5.6-terra", "medium"),
+        ("switchloom_verifier", "gpt-5.6-terra", "low"),
+    ] {
+        fs::write(
+            repository.join(format!(".codex/agents/{agent_type}.toml")),
+            format!(
+                "name = \"{agent_type}\"\nmodel = \"{model}\"\nmodel_reasoning_effort = \"{effort}\"\n"
+            ),
+        )
+        .unwrap();
+    }
+}
+
 #[test]
 fn adapter_contract_distinguishes_external_runner_runtime_class() {
     let binding = HostBinding {
@@ -165,6 +240,138 @@ hide_spawn_agent_metadata = true
             .diagnostics
             .iter()
             .any(|diagnostic| diagnostic.code == "codex_v2_metadata_conflict")
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn codex_doctor_uses_applied_semantic_roles_and_distinguishes_drift() {
+    let repository = temp_host_repo("codex-semantic-doctor");
+    write_semantic_codex_recipe(&repository);
+    let exact = codex_version_stub(&repository, "codex-cli 0.145.0");
+
+    let ready =
+        probe_host_with_repository("codex", Some(exact.to_str().unwrap()), &repository).unwrap();
+    assert!(!ready.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_role_registration_missing"
+            || diagnostic.code == "codex_role_file_missing"
+            || diagnostic.code == "codex_role_config_mismatch"
+            || diagnostic.code == "codex_role_spawn_metadata_invalid"
+    }));
+    assert!(
+        !ready
+            .diagnostics
+            .iter()
+            .any(|diagnostic| { diagnostic.message.contains("model_routing_terra_high") })
+    );
+    assert!(ready.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_exact_version_ready"
+            && diagnostic
+                .repair
+                .contains("Switchloom v0.3.3 certification")
+    }));
+
+    fs::write(
+        repository.join(".codex/config.toml"),
+        fs::read_to_string(repository.join(".codex/config.toml"))
+            .unwrap()
+            .replace(
+                "[agents.switchloom_reviewer]\nconfig_file = \"./agents/switchloom_reviewer.toml\"\n",
+                "",
+            ),
+    )
+    .unwrap();
+    let missing_registration =
+        probe_host_with_repository("codex", Some(exact.to_str().unwrap()), &repository).unwrap();
+    assert!(missing_registration.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_role_registration_missing"
+            && diagnostic.message.contains("switchloom_reviewer")
+    }));
+
+    write_semantic_codex_recipe(&repository);
+    fs::remove_file(repository.join(".codex/agents/switchloom_verifier.toml")).unwrap();
+    let missing_file =
+        probe_host_with_repository("codex", Some(exact.to_str().unwrap()), &repository).unwrap();
+    assert!(missing_file.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_role_file_missing" && diagnostic.message.contains("verifier")
+    }));
+
+    write_semantic_codex_recipe(&repository);
+    fs::write(
+        repository.join(".codex/agents/switchloom_implementer.toml"),
+        "name = \"switchloom_implementer\"\nmodel = \"gpt-5.6-sol\"\nmodel_reasoning_effort = \"medium\"\n",
+    )
+    .unwrap();
+    let config_mismatch =
+        probe_host_with_repository("codex", Some(exact.to_str().unwrap()), &repository).unwrap();
+    assert!(config_mismatch.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_role_config_mismatch"
+            && diagnostic.message.contains("implementer")
+    }));
+
+    write_semantic_codex_recipe(&repository);
+    fs::write(
+        repository.join(".switchloom/config.toml"),
+        fs::read_to_string(repository.join(".switchloom/config.toml"))
+            .unwrap()
+            .replace("task_name = \"implementer\"", "task_name = \"wrong_task\""),
+    )
+    .unwrap();
+    let invalid_spawn =
+        probe_host_with_repository("codex", Some(exact.to_str().unwrap()), &repository).unwrap();
+    assert!(invalid_spawn.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "codex_role_spawn_metadata_invalid"
+            && diagnostic.message.contains("implementer")
+    }));
+
+    write_semantic_codex_recipe(&repository);
+    fs::create_dir_all(repository.join(".model-routing")).unwrap();
+    fs::write(
+        repository.join(".model-routing/manifest.json"),
+        r#"{"schema_version":1,"artifacts":[]}"#,
+    )
+    .unwrap();
+    let manifest_mismatch =
+        probe_host_with_repository("codex", Some(exact.to_str().unwrap()), &repository).unwrap();
+    assert!(
+        manifest_mismatch
+            .diagnostics
+            .iter()
+            .any(|diagnostic| { diagnostic.code == "codex_applied_manifest_mismatch" })
+    );
+
+    fs::write(
+        repository.join(".model-routing/manifest.json"),
+        "{ malformed manifest",
+    )
+    .unwrap();
+    let invalid_manifest =
+        probe_host_with_repository("codex", Some(exact.to_str().unwrap()), &repository).unwrap();
+    assert!(
+        invalid_manifest
+            .diagnostics
+            .iter()
+            .any(|diagnostic| { diagnostic.code == "codex_applied_manifest_invalid" })
+    );
+
+    fs::write(repository.join(".switchloom/config.toml"), "not = [valid").unwrap();
+    let invalid_recipe =
+        probe_host_with_repository("codex", Some(exact.to_str().unwrap()), &repository).unwrap();
+    assert!(
+        invalid_recipe
+            .diagnostics
+            .iter()
+            .any(|diagnostic| { diagnostic.code == "codex_applied_recipe_invalid" })
+    );
+
+    fs::remove_file(repository.join(".switchloom/config.toml")).unwrap();
+    let missing_recipe =
+        probe_host_with_repository("codex", Some(exact.to_str().unwrap()), &repository).unwrap();
+    assert!(
+        missing_recipe
+            .diagnostics
+            .iter()
+            .any(|diagnostic| { diagnostic.code == "codex_applied_recipe_missing" })
     );
 }
 

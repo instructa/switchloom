@@ -1,0 +1,34 @@
+{
+  "fixture_version": 1,
+  "purpose": "Define the minimum authenticated evidence that proves routing from a parent to each child; this is not a synthetic success claim.",
+  "parent": {
+    "required_turn_context": {
+      "model": "gpt-5.6-sol",
+      "effort": "medium"
+    }
+  },
+  "children": [
+    {
+      "semantic_role": "implementer",
+      "agent_type": "switchloom_implementer",
+      "required_turn_context": { "model": "gpt-5.6-terra", "effort": "medium" }
+    },
+    {
+      "semantic_role": "reviewer",
+      "agent_type": "switchloom_reviewer",
+      "required_turn_context": { "model": "gpt-5.6-terra", "effort": "medium" }
+    },
+    {
+      "semantic_role": "verifier",
+      "agent_type": "switchloom_verifier",
+      "required_turn_context": { "model": "gpt-5.6-terra", "effort": "low" }
+    }
+  ],
+  "proof_requirements": [
+    "The parent session records a successful collaboration.spawn_agent call with the listed agent_type and a returned canonical child task path.",
+    "The child session metadata names the parent thread and the same agent_type.",
+    "The child turn_context records the listed effective model and effort.",
+    "A child completion is recorded after its spawn; a route declaration or static TOML file alone is insufficient."
+  ],
+  "known_failed_pre_reload_state": "Before this fresh Codex task/app process, three authenticated dispatch attempts reported unknown agent_type `switchloom_implementer`; no child was created. Preserve that as a host discovery/reload failure, not as evidence of a routing fallback."
+}

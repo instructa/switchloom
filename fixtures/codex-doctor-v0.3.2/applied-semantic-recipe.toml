@@ -1,0 +1,16 @@
+# Valid applied state observed in the repository for the v0.3.2 Doctor freeze.
+# These are semantic role names selected by Switchloom, not the legacy
+# `model_routing_*` names hard-coded by the frozen Doctor implementation.
+
+[agents.switchloom_implementer]
+config_file = "./agents/switchloom_implementer.toml"
+
+[agents.switchloom_reviewer]
+config_file = "./agents/switchloom_reviewer.toml"
+
+[agents.switchloom_verifier]
+config_file = "./agents/switchloom_verifier.toml"
+
+[features.multi_agent_v2]
+enabled = true
+hide_spawn_agent_metadata = true
