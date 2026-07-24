@@ -67,9 +67,38 @@ jobs:
         run: |
           version="${TAG#v}"
           git_sha="$(git rev-parse HEAD)"
+          expected_members='LICENSE
+          README.md
+          SHA256SUMS
+          model-routing'
+          validate_archive() {
+            archive="$1"
+            members="$(tar -tzf "$archive")"
+            members="$(printf '%s\n' "$members" | LC_ALL=C sort)"
+            if [ "$members" != "$expected_members" ]; then
+              echo "unexpected release archive members in $archive" >&2
+              printf '%s\n' "$members" >&2
+              return 1
+            fi
+          }
+          fixture_dir="$(mktemp -d)"
+          trap 'rm -rf "$fixture_dir"' EXIT HUP INT TERM
+          mkdir -p "$fixture_dir/good" "$fixture_dir/bad"
+          for member in LICENSE README.md SHA256SUMS model-routing; do
+            : > "$fixture_dir/good/$member"
+            : > "$fixture_dir/bad/$member"
+          done
+          : > "$fixture_dir/bad/unexpected"
+          tar -czf "$fixture_dir/good.tar.gz" -C "$fixture_dir/good" LICENSE README.md SHA256SUMS model-routing
+          tar -czf "$fixture_dir/bad.tar.gz" -C "$fixture_dir/bad" LICENSE README.md SHA256SUMS model-routing unexpected
+          validate_archive "$fixture_dir/good.tar.gz"
+          if validate_archive "$fixture_dir/bad.tar.gz"; then
+            echo "archive validator accepted an unexpected member" >&2
+            exit 1
+          fi
           mkdir -p recovery-receipts
           for target in darwin-arm64 darwin-x86_64 linux-arm64 linux-x86_64; do
-            sh scripts/verify-release-archive.sh "assets/switchloom-$target.tar.gz"
+            validate_archive "assets/switchloom-$target.tar.gz"
             mkdir -p "extract/$target" "npm/native/$target"
             tar -xzf "assets/switchloom-$target.tar.gz" -C "extract/$target"
             install -m 755 "extract/$target/model-routing" "npm/native/$target/model-routing"
