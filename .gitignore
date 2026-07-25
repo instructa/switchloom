@@ -86,7 +86,31 @@ core.*
 /coverage/
 /tmp/
 /reports/
+/retained-evidence/
 *.crate
 *.sqlite
 *.sqlite-*
 *receipt*
+
+# Private release-eval evidence must remain in the external store.
+/release-eval-artifacts/
+/release-eval-output/
+/release-eval-results/
+/attestation.json
+/evidence-manifest.json
+/sanitized-results.json
+/matrix-results.json
+/blind-quality-bundle.json
+/private-blind-quality-mapping.json
+
+# The same private evidence names must be rejected at every external-run depth.
+**/results.json
+**/run.json
+**/artifacts/attestation.json
+**/artifacts/evidence-manifest.json
+**/artifacts/sanitized-results.json
+**/raw/matrix-results.json
+**/blind/review-bundle.json
+**/private/blind-mapping.json
+**/verification/store-verification.json
+**/verification/tamper-results.json

@@ -8,7 +8,8 @@ The repository must be safe to publish from a dirty local coordination environme
 - `.claude/`, `.codex/`, and `.cursor/` host-local state.
 - Credentials, private keys, `.env` files except `.env.example`, generated reports, and build output.
 - Regenerated website/package output such as `dist/`, `coverage/`, `tmp/`, and `.crate` files.
-- Historical migration, handoff, and release records under `retained-evidence/`.
+- Historical migration, handoff, release, live-host, and maintainer-evaluation
+  records. They are archived only in the external `switchloom-evals` owner.
 
 The policy is enforced by `.gitignore`, `Cargo.toml` `exclude`, and the CI package-content audit.
 
@@ -25,8 +26,15 @@ reviewed retained records after secret scrubbing, not in either payload.
 
 README and switchloom.ai own end-user setup and usage. Current maintainer
 contracts remain in `docs/`; immutable runtime inputs live under `evidence/`;
-historical migration, handoff, and release records live under
-`retained-evidence/`.
+historical and maintainer records live only in the external owner.
+
+## Maintainer Release Handoff
+
+The unpublished release wrapper takes only an explicit executable preflight,
+external evidence-store path, and selected run. It passes the candidate root,
+store, run, commit, and requested version to that external owner before any
+repository mutation. The public repository neither creates nor interprets
+release-evaluation evidence.
 
 ## v0.3.1 Public Boundary
 

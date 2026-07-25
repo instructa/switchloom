@@ -2,6 +2,22 @@
 
 All notable changes to Switchloom are recorded here.
 
+## [Unreleased]
+
+- Added bounded maintainer release-eval hardening: private external evidence,
+  deterministic harness checks, and a local fail-closed release preflight with
+  an explicit external store and selected immutable run.
+- Kept public CI credential-free and limited to deterministic product and
+  absence validation; private evaluation evidence is neither committed nor
+  uploaded.
+- Fixed native provenance uploads to use unique target-specific asset names so
+  npm packaging receives all four platform receipts.
+- Simplified releases back to one generic tag-driven workflow. Published assets
+  cannot be overwritten, and partial release failures now follow a fix-forward
+  policy using the next patch version instead of version-specific recovery jobs.
+- Rewrote the README around the product, routing model, quick start, and common
+  lifecycle commands while moving maintainer details to focused documentation.
+
 ## [0.3.3] - 2026-07-24
 
 - Made `doctor codex` validate the applied semantic role registration, role

@@ -25,8 +25,8 @@ jobs:
         run: cargo +1.85.0 clippy --workspace --all-targets --all-features -- -D warnings
       - name: Test
         run: cargo +1.85.0 test --workspace --all-targets --all-features
-      - name: Migration manifest
-        run: sh scripts/check-migration-manifest.sh
+      - name: Assert public eval absence
+        run: node scripts/check-public-eval-absence.mjs
       - name: Package
         run: cargo +1.85.0 package --package model-routing --allow-dirty --no-verify
       - name: Assert sole public Cargo inventory
