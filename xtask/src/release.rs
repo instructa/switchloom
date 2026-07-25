@@ -33,17 +33,6 @@ const CURRENT_MAINTAINER_DOCS: &[&str] = &[
     "preset-composition.md",
     "preset-evaluation.md",
     "preset-registry.md",
-    "routing-efficiency-pilot.md",
-    "routing-quality-comparison.md",
-];
-const REQUIRED_RETAINED_RECORDS: &[&str] = &[
-    "retained-evidence/handoffs/v0.3.1/planr-hard-cut-handoff.md",
-    "retained-evidence/migrations/v0.3.0/migration-baseline.md",
-    "retained-evidence/migrations/v0.3.0/migration-manifest.tsv",
-    "retained-evidence/migrations/v0.3.0/v0.3.0-migration-characterization.md",
-    "retained-evidence/releases/v0.2.2/prepublish-certification-0.2.2.md",
-    "retained-evidence/releases/v0.3.0/prepublish-certification-0.3.0.md",
-    "retained-evidence/releases/v0.3.1/prepublish-certification-0.3.1.md",
 ];
 const REMOVED_BROWSER_ARTIFACT_WORDING: &[&str] = &[
     "download .switchloom/config.toml",
@@ -182,13 +171,8 @@ pub(crate) fn verify(options: VerifyOptions) -> Result<()> {
         verify_packaged_source_tests(&options.root, &version)?;
         run(
             &options.root,
-            "sh",
-            &["scripts/check-migration-manifest.sh"],
-        )?;
-        run(
-            &options.root,
             "node",
-            &["scripts/check-evidence-validator-parity.mjs"],
+            &["scripts/check-public-eval-absence.mjs"],
         )?;
         run(&options.root, "node", &["scripts/build-site.mjs"])?;
         run(&options.root, "betterleaks", &["dir", "."])?;
@@ -489,21 +473,14 @@ fn verify_documentation_boundary(root: &Path) -> Result<()> {
         actual_docs == CURRENT_MAINTAINER_DOCS,
         "docs ownership mismatch: expected {CURRENT_MAINTAINER_DOCS:?}, found {actual_docs:?}"
     );
-    for record in REQUIRED_RETAINED_RECORDS {
-        ensure!(
-            root.join(record).is_file(),
-            "required retained record is missing: {record}"
-        );
-    }
     verify_current_document_wording("README.md", &fs::read_to_string(root.join("README.md"))?)?;
     for document in CURRENT_MAINTAINER_DOCS {
         let path = format!("docs/{document}");
         verify_current_document_wording(&path, &fs::read_to_string(root.join(&path))?)?;
     }
     println!(
-        "documentation boundary passed: {} current docs, {} retained records",
-        actual_docs.len(),
-        REQUIRED_RETAINED_RECORDS.len()
+        "documentation boundary passed: {} current docs",
+        actual_docs.len()
     );
     Ok(())
 }

@@ -1,1 +1,0 @@
-parent must contain exactly 2 V2 spawn_agent calls
