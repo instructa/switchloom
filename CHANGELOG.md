@@ -4,6 +4,12 @@ All notable changes to Switchloom are recorded here.
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-07-25
+
+- Restored the GitHub Secret Scan under the repository's selected-actions
+  policy by running a checksum-verified, pinned TruffleHog binary while
+  retaining the existing read-only workflow permissions and secret checks.
+
 - Added bounded maintainer release-eval hardening: private external evidence,
   deterministic harness checks, and a local fail-closed release preflight with
   an explicit external store and selected immutable run.
