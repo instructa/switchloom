@@ -14,7 +14,7 @@ describe("provider onboarding templates", () => {
       expect(template.icon).toMatch(/^\/brand\/[a-z-]+\.svg$/);
       expect(template.steps.map((step) => step.id)).toEqual(["requirements", "project", "install", "activate"]);
       expect(template.steps.every((step) => step.title.length > 0 && step.description.length > 0)).toBe(true);
-      expect(template.steps.filter((step) => step.command?.kind === "apply")).toHaveLength(1);
+      expect(template.steps.filter((step) => step.command?.kind === "apply")).toHaveLength(template.host === "pi" ? 0 : 1);
     }
   });
 
@@ -28,5 +28,21 @@ describe("provider onboarding templates", () => {
     expect(onboarding.steps.find((step) => step.id === "project")?.description).toContain("Codex child-role files");
     expect(onboarding.steps.find((step) => step.id === "project")?.description).toContain("does not touch your global Codex settings");
     expect(PROVIDER_ONBOARDING.codex.steps.find((step) => step.id === "install")?.command).toEqual({ kind: "apply" });
+  });
+
+  it("keeps Pi and OpenCode onboarding free of access-control setup", () => {
+    expect(PROVIDER_ONBOARDING.pi.description).toContain("active main Pi session is the Orchestrator");
+    expect(PROVIDER_ONBOARDING.opencode.description).toContain("never the recipe");
+    expect(PROVIDER_ONBOARDING.opencode.description).not.toMatch(/proxy|gateway|openrouter/i);
+    expect(PROVIDER_ONBOARDING.pi.steps[0]?.command).toEqual({ kind: "literal", value: "/login" });
+    expect(PROVIDER_ONBOARDING.opencode.steps[0]?.command).toEqual({ kind: "literal", value: "/connect" });
+  });
+
+  it("offers only Pi Subagents from the active Pi session", () => {
+    const onboarding = providerOnboarding("pi", "switchloom apply");
+
+    expect(onboarding.description).toContain("active main Pi session is the Orchestrator");
+    expect(onboarding.steps.some((step) => step.command === "pi install npm:pi-subagents")).toBe(true);
+    expect(onboarding.description).not.toMatch(/isolated|proxy|gateway/i);
   });
 });

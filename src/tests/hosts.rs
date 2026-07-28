@@ -268,7 +268,7 @@ fn codex_doctor_uses_applied_semantic_roles_and_distinguishes_drift() {
         diagnostic.code == "codex_exact_version_ready"
             && diagnostic
                 .repair
-                .contains("Switchloom v0.3.4 certification")
+                .contains("Switchloom v0.3.5 certification")
     }));
 
     fs::write(
@@ -376,27 +376,19 @@ fn codex_doctor_uses_applied_semantic_roles_and_distinguishes_drift() {
 }
 
 #[test]
-fn pi_external_adapter_declares_typed_runner_contract() {
-    let bundle = compile_policy("balanced", "pi-external", Integration::Standalone).unwrap();
+fn pi_subagents_adapter_declares_native_child_contract() {
+    let bundle = compile_policy("balanced", "pi-subagents", Integration::Standalone).unwrap();
     let contract = bundle.adapter_contract.as_ref().unwrap();
     assert_eq!(
         contract.capability.runtime_class,
-        RuntimeClass::ExternalRunner
+        RuntimeClass::NativeSubagent
     );
-    assert_eq!(contract.adapter.runtime_class, RuntimeClass::ExternalRunner);
+    assert_eq!(contract.adapter.runtime_class, RuntimeClass::NativeSubagent);
     assert_eq!(
         contract.adapter.dispatch_recipe.invocation,
-        "external-runner-process"
+        "host-native-subagent"
     );
-    for field in [
-        "agent_type",
-        "provider",
-        "model",
-        "effort",
-        "fork_turns",
-        "isolation",
-        "task",
-    ] {
+    for field in ["model", "effort", "fork_turns"] {
         assert!(
             contract
                 .adapter
@@ -415,32 +407,20 @@ fn pi_external_adapter_declares_typed_runner_contract() {
             .capability
             .known_limitations
             .iter()
-            .any(|limitation| limitation.contains("process-isolated"))
+            .any(|limitation| limitation.contains("Pi Subagents"))
     );
 
     let workflow = bundle
         .artifacts
         .iter()
-        .find(|artifact| artifact.path == ".pi/workflows/model-routing-preset-runner.json")
+        .find(|artifact| artifact.path == ".pi/agents/switchloom-implementer.md")
         .unwrap();
-    assert!(
-        workflow
-            .content
-            .contains("\"runtime_class\": \"external-runner\"")
-    );
-    assert!(
-        workflow
-            .content
-            .contains("\"agent_type\": \"switchloom-pi-worker\"")
-    );
-    assert!(
-        workflow
-            .content
-            .contains("\"provider_model\": \"openai/gpt-4o-mini\"")
-    );
-    assert!(workflow.content.contains("\"thinking\": \"low\""));
-    assert!(workflow.content.contains("\"session\": \"none\""));
-    assert!(workflow.content.contains("\"task\""));
+    assert!(workflow.content.contains("name: switchloom-implementer"));
+    assert!(workflow.content.contains("openai-codex/gpt-5.6-terra"));
+    assert!(workflow.content.contains("active Pi parent session"));
+    assert!(workflow.content.contains("thinking: medium"));
+    assert!(!workflow.content.contains("endpoint"));
+    assert!(!workflow.content.contains("credential"));
 }
 
 #[test]
@@ -647,7 +627,7 @@ fn claude_and_cursor_native_adapters_emit_artifacts_with_advisory_effective_rout
         (
             "opencode-native",
             ".opencode/agents/model-routing-preset-worker.md",
-            "opencode/gpt-5-nano",
+            "openrouter/google/gemini-3.6-flash",
         ),
     ] {
         let bundle = compile_policy("balanced", host, Integration::Standalone).unwrap();

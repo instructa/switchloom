@@ -24,7 +24,7 @@ model-routing inspect routing-bundle.json
 
 Each generated bundle carries `adapter_contract.schema_version = 1`. The contract separates Switchloom-owned routing declarations from host-owned runtime behavior:
 
-- `runtime_class` is `native-subagent` for repository-local host agents and `external-runner` for process/workflow runners.
+- `runtime_class` is `native-subagent` for repository-local host agents.
 - `RoutingIntentV1` records semantic roles plus each role's requested model, effort, and adapter instructions.
 - `HostCapabilityV1` records host version constraints, model/effort control, context semantics, nesting, parallelism, observability, and known limitations.
 - `HostCapabilityV1.runtime_behavior` records the versioned host runtime facts behind those controls: installed host-version source, actual backend selection owner, trust/discovery behavior, role precedence, shared filesystem behavior, explicit child dispatch, Ultra automatic delegation, and source references.
@@ -127,8 +127,8 @@ Planr receives semantic intent only. The inputs are:
 - `usage_policy`, `integration`, selected `host` binding, and `work_type` routes.
 - Semantic roles with selected `profile`, `model`, `effort`, `agent_type`, and
   `fork_turns`.
-- Runtime class: `native-subagent` for Codex, Claude Code, Cursor, and OpenCode
-  host-native child dispatch; `external-runner` for Pi workflow/process dispatch.
+- Runtime class: `native-subagent` for Codex, Claude Code, Cursor, OpenCode,
+  and Pi Subagents host-native child dispatch.
 - Release metadata: Switchloom package version, package digest, bundle id,
   catalog version, host version, report path, and validator stdout.
 

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import catalog from "../../data/catalog.json";
 import Generator from "./Generator";
-import { hostCatalogFrom, setupTransportFrom } from "../lib/generator";
+import { hostCatalogFrom, setupTransportFrom, workflowCapabilitiesFrom, type WorkflowCapability } from "../lib/generator";
 
 const reactState = vi.hoisted(() => ({
   cursor: 0,
@@ -33,6 +33,7 @@ vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react")>();
   return {
     ...actual,
+    useEffect: (effect: () => void) => effect(),
     useMemo: <T>(factory: () => T) => factory(),
     useState: <T>(initial: T | (() => T)) => reactState.useState(initial),
   };
@@ -43,9 +44,9 @@ const setupTransport = setupTransportFrom(catalog);
 
 type TestRenderableComponent = (props: Record<string, unknown>) => ReactNode;
 
-function renderGenerator() {
+function renderGenerator(workflowCapabilities: WorkflowCapability[] = workflowCapabilitiesFrom(catalog)) {
   reactState.rewind();
-  return Generator({ hostCatalog, setupTransport });
+  return Generator({ hostCatalog, setupTransport, workflowCapabilities });
 }
 
 function elementProps(node: ReactNode) {
@@ -59,6 +60,7 @@ function isTestRenderableComponent(type: unknown): type is TestRenderableCompone
     "GeneratorConfigPanel",
     "GeneratorSummaryPanel",
     "IntegrationFieldSet",
+    "OrchestrationFieldSet",
     "ParentRecommendationCard",
     "PresetField",
     "ResetRolesDialog",
@@ -244,17 +246,99 @@ describe("Generator parent recommendation card", () => {
     expect(text).not.toContain("Set Codex reasoning to Low.");
   });
 
-  it("does not render the parent card for Pi", () => {
+  it("uses the active Pi session as the parent card", () => {
+    selectToggle("AI agent", "pi");
+    const tree = renderGenerator();
+    const text = visibleText(tree);
+
+    expect(text).toContain("3 generated child roles");
+    expect(text).toContain("Orchestrator");
+    expect(text).toContain("Use GPT-5.6 Terra with Pi thinking Medium in the active session.");
+    expect(text).toContain("host-managed parent");
+    expect(text).toContain("Host managed");
+    expect(text).not.toContain("Not included");
+    expect(text).not.toContain("Set Codex reasoning");
+    expect(findByAriaLabelOrNull(tree, "Orchestrator model")).toBeNull();
+    expect(findByAriaLabel(tree, "Cannot remove Implementer; Pi Subagents requires all three child roles").props.disabled).toBe(true);
+    expect(findByAriaLabel(tree, "Cannot remove Reviewer; Pi Subagents requires all three child roles").props.disabled).toBe(true);
+    expect(findByAriaLabel(tree, "Cannot remove Verifier; Pi Subagents requires all three child roles").props.disabled).toBe(true);
+  });
+});
+
+describe("Generator experimental capability disclosure", () => {
+  beforeEach(() => {
+    reactState.reset();
+  });
+
+  it("keeps Codex native without a Gateway disclosure", () => {
+    const text = visibleText(renderGenerator());
+
+    expect(text).not.toContain("Gateway (Experimental)");
+    expect(text).not.toContain("Experimental Gateway — not generated yet");
+    expect(text).not.toContain("project config cannot install provider or authentication settings");
+    expect(text).not.toContain("How should Pi run the child roles?");
+    expect(text).toContain("2. Standalone or With Planr?");
+    expect(text).toContain("3. Tune each role");
+    expect(findByAriaLabelOrNull(renderGenerator(), "Experimental Gateway unavailable")).toBeNull();
+  });
+
+  it("does not invent a Gateway path when the capability catalog omits it", () => {
+    const withoutGateway = workflowCapabilitiesFrom(catalog).filter((capability) => capability.executionPath !== "gateway");
+
+    const text = visibleText(renderGenerator(withoutGateway));
+    expect(text).not.toContain("Gateway (Experimental)");
+    expect(text).not.toContain("Experimental Gateway — not generated yet");
+    expect(text).not.toContain("2. Orchestration");
+    expect(text).toContain("2. Standalone or With Planr?");
+    expect(text).toContain("3. Tune each role");
+  });
+
+  it("shows Pi Subagents only for Pi and keeps the four-step numbering", () => {
+    selectToggle("AI agent", "pi");
+    const tree = renderGenerator();
+    const text = visibleText(tree);
+
+    expect(text).toContain("Pi Subagents");
+    expect(text).toContain("active Pi session is the Orchestrator");
+    expect(text).not.toMatch(/isolated|model access|proxy|gateway/i);
+    expect(text).not.toContain("Gateway (Experimental)");
+    expect(text).toContain("2. Pi Subagents");
+    expect(text).toContain("3. Standalone or With Planr?");
+    expect(text).toContain("4. Tune each role");
+    expect(findByAriaLabel(tree, "Implementer model").props.placeholder).toBe("Search latest models...");
+  });
+
+  it("keeps OpenCode native without access-control guidance", () => {
+    selectToggle("AI agent", "opencode");
+    const text = visibleText(renderGenerator());
+
+    expect(text).not.toMatch(/model access|self-hosted proxy|gateway-selected/i);
+    expect(text).not.toContain("Gateway (Experimental)");
+    expect(text).not.toContain("project config cannot install provider or authentication settings");
+  });
+
+  it("hides orchestration for runtimes without an alternate path", () => {
+    selectToggle("AI agent", "cursor");
+    const text = visibleText(renderGenerator());
+
+    expect(text).not.toContain("2. Orchestration");
+    expect(text).not.toContain("How should Pi run the child roles?");
+    expect(text).not.toContain("Gateway (Experimental)");
+    expect(text).toContain("2. Standalone or With Planr?");
+    expect(text).toContain("3. Tune each role");
+  });
+
+  it("keeps the active Pi session as orchestrator for the Subagents path", () => {
     selectToggle("AI agent", "pi");
     const text = visibleText(renderGenerator());
 
-    expect(text).toContain("4 focused roles");
-    expect(text).toContain("Orchestrator");
-    expect(text).toContain("openai/gpt-4o-mini · medium");
-    expect(text).not.toContain("host-managed parent");
-    expect(text).not.toContain("Host managed");
-    expect(text).not.toContain("Not included");
-    expect(text).not.toContain("Set Codex reasoning");
+    expect(text).toContain("Active Pi session orchestrates");
+    expect(text).toContain("Host managed");
+    expect(text).toContain("Use GPT-5.6 Terra with Pi thinking Medium in the active session.");
+    expect(text).toContain("3 generated child roles");
+    expect(text).toContain("not written to Spec");
+    expect(text).not.toContain("4 focused roles");
+    expect(findByAriaLabelOrNull(renderGenerator(), "Orchestrator model")).toBeNull();
   });
 });
 
@@ -372,7 +456,7 @@ describe("Generator connected child cards", () => {
     const switchedText = visibleText(renderGenerator());
     expect(switchedText).toContain("Custom");
     expect(switchedText).not.toContain("Reviewer");
-    expect(switchedText).toContain("openai/gpt-4o-mini · medium");
+    expect(switchedText).toContain("Use GPT-5.6 Terra with Pi thinking Medium in the active session.");
     expect(findByAriaLabel(renderGenerator(), "Reset roles").props.disabled).toBe(false);
 
     const confirmReset = findByAriaLabel(renderGenerator(), "Confirm reset roles").props.onClick;

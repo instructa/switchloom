@@ -2,13 +2,12 @@ mod codex;
 mod codex_spawn;
 mod live;
 mod opencode;
-mod pi;
 mod runner;
 
 #[cfg(test)]
 mod tests;
 
-use crate::{OpencodeArgs, PiArgs};
+use crate::OpencodeArgs;
 use anyhow::{Context, Result, bail};
 use model_routing::validate_dispatch_evidence_json_for_bundle;
 use std::fs;
@@ -19,10 +18,9 @@ pub(crate) use codex_spawn::{CodexRawInput, extract as extract_codex};
 pub(crate) use live::{
     LiveRunArgs, PlanrRunArgs, run_codex as run_live_codex,
     run_codex_negative_fixture as run_live_codex_negative_fixture, run_native as run_live_native,
-    run_opencode as run_live_opencode, run_pi as run_live_pi, run_planr,
+    run_opencode as run_live_opencode, run_planr,
 };
 pub(crate) use opencode::validate as validate_opencode;
-pub(crate) use pi::validate as validate_pi;
 
 pub(crate) fn validate_cursor(receipt: &Path, bundle: &Path) -> Result<()> {
     let receipt = fs::read_to_string(receipt).context("failed to read Cursor evidence receipt")?;
@@ -61,42 +59,6 @@ impl TryFrom<OpencodeArgs> for OpencodeInput {
             model: required(value.model, "model")?,
             variant: required(value.variant, "variant")?,
             worker: required(value.worker, "worker")?,
-        })
-    }
-}
-
-pub(crate) struct PiInput {
-    pub workflow: PathBuf,
-    pub invocation: PathBuf,
-    pub stdout: PathBuf,
-    pub stderr: PathBuf,
-    pub workflow_receipt: PathBuf,
-    pub dispatch_receipt: PathBuf,
-    pub package_digest: String,
-    pub host_version: String,
-    pub profile: String,
-    pub model: String,
-    pub thinking: String,
-    pub agent_type: String,
-}
-
-impl TryFrom<PiArgs> for PiInput {
-    type Error = anyhow::Error;
-
-    fn try_from(value: PiArgs) -> Result<Self> {
-        Ok(Self {
-            workflow: required(value.workflow, "workflow")?,
-            invocation: required(value.invocation, "invocation")?,
-            stdout: required(value.stdout, "stdout")?,
-            stderr: required(value.stderr, "stderr")?,
-            workflow_receipt: required(value.workflow_receipt, "workflow-receipt")?,
-            dispatch_receipt: required(value.dispatch_receipt, "dispatch-receipt")?,
-            package_digest: required(value.package_digest, "package-digest")?,
-            host_version: required(value.host_version, "host-version")?,
-            profile: required(value.profile, "profile")?,
-            model: required(value.model, "model")?,
-            thinking: required(value.thinking, "thinking")?,
-            agent_type: required(value.agent_type, "agent-type")?,
         })
     }
 }

@@ -1,6 +1,6 @@
 {
   "name": "switchloom",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Deterministic model routing for coding agents.",
   "license": "MIT",
   "repository": {
@@ -41,7 +41,8 @@
     "site:build": "astro build && node scripts/build-site.mjs",
     "site:check": "pnpm site:test && astro check && pnpm site:build",
     "site:dev": "astro dev",
-    "site:test": "vitest run && node --test website/alchemy-runtime.test.mjs website/cloudflare-launcher.test.mjs",
+    "site:test": "vitest run --exclude website/src/lib/website-cli-parity.test.ts && node --test website/alchemy-runtime.test.mjs website/cloudflare-launcher.test.mjs",
+    "site:test:parity": "vitest run website/src/lib/website-cli-parity.test.ts --hookTimeout=120000",
     "site:serve": "astro dev --host 127.0.0.1 --port 4173"
   },
   "devDependencies": {

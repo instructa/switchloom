@@ -1,9 +1,6 @@
 name: Release Candidate
 
 on:
-  push:
-    branches:
-      - "codex/**"
   workflow_dispatch:
     inputs:
       ref:
@@ -14,7 +11,7 @@ on:
 permissions: {}
 
 env:
-  CANDIDATE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+  CANDIDATE_REF: ${{ inputs.ref }}
 
 concurrency:
   group: release-candidate-${{ github.ref }}

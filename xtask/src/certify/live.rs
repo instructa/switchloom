@@ -1,10 +1,10 @@
 use super::{
-    CodexRawInput, OpencodeInput, PiInput,
+    CodexRawInput, OpencodeInput,
     runner::{
         OwnedReportRepo, ProcessReceipt, ProcessSpec, RestorationOutcome, RestorationTracker,
         run_process,
     },
-    validate_opencode, validate_pi,
+    validate_opencode,
 };
 use anyhow::{Context, Result, bail};
 use model_routing::{
@@ -453,136 +453,6 @@ pub(crate) fn run_opencode(args: LiveRunArgs) -> Result<()> {
     )?;
     println!(
         "OpenCode live certification passed: {}",
-        owned.report_dir.display()
-    );
-    Ok(())
-}
-
-pub(crate) fn run_pi(args: LiveRunArgs) -> Result<()> {
-    let host = "pi-external";
-    let owned = OwnedReportRepo::create(&args.report_root, host)?;
-    let mut session = CertificationSession::new(&owned, host);
-    let routing_bin = absolute_binary(&args.routing_bin)?;
-    session.run_checked(
-        command(
-            "compile",
-            &routing_bin,
-            [
-                "compile",
-                "balanced",
-                "--host",
-                host,
-                "--output",
-                "bundle.json",
-            ],
-            &owned,
-            args.timeout,
-        ),
-        &owned,
-    )?;
-    session.run_checked(
-        command(
-            "apply",
-            &routing_bin,
-            ["apply", "bundle.json", "--repository", "."],
-            &owned,
-            args.timeout,
-        ),
-        &owned,
-    )?;
-    fs::copy(
-        owned
-            .workdir
-            .join(".pi/workflows/model-routing-preset-runner.json"),
-        owned.workdir.join("workflow.json"),
-    )?;
-    let version = session.run_checked(
-        command(
-            "pi-version",
-            Path::new("pi"),
-            ["--version"],
-            &owned,
-            args.timeout,
-        ),
-        &owned,
-    )?;
-    let host_version = last_line(&version.stdout, &version.stderr);
-    let nonce = nonce("pi");
-    let prompt = format!("Return only this nonce and no other text: {nonce}");
-    let prompt_sha = format!("sha256:{:x}", Sha256::digest(prompt.as_bytes()));
-    let argv = vec![
-        "env",
-        "PI_CODING_AGENT_DIR=.pi-agent",
-        "PI_OFFLINE=1",
-        "pi",
-        "--print",
-        "--no-session",
-        "--no-tools",
-        "--no-extensions",
-        "--no-skills",
-        "--provider",
-        "openai",
-        "--model",
-        "gpt-4o-mini",
-        "--thinking",
-        "low",
-    ];
-    write_json(
-        &owned.workdir.join("requested-invocation.json"),
-        &json!({"host":"pi","nonce":nonce,"argv":argv,"env":{"PI_CODING_AGENT_DIR":".pi-agent","PI_OFFLINE":"1"},"requested":{"profile":"pi-worker","agent_type":"switchloom-pi-worker","provider_model":"openai/gpt-4o-mini","thinking":"low","isolation":{"session":"none","tools":"none","extensions":"none","skills":"none"}},"prompt_sha256":prompt_sha,"artifact_path":".pi/workflows/model-routing-preset-runner.json"}),
-    )?;
-    fs::create_dir_all(owned.workdir.join(".pi-agent"))?;
-    let mut spec = command(
-        "pi-host",
-        Path::new("pi"),
-        [
-            "--print",
-            "--no-session",
-            "--no-tools",
-            "--no-extensions",
-            "--no-skills",
-            "--provider",
-            "openai",
-            "--model",
-            "gpt-4o-mini",
-            "--thinking",
-            "low",
-            &prompt,
-        ],
-        &owned,
-        args.timeout,
-    );
-    spec.env = BTreeMap::from([
-        (
-            "PI_CODING_AGENT_DIR".into(),
-            owned.workdir.join(".pi-agent").display().to_string(),
-        ),
-        ("PI_OFFLINE".into(), "1".into()),
-    ]);
-    let host_run = session.run_checked(spec, &owned)?;
-    fs::write(owned.workdir.join("host-output.txt"), &host_run.stdout)?;
-    fs::write(owned.workdir.join("host-output.stderr"), &host_run.stderr)?;
-    validate_pi(PiInput {
-        workflow: owned.workdir.join("workflow.json"),
-        invocation: owned.workdir.join("requested-invocation.json"),
-        stdout: owned.workdir.join("host-output.txt"),
-        stderr: owned.workdir.join("host-output.stderr"),
-        workflow_receipt: owned.workdir.join("workflow-receipt.json"),
-        dispatch_receipt: owned.workdir.join("dispatch-evidence.json"),
-        package_digest: sha256_file(&routing_bin)?,
-        host_version,
-        profile: "pi-worker".into(),
-        model: "openai/gpt-4o-mini".into(),
-        thinking: "low".into(),
-        agent_type: "switchloom-pi-worker".into(),
-    })?;
-    validate_bundle_receipt(&owned)?;
-    session.complete(
-        true,
-        Some("Pi is an isolated external runner and reports advisory dispatch evidence".into()),
-    )?;
-    println!(
-        "Pi live certification passed: {}",
         owned.report_dir.display()
     );
     Ok(())

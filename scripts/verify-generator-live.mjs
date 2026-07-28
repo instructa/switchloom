@@ -182,7 +182,7 @@ async function scrollTeamHierarchyIntoView(client) {
   await evaluate(client, String.raw`
 (() => {
   const legends = [...document.querySelectorAll("legend")];
-  const legend = legends.find((element) => element.textContent?.includes("3. Tune each role"));
+  const legend = legends.find((element) => element.textContent?.includes("Tune each role"));
   if (!legend) throw new Error("team hierarchy legend missing");
   legend.scrollIntoView({ block: "start", inline: "nearest" });
 })()
@@ -342,18 +342,20 @@ async function main() {
     assert(state.includes("3 generated child roles"), "desktop: generated child count missing");
     assert(state.includes("Set Codex reasoning to Medium."), "desktop: balanced parent effort copy missing");
     assert(!state.includes("Not included"), "desktop: obsolete parent copy is still visible");
+    assert(!state.match(/gateway/i), "desktop: Codex Gateway copy leaked into the native path");
+    assert(!state.includes("Pi Subagents"), "desktop: Pi setup leaked into the Codex path");
+    assert(state.includes("2. Standalone or With Planr?"), "desktop: setup mode step number is incorrect");
+    assert(state.includes("3. Tune each role"), "desktop: role tuning step number is incorrect");
     const desktopShot = await capture(client, "desktop-generator.png");
     await scrollTeamHierarchyIntoView(client);
     await assertNoHorizontalOverflow(client, "desktop hierarchy");
     await assertHierarchyGeometry(client, "desktop hierarchy");
     const desktopHierarchyShot = await capture(client, "desktop-generator-hierarchy.png");
 
-    await focusLabel(client, "Edit Implementer");
+    await focusLabel(client, "Remove Reviewer");
     await client.send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: " ", code: "Space", windowsVirtualKeyCode: 32 });
     await client.send("Input.dispatchKeyEvent", { type: "keyUp", key: " ", code: "Space", windowsVirtualKeyCode: 32 });
-    await waitFor(client, "() => document.body.innerText.includes('Model') && document.querySelector('[aria-label=\"Implementer model\"]')", "keyboard edit did not expose Implementer controls");
-
-    await clickLabel(client, "Remove Reviewer");
+    await waitFor(client, "() => document.body.innerText.includes('2 generated child roles')", "keyboard removal did not update the generated roles");
     state = await pageState(client);
     assert(state.includes("Custom"), "removal: custom preset badge missing");
     assert(state.includes("2 generated child roles"), "removal: child count did not update");
@@ -375,12 +377,37 @@ async function main() {
     await clickText(client, "Pi");
     await waitFor(client, "() => document.body.innerText.includes('Pi team')", "host switch to Pi failed");
     state = await pageState(client);
-    assert(state.includes("4 focused roles"), "host switch: Pi should render all focused roles");
-    assert(!state.includes("host-managed parent"), "host switch: Pi should not show native parent summary");
+    assert(state.includes("3 generated child roles"), "host switch: Pi should generate three child roles");
+    assert(state.includes("host-managed parent"), "host switch: Pi active-session parent summary missing");
+    assert(state.includes("Claude Sonnet 5"), "host switch: current Anthropic model missing");
+    assert(state.includes("Claude Fable 5"), "host switch: current Anthropic reviewer model missing");
+    assert(state.includes("Gemini 3.6 Flash"), "host switch: current Gemini model missing");
+    assert(!state.includes("GPT 4o Mini"), "host switch: stale GPT-4o Mini remains visible");
+    assert(!state.includes("Gemini 2.5 Flash"), "host switch: stale Gemini 2.5 remains visible");
+    assert(!state.includes("Claude Sonnet 4.5"), "host switch: stale Claude Sonnet 4.5 remains visible");
+    const piAutocompleteCount = await evaluate(client, "document.querySelectorAll('input[placeholder=\"Search latest models...\"]').length");
+    assert(piAutocompleteCount === 3, `host switch: expected 3 Pi child model autocompletes, found ${piAutocompleteCount}`);
+    await clickLabel(client, "Implementer model");
+    await waitFor(client, "() => document.body.innerText.includes('Kimi K3')", "current Pi model list did not open");
+    state = await pageState(client);
+    for (const model of ["Kimi K3", "MiniMax M3", "GLM-5.2", "Step 3.7 Flash", "MiMo V2.5"]) {
+      assert(state.includes(model), `host switch: missing current open-weight model ${model}`);
+    }
     await clickText(client, "Spec");
     await waitFor(client, "() => Boolean(document.querySelector('pre')?.textContent)", "spec tab did not render JSON");
     const piSpec = await evaluate(client, "document.querySelector('pre')?.textContent || ''");
-    assert(piSpec.includes('"orchestrator"'), "host switch: Pi spec should include orchestrator");
+    assert(!piSpec.includes('"orchestrator"'), "host switch: Pi spec should not generate a second orchestrator role");
+    state = await pageState(client);
+    assert(state.includes("Active Pi session orchestrates"), "Pi active-session ownership disclosure missing");
+    assert(!state.match(/isolated|model access|self-hosted proxy|gateway/i), "Pi access or isolated-worker UI leaked");
+    const sharedRecipe = await evaluate(client, "window.location.search");
+    assert(sharedRecipe.includes("recipe="), "share-link state: selected Pi setup did not update the URL");
+    await client.send("Page.reload", { ignoreCache: true });
+    await client.waitFor("Page.loadEventFired");
+    await waitFor(client, "() => document.body.innerText.includes('Active Pi session orchestrates')", "share-link state: Pi active-session setup did not restore after reload");
+    await evaluate(client, "Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => undefined } })");
+    await clickLabel(client, "Copy share link");
+    await waitFor(client, "() => document.body.innerText.includes('Copied share link')", "share-link copy feedback missing");
 
     await clickText(client, "Codex");
     await clickText(client, "Light");
@@ -412,13 +439,17 @@ async function main() {
       screenshots: [desktopShot, desktopHierarchyShot, desktopResetShot, mobileShot, mobileResetShot],
       checks: [
         "desktop host-managed parent and generated child count",
+        "Codex native flow has no Gateway path",
         "desktop hierarchy connectors and action-control geometry",
         "desktop reset confirmation capture",
-        "keyboard activation of Edit Implementer",
-        "remove Reviewer",
+        "keyboard removal of Reviewer",
         "cancel reset preserves custom edits",
         "confirm reset restores selected preset",
-        "host switch to Pi includes orchestrator in spec",
+        "host switch to Pi omits an orchestrator child artifact from the spec",
+        "Pi uses searchable current-model selectors with current open-weight models",
+        "Pi keeps the active session as orchestrator without access or isolated-worker UI",
+        "share-link URL restoration after reload",
+        "share-link copy feedback",
         "preset switching updates Codex parent effort copy",
         "narrow mobile render at 390x844",
         "narrow mobile hierarchy connectors, action-control geometry, and horizontal overflow",
@@ -427,7 +458,9 @@ async function main() {
     }, null, 2));
   } finally {
     chrome.kill("SIGTERM");
-    await rm(profile, { recursive: true, force: true });
+    await rm(profile, { recursive: true, force: true }).catch((error) => {
+      process.stderr.write(`warning: could not remove temporary Chrome profile ${profile}: ${error.message}\n`);
+    });
     if (chrome.exitCode && chrome.exitCode !== 0) {
       process.stderr.write(stderr);
     }

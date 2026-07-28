@@ -56,6 +56,7 @@ pub fn setup_spec_for_policy(
         selected_roles,
         routes,
         route_default,
+        workflow: None,
     };
     validate_setup_spec(&spec)?;
     Ok(spec)
@@ -77,6 +78,43 @@ pub fn validate_setup_spec(spec: &SetupSpecV1) -> Result<()> {
     }
     let binding = binding_for_selector(&spec.host)?;
     let canonical_host = setup_runtime_host(&binding);
+    if let Some(workflow) = &spec.workflow {
+        validate_workflow_request(workflow)?;
+        let supported_adapter = matches!(
+            (
+                canonical_host,
+                workflow.coding_agent,
+                workflow.execution_path
+            ),
+            ("pi", CodingAgentRuntime::Pi, ExecutionPath::Extension)
+                | (
+                    "opencode",
+                    CodingAgentRuntime::OpenCode,
+                    ExecutionPath::Native
+                )
+        );
+        if !supported_adapter {
+            bail!(
+                "workflow requests are currently supported only for Pi Subagents and OpenCode native"
+            );
+        }
+        for (role, workflow_role) in &workflow.roles {
+            let selection = spec.selected_roles.get(role).ok_or_else(|| {
+                product_error!(
+                    "workflow role `{role}` must have a matching setup selected_roles entry"
+                )
+            })?;
+            if selection.model != format!("{}/{}", workflow_role.provider, workflow_role.model) {
+                bail!("workflow role `{role}` provider/model must match its setup selection");
+            }
+            if selection.effort != workflow_role.thinking {
+                bail!("workflow role `{role}` thinking must match its setup effort");
+            }
+        }
+        if workflow.roles.len() != spec.selected_roles.len() {
+            bail!("workflow roles must exactly match setup selected_roles");
+        }
+    }
     let model_catalog = setup_model_catalog(canonical_host);
     for (role, selection) in &spec.selected_roles {
         validate_setup_identifier("role", role)?;
@@ -175,6 +213,375 @@ pub fn setup_spec_from_recipe(recipe: &str) -> Result<SetupSpecV1> {
     setup_spec_from_json(&json)
 }
 
+/// Validate the runtime-aware selection before an exporter is allowed to turn
+/// it into repository artifacts. Certified tuples are actionable; experimental
+/// and planned tuples remain catalog-visible but cannot be applied.
+pub fn validate_workflow_request(request: &WorkflowRequestV1) -> Result<()> {
+    if request.schema_version != 1 {
+        bail!(
+            "unsupported workflow schema_version {}",
+            request.schema_version
+        );
+    }
+    if request.roles.is_empty() {
+        bail!("workflow roles must not be empty");
+    }
+    let expected = match (request.coding_agent, request.execution_path) {
+        (CodingAgentRuntime::Codex, ExecutionPath::Native) => (
+            ValidationStatus::Certified,
+            ParentModelGuidance::CurrentSession,
+            &[WorkflowTopology::RoleDispatch][..],
+        ),
+        (CodingAgentRuntime::Pi, ExecutionPath::Extension) => (
+            ValidationStatus::Experimental,
+            ParentModelGuidance::RuntimeManaged,
+            &[WorkflowTopology::Sequential][..],
+        ),
+        (CodingAgentRuntime::Pi, ExecutionPath::Native) => {
+            bail!("Pi native workflow is no longer supported; regenerate the recipe")
+        }
+        (CodingAgentRuntime::OpenCode, ExecutionPath::Native) => (
+            ValidationStatus::Experimental,
+            ParentModelGuidance::RuntimeManaged,
+            &[WorkflowTopology::RoleDispatch][..],
+        ),
+        (CodingAgentRuntime::ClaudeCode, ExecutionPath::Sidecar) => (
+            ValidationStatus::Planned,
+            ParentModelGuidance::ExternalSetupRequired,
+            &[WorkflowTopology::RoleDispatch][..],
+        ),
+        (CodingAgentRuntime::ClaudeCode, ExecutionPath::Native) => (
+            ValidationStatus::Planned,
+            ParentModelGuidance::RuntimeManaged,
+            &[WorkflowTopology::RoleDispatch][..],
+        ),
+        (CodingAgentRuntime::Cursor, ExecutionPath::Native) => (
+            ValidationStatus::Experimental,
+            ParentModelGuidance::RuntimeManaged,
+            &[WorkflowTopology::RoleDispatch][..],
+        ),
+        _ => bail!(
+            "workflow runtime `{}` does not support execution path `{}`",
+            workflow_runtime_id(request.coding_agent),
+            workflow_path_id(request.execution_path)
+        ),
+    };
+    if request.validation_status != expected.0 {
+        bail!("workflow validation_status does not match the runtime capability");
+    }
+    if request.parent_model != expected.1 {
+        bail!("workflow parent_model guidance does not match the runtime capability");
+    }
+    if !expected.2.contains(&request.topology) {
+        bail!("workflow topology is not supported by the runtime capability");
+    }
+    if matches!(
+        request.coding_agent,
+        CodingAgentRuntime::Pi | CodingAgentRuntime::OpenCode
+    ) && request.model_access.is_some()
+    {
+        bail!(
+            "workflow model_access is no longer supported for Pi or OpenCode; regenerate the recipe"
+        );
+    }
+    if let Some(access) = &request.model_access {
+        validate_model_access_profile(request, access)?;
+    }
+    if request.coding_agent == CodingAgentRuntime::Pi {
+        let child_roles = ["implementer", "reviewer", "verifier"];
+        if request.roles.len() != child_roles.len()
+            || child_roles
+                .iter()
+                .any(|role| !request.roles.contains_key(*role))
+        {
+            bail!(
+                "Pi Subagents workflows must define exactly implementer, reviewer, and verifier child roles"
+            );
+        }
+    }
+    for (role, selection) in &request.roles {
+        validate_setup_identifier("workflow role", role)?;
+        if selection.provider.trim().is_empty() || selection.model.trim().is_empty() {
+            bail!("workflow role `{role}` provider and model must not be blank");
+        }
+        reject_workflow_secret_like("provider", &selection.provider)?;
+        reject_workflow_secret_like("model", &selection.model)?;
+        if matches!(
+            request.coding_agent,
+            CodingAgentRuntime::Pi | CodingAgentRuntime::OpenCode
+        ) && selection.selection_mode == ModelSelectionMode::GatewayAuto
+        {
+            bail!(
+                "workflow gateway_auto selection is no longer supported for Pi or OpenCode; regenerate the recipe"
+            );
+        }
+        if selection.selection_mode == ModelSelectionMode::GatewayAuto
+            && (request
+                .model_access
+                .as_ref()
+                .is_some_and(|access| access.kind != ModelAccessKind::HostedGateway)
+                || selection.provider != "openrouter"
+                || selection.model != "auto")
+        {
+            bail!("workflow gateway_auto selection requires the OpenRouter hosted gateway");
+        }
+        if selection.selection_mode == ModelSelectionMode::Fixed
+            && selection.model == "auto"
+            && !(request.coding_agent == CodingAgentRuntime::OpenCode
+                && selection.provider == "openrouter")
+        {
+            bail!("workflow fixed selection must not use dynamic model `auto`");
+        }
+        if let Some(access) = &request.model_access {
+            match access.kind {
+                ModelAccessKind::HostedGateway | ModelAccessKind::SelfHostedProxy => {
+                    if access.provider.as_deref() != Some(selection.provider.as_str()) {
+                        bail!(
+                            "workflow role `{role}` provider must match the selected model_access profile"
+                        );
+                    }
+                }
+                ModelAccessKind::RuntimeManaged | ModelAccessKind::Direct => {}
+            }
+        }
+        let provider_models = workflow_provider_models(request.coding_agent);
+        let Some((_, allowed_models)) = provider_models
+            .iter()
+            .find(|(provider, _)| *provider == selection.provider)
+        else {
+            bail!(
+                "workflow role `{role}` provider `{}` is unsupported by {} {}",
+                selection.provider,
+                workflow_runtime_id(request.coding_agent),
+                workflow_path_id(request.execution_path)
+            );
+        };
+        if !allowed_models.contains(&selection.model.as_str()) {
+            bail!(
+                "workflow role `{role}` model `{}` is unsupported for provider `{}`",
+                selection.model,
+                selection.provider
+            );
+        }
+        if request.coding_agent == CodingAgentRuntime::Codex
+            && !selection.fallback_models.is_empty()
+        {
+            bail!("workflow role `{role}` fallbacks are not supported by Codex native");
+        }
+        for fallback in &selection.fallback_models {
+            if fallback.trim().is_empty() {
+                bail!("workflow role `{role}` fallback model must not be blank");
+            }
+            if workflow_qualified_model(request.coding_agent, fallback).is_none() {
+                bail!(
+                    "workflow role `{role}` fallback model `{fallback}` is unsupported by the runtime capability"
+                );
+            }
+        }
+    }
+    if request.validation_status != ValidationStatus::Certified {
+        bail!(
+            "workflow is {} and cannot be applied as certified support",
+            workflow_status_id(request.validation_status)
+        );
+    }
+    Ok(())
+}
+
+fn validate_model_access_profile(
+    request: &WorkflowRequestV1,
+    access: &ModelAccessProfileV1,
+) -> Result<()> {
+    let Some((runtime, kind, status, provider)) = workflow_access_profile(&access.id) else {
+        bail!(
+            "workflow model_access profile `{}` is unsupported",
+            access.id
+        );
+    };
+    if runtime != request.coding_agent || kind != access.kind {
+        bail!("workflow model_access profile does not match the runtime or access kind");
+    }
+    if status != request.validation_status {
+        bail!("workflow model_access profile status does not match the runtime capability");
+    }
+    if let Some(required_provider) = provider {
+        if access.provider.as_deref() != Some(required_provider) {
+            bail!(
+                "workflow model_access profile `{}` requires provider `{required_provider}`",
+                access.id
+            );
+        }
+    } else if access.provider.is_some() {
+        bail!(
+            "workflow model_access profile `{}` must not declare a provider",
+            access.id
+        );
+    }
+    reject_workflow_secret_like("model_access id", &access.id)?;
+    if let Some(provider) = &access.provider {
+        reject_workflow_secret_like("model_access provider", provider)?;
+    }
+    if let Some(reference) = &access.credential_reference {
+        if !reference.starts_with("env:")
+            || reference.len() == 4
+            || !reference[4..].chars().all(|character| {
+                character.is_ascii_uppercase() || character.is_ascii_digit() || character == '_'
+            })
+        {
+            bail!("workflow credential_reference must be an environment-variable reference");
+        }
+    }
+    Ok(())
+}
+
+fn reject_workflow_secret_like(kind: &str, value: &str) -> Result<()> {
+    let lower = value.to_ascii_lowercase();
+    if lower.contains("api_key")
+        || lower.contains("apikey")
+        || lower.contains("bearer ")
+        || lower.starts_with("sk-")
+        || lower.contains("token=")
+    {
+        bail!("workflow {kind} must not contain a credential value");
+    }
+    Ok(())
+}
+
+fn workflow_access_profile(
+    id: &str,
+) -> Option<(
+    CodingAgentRuntime,
+    ModelAccessKind,
+    ValidationStatus,
+    Option<&'static str>,
+)> {
+    use CodingAgentRuntime::{ClaudeCode, Codex, Cursor};
+    use ModelAccessKind::{Direct, HostedGateway, RuntimeManaged};
+    use ValidationStatus::{Certified, Experimental, Planned};
+    match id {
+        "codex-runtime-managed" => Some((Codex, RuntimeManaged, Certified, None)),
+        "cursor-direct" => Some((Cursor, Direct, Experimental, None)),
+        "cursor-gateway" => Some((
+            Cursor,
+            HostedGateway,
+            Experimental,
+            Some("openai-compatible"),
+        )),
+        "claude-runtime-managed" => Some((ClaudeCode, RuntimeManaged, Planned, None)),
+        "claude-compatible-gateway" => {
+            Some((ClaudeCode, HostedGateway, Experimental, Some("anthropic")))
+        }
+        _ => None,
+    }
+}
+
+pub fn workflow_capability_catalog_value() -> Value {
+    json!({
+        "schemaVersion": 1,
+        "capabilities": [
+            {"codingAgent": "codex", "executionPath": "native", "validationStatus": "certified", "parentModel": "current-session", "topologies": ["role-dispatch"], "providers": workflow_provider_capabilities(CodingAgentRuntime::Codex)},
+            {"codingAgent": "pi", "executionPath": "extension", "validationStatus": "experimental", "parentModel": "runtime-managed", "topologies": ["sequential"], "providers": workflow_provider_capabilities(CodingAgentRuntime::Pi)},
+            {"codingAgent": "opencode", "executionPath": "native", "validationStatus": "experimental", "parentModel": "runtime-managed", "topologies": ["role-dispatch"], "providers": workflow_provider_capabilities(CodingAgentRuntime::OpenCode)},
+            {"codingAgent": "claude-code", "executionPath": "sidecar", "validationStatus": "planned", "parentModel": "external-setup-required", "topologies": ["role-dispatch"]},
+            {"codingAgent": "claude-code", "executionPath": "native", "validationStatus": "planned", "parentModel": "runtime-managed", "topologies": ["role-dispatch"], "providers": workflow_provider_capabilities(CodingAgentRuntime::ClaudeCode)},
+            {"codingAgent": "cursor", "executionPath": "native", "validationStatus": "experimental", "parentModel": "runtime-managed", "topologies": ["role-dispatch"], "providers": workflow_provider_capabilities(CodingAgentRuntime::Cursor)},
+        ],
+        "modelAccessProfiles": [
+            {"id":"codex-runtime-managed","kind":"runtime_managed","status":"certified"},
+            {"id":"cursor-direct","kind":"direct","status":"experimental"},
+            {"id":"cursor-gateway","kind":"hosted_gateway","status":"experimental","provider":"openai-compatible"},
+            {"id":"claude-runtime-managed","kind":"runtime_managed","status":"planned"},
+            {"id":"claude-compatible-gateway","kind":"hosted_gateway","status":"experimental","provider":"anthropic"}
+        ]
+    })
+}
+
+fn workflow_provider_models(
+    runtime: CodingAgentRuntime,
+) -> &'static [(&'static str, &'static [&'static str])] {
+    match runtime {
+        CodingAgentRuntime::Codex => {
+            &[("openai", &["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"])]
+        }
+        CodingAgentRuntime::Pi => &[
+            (
+                "openai-codex",
+                &["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"],
+            ),
+            (
+                "anthropic",
+                &["claude-sonnet-5", "claude-opus-5", "claude-fable-5"],
+            ),
+            (
+                "openrouter",
+                &[
+                    "google/gemini-3.5-flash-lite",
+                    "google/gemini-3.6-flash",
+                    "x-ai/grok-4.5",
+                    "moonshotai/kimi-k3",
+                    "minimax/minimax-m3",
+                    "z-ai/glm-5.2",
+                    "stepfun/step-3.7-flash",
+                    "xiaomi/mimo-v2.5",
+                ],
+            ),
+        ],
+        CodingAgentRuntime::OpenCode => &[
+            ("openai", &["gpt-5-nano"]),
+            (
+                "openrouter",
+                &["auto", "google/gemini-3.6-flash", "x-ai/grok-4.5"],
+            ),
+        ],
+        CodingAgentRuntime::ClaudeCode => &[("anthropic", &["sonnet", "opus"])],
+        CodingAgentRuntime::Cursor => &[("openai", &["gpt-5.5", "gpt-5.4-mini"])],
+    }
+}
+
+pub(crate) fn workflow_qualified_model(runtime: CodingAgentRuntime, model: &str) -> Option<String> {
+    workflow_provider_models(runtime)
+        .iter()
+        .find_map(|(provider, models)| {
+            models
+                .contains(&model)
+                .then(|| format!("{provider}/{model}"))
+        })
+}
+
+fn workflow_provider_capabilities(runtime: CodingAgentRuntime) -> Vec<Value> {
+    workflow_provider_models(runtime)
+        .iter()
+        .map(|(provider, models)| json!({ "id": provider, "models": models }))
+        .collect()
+}
+
+fn workflow_runtime_id(runtime: CodingAgentRuntime) -> &'static str {
+    match runtime {
+        CodingAgentRuntime::Codex => "codex",
+        CodingAgentRuntime::Pi => "pi",
+        CodingAgentRuntime::OpenCode => "opencode",
+        CodingAgentRuntime::ClaudeCode => "claude-code",
+        CodingAgentRuntime::Cursor => "cursor",
+    }
+}
+
+fn workflow_path_id(path: ExecutionPath) -> &'static str {
+    match path {
+        ExecutionPath::Native => "native",
+        ExecutionPath::Extension => "extension",
+        ExecutionPath::Gateway => "gateway",
+        ExecutionPath::Sidecar => "sidecar",
+    }
+}
+
+fn workflow_status_id(status: ValidationStatus) -> &'static str {
+    match status {
+        ValidationStatus::Certified => "certified",
+        ValidationStatus::Experimental => "experimental",
+        ValidationStatus::Planned => "planned",
+    }
+}
+
 pub fn setup_contract_catalog_value() -> Result<Value> {
     let hosts = [
         "codex",
@@ -213,6 +620,7 @@ pub fn setup_contract_catalog_value() -> Result<Value> {
             "mayContainCredentials": false,
             "mayContainScripts": false,
         },
+        "workflowCapabilities": workflow_capability_catalog_value(),
         "hosts": hosts,
     }))
 }

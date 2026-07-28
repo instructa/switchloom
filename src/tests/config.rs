@@ -1,6 +1,40 @@
 use crate::*;
 use std::collections::BTreeMap;
 
+fn workflow_capability<'a>(
+    catalog: &'a serde_json::Value,
+    coding_agent: &str,
+    execution_path: &str,
+) -> &'a serde_json::Value {
+    catalog["capabilities"]
+        .as_array()
+        .expect("workflow capability catalog has capabilities")
+        .iter()
+        .find(|capability| {
+            capability["codingAgent"] == coding_agent
+                && capability["executionPath"] == execution_path
+        })
+        .unwrap_or_else(|| panic!("workflow capability exists for {coding_agent}/{execution_path}"))
+}
+
+fn model_access_profile<'a>(catalog: &'a serde_json::Value, id: &str) -> &'a serde_json::Value {
+    catalog["modelAccessProfiles"]
+        .as_array()
+        .expect("workflow capability catalog has model access profiles")
+        .iter()
+        .find(|profile| profile["id"] == id)
+        .unwrap_or_else(|| panic!("model access profile exists for {id}"))
+}
+
+fn workflow_provider<'a>(capability: &'a serde_json::Value, id: &str) -> &'a serde_json::Value {
+    capability["providers"]
+        .as_array()
+        .expect("workflow capability has providers")
+        .iter()
+        .find(|provider| provider["id"] == id)
+        .unwrap_or_else(|| panic!("provider {id} exists"))
+}
+
 #[test]
 fn setup_spec_roundtrips_through_canonical_toml_json_and_recipe() {
     let spec = setup_spec_for_policy("balanced", "codex-openai", Integration::Standalone).unwrap();
@@ -104,6 +138,7 @@ fn custom_setup_rejects_duplicate_codex_spawn_identities() {
             role: "implementer".to_string(),
             fallbacks: Vec::new(),
         }),
+        workflow: None,
     };
     assert!(
         compile_setup_spec(&duplicate_agent_type)
@@ -155,6 +190,7 @@ fn custom_setup_rejects_duplicate_codex_spawn_identities() {
             fallbacks: vec!["foo_bar".to_string()],
         }],
         route_default: None,
+        workflow: None,
     };
     assert!(
         compile_setup_spec(&duplicate_task_name)
@@ -215,6 +251,7 @@ fn custom_setup_rejects_normalized_artifact_path_collisions() {
                 fallbacks: vec!["foo_bar".to_string()],
             }],
             route_default: None,
+            workflow: None,
         };
         let error = compile_setup_spec(&spec).unwrap_err().to_string();
         assert!(
@@ -263,6 +300,7 @@ fn setup_spec_rejects_unknown_fields_and_invalid_combinations() {
             fallbacks: Vec::new(),
         }],
         route_default: None,
+        workflow: None,
     };
     assert!(
         validate_setup_spec(&invalid_effort)
@@ -394,4 +432,149 @@ fn setup_contract_catalog_exposes_transport_and_host_options() {
                 .iter()
                 .any(|model| model["id"] == "opencode/gpt-5-nano")
     }));
+}
+
+#[test]
+fn workflow_contract_fixtures_reject_unproven_and_invalid_tuples() {
+    for (fixture, expected_error) in [
+        (
+            include_str!("../../fixtures/workflow-contract-v1/valid-codex-native.json"),
+            None,
+        ),
+        (
+            include_str!("../../fixtures/workflow-contract-v1/experimental-pi-extension.json"),
+            Some("workflow is experimental and cannot be applied as certified support"),
+        ),
+        (
+            include_str!("../../fixtures/workflow-contract-v1/experimental-opencode-native.json"),
+            Some("workflow is experimental and cannot be applied as certified support"),
+        ),
+        (
+            include_str!("../../fixtures/workflow-contract-v1/experimental-cursor-direct.json"),
+            Some("workflow is experimental and cannot be applied as certified support"),
+        ),
+        (
+            include_str!("../../fixtures/workflow-contract-v1/planned-claude-runtime-managed.json"),
+            Some("workflow is planned and cannot be applied as certified support"),
+        ),
+    ] {
+        let request: WorkflowRequestV1 = serde_json::from_str(fixture).unwrap();
+        match expected_error {
+            Some(expected_error) => assert_eq!(
+                validate_workflow_request(&request).unwrap_err().to_string(),
+                expected_error
+            ),
+            None => validate_workflow_request(&request).unwrap(),
+        }
+    }
+    for (fixture, expected) in [
+        (
+            include_str!("../../fixtures/workflow-contract-v1/invalid-codex-native-provider.json"),
+            "provider `anthropic` is unsupported",
+        ),
+        (
+            include_str!("../../fixtures/workflow-contract-v1/invalid-codex-native-model.json"),
+            "model `gpt-unknown` is unsupported",
+        ),
+        (
+            include_str!("../../fixtures/workflow-contract-v1/invalid-pi-extension-provider.json"),
+            "provider `mistral` is unsupported",
+        ),
+        (
+            include_str!("../../fixtures/workflow-contract-v1/invalid-pi-extension-fallback.json"),
+            "fallback model `gpt-unknown` is unsupported",
+        ),
+        (
+            include_str!("../../fixtures/workflow-contract-v1/invalid-pi-native.json"),
+            "Pi native workflow is no longer supported; regenerate the recipe",
+        ),
+        (
+            include_str!("../../fixtures/workflow-contract-v1/invalid-raw-credential.json"),
+            "model_access is no longer supported for Pi or OpenCode; regenerate the recipe",
+        ),
+        (
+            include_str!("../../fixtures/workflow-contract-v1/invalid-auto-as-fixed.json"),
+            "model_access is no longer supported for Pi or OpenCode; regenerate the recipe",
+        ),
+    ] {
+        let request: WorkflowRequestV1 = serde_json::from_str(fixture).unwrap();
+        assert!(
+            validate_workflow_request(&request)
+                .unwrap_err()
+                .to_string()
+                .contains(expected)
+        );
+    }
+
+    let catalog = workflow_capability_catalog_value();
+    let codex_native = workflow_capability(&catalog, "codex", "native");
+    let pi_extension = workflow_capability(&catalog, "pi", "extension");
+    let opencode_native = workflow_capability(&catalog, "opencode", "native");
+    let claude_sidecar = workflow_capability(&catalog, "claude-code", "sidecar");
+    let cursor_native = workflow_capability(&catalog, "cursor", "native");
+    assert_eq!(codex_native["validationStatus"], "certified");
+    assert_eq!(pi_extension["validationStatus"], "experimental");
+    assert_eq!(opencode_native["validationStatus"], "experimental");
+    assert_eq!(claude_sidecar["validationStatus"], "planned");
+    assert_eq!(cursor_native["validationStatus"], "experimental");
+    assert_eq!(
+        model_access_profile(&catalog, "codex-runtime-managed")["status"],
+        "certified"
+    );
+    assert_eq!(
+        model_access_profile(&catalog, "cursor-gateway")["status"],
+        "experimental"
+    );
+    assert_eq!(
+        model_access_profile(&catalog, "claude-runtime-managed")["status"],
+        "planned"
+    );
+    assert!(
+        !catalog["modelAccessProfiles"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|profile| {
+                profile["id"]
+                    .as_str()
+                    .is_some_and(|id| id.starts_with("pi-") || id.starts_with("opencode-"))
+            })
+    );
+    assert!(
+        !catalog["capabilities"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|capability| {
+                capability["codingAgent"] == "pi" && capability["executionPath"] == "native"
+            })
+    );
+    assert_eq!(workflow_provider(codex_native, "openai")["id"], "openai");
+    let pi_openrouter = workflow_provider(pi_extension, "openrouter");
+    assert_eq!(
+        workflow_provider(pi_extension, "openai-codex")["id"],
+        "openai-codex"
+    );
+    assert!(
+        pi_openrouter["models"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|model| model == "google/gemini-3.6-flash")
+    );
+    assert!(
+        pi_openrouter["models"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|model| model == "moonshotai/kimi-k3")
+    );
+    assert!(
+        pi_openrouter["models"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|model| model == "xiaomi/mimo-v2.5")
+    );
+    assert_eq!(catalog["modelAccessProfiles"].as_array().unwrap().len(), 5);
 }

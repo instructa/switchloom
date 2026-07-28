@@ -22,6 +22,8 @@ pub struct SetupSpecV1 {
     pub routes: Vec<SetupRouteMapping>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub route_default: Option<SetupDefaultRoute>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workflow: Option<WorkflowRequestV1>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -57,6 +59,113 @@ pub struct SetupDefaultRoute {
     pub role: String,
     #[serde(default)]
     pub fallbacks: Vec<String>,
+}
+
+/// A runtime-aware workflow request. This is intentionally separate from
+/// `SetupSpecV1`: existing recipe/share payloads retain their exact shape until
+/// an exporter owns these fields.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct WorkflowRequestV1 {
+    pub schema_version: u32,
+    pub coding_agent: CodingAgentRuntime,
+    pub execution_path: ExecutionPath,
+    pub validation_status: ValidationStatus,
+    pub parent_model: ParentModelGuidance,
+    pub topology: WorkflowTopology,
+    /// Access profiles remain part of the Codex, Claude Code, and Cursor
+    /// contracts. Pi and OpenCode own provider access natively and reject this
+    /// legacy field when it is present.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_access: Option<ModelAccessProfileV1>,
+    pub roles: BTreeMap<String, WorkflowRoleRequestV1>,
+}
+
+/// A credential-free description of how a runtime reaches role models. The
+/// endpoint and credential themselves always remain runtime-global user setup.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ModelAccessProfileV1 {
+    pub id: String,
+    pub kind: ModelAccessKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credential_reference: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ModelAccessKind {
+    RuntimeManaged,
+    Direct,
+    HostedGateway,
+    SelfHostedProxy,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ModelSelectionMode {
+    #[default]
+    Fixed,
+    GatewayAuto,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum CodingAgentRuntime {
+    Codex,
+    Pi,
+    #[serde(rename = "opencode")]
+    OpenCode,
+    ClaudeCode,
+    Cursor,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum ExecutionPath {
+    Native,
+    Extension,
+    Gateway,
+    Sidecar,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum ValidationStatus {
+    Certified,
+    Experimental,
+    Planned,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum ParentModelGuidance {
+    CurrentSession,
+    RuntimeManaged,
+    ExternalSetupRequired,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum WorkflowTopology {
+    RoleDispatch,
+    Sequential,
+    Parallel,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct WorkflowRoleRequestV1 {
+    pub provider: String,
+    pub model: String,
+    #[serde(default)]
+    pub selection_mode: ModelSelectionMode,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<String>,
+    #[serde(default)]
+    pub fallback_models: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

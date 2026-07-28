@@ -15,8 +15,8 @@ your coding agent (orchestrator)
 └── verifier     → lightweight verification model
 ```
 
-The model selected in your coding agent remains the orchestrator. Switchloom
-configures the child roles it can delegate to.
+For native agent teams, the model selected in your coding agent remains the
+orchestrator. Pi uses that active session to delegate through Pi Subagents.
 
 ## Why Switchloom
 

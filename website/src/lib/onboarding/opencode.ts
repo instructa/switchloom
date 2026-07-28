@@ -4,19 +4,19 @@ export const opencodeOnboarding = {
   host: "opencode",
   icon: "/brand/opencode.svg",
   title: "Set up your OpenCode agent team",
-  description: "Switchloom installs provider-qualified OpenCode child agents with explicit task permissions.",
+  description: "Switchloom installs provider-qualified OpenCode child agents with explicit task permissions. Provider credentials remain in your OpenCode setup, never the recipe.",
   status: "experimental",
   steps: [
     {
       id: "requirements",
-      title: "Check OpenCode",
-      description: "Use a current OpenCode CLI with project agent and Task support.",
-      command: { kind: "literal", value: "opencode --version" },
+      title: "Connect a provider in OpenCode",
+      description: "Use OpenCode's runtime-owned provider connection flow before selecting provider-qualified child models.",
+      command: { kind: "literal", value: "/connect" },
     },
     {
       id: "project",
       title: "Keep agents in the repository",
-      description: "cd into your project first. Switchloom sets up the OpenCode child-agent files there and does not touch your global OpenCode settings.",
+      description: "cd into your project first. Switchloom sets up child-agent files there and does not touch provider credentials.",
     },
     {
       id: "install",

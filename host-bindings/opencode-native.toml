@@ -18,14 +18,14 @@ fork_all = false
 [profiles.driver]
 profile = "opencode-driver"
 client = "opencode"
-model = "opencode/gpt-5-nano"
+model = "openrouter/google/gemini-3.6-flash"
 effort = "medium"
 cost_tier = "premium"
 
 [profiles.worker]
 profile = "opencode-worker"
 client = "opencode"
-model = "opencode/gpt-5-nano"
+model = "openrouter/google/gemini-3.6-flash"
 effort = "low"
 cost_tier = "standard"
 fork_turns = { mode = "none" }
@@ -46,7 +46,7 @@ kind = "opencode_agent"
 content = '''---
 description: Switchloom driver that delegates implementation to the preset worker.
 mode: primary
-model: opencode/gpt-5-nano
+model: openrouter/google/gemini-3.6-flash
 variant: medium
 permission:
   edit: deny
@@ -64,7 +64,7 @@ kind = "opencode_agent"
 content = '''---
 description: Switchloom worker subagent for bounded implementation tasks.
 mode: subagent
-model: opencode/gpt-5-nano
+model: openrouter/google/gemini-3.6-flash
 variant: low
 permission:
   edit: allow

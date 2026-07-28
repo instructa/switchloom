@@ -34,8 +34,8 @@ pub(crate) const BINDINGS: [(&str, &str); 7] = [
         include_str!("../host-bindings/opencode-native.toml"),
     ),
     (
-        "pi-external",
-        include_str!("../host-bindings/pi-external.toml"),
+        "pi-subagents",
+        include_str!("../host-bindings/pi-subagents.toml"),
     ),
     (
         "mixed-host",
@@ -911,7 +911,7 @@ pub(crate) fn canonical_binding_id(selector: &str) -> &str {
         "claude-code" => "claude-native",
         "cursor" => "cursor-openai",
         "opencode" => "opencode-native",
-        "pi" => "pi-external",
+        "pi" => "pi-subagents",
         other => other,
     }
 }
@@ -1009,22 +1009,92 @@ pub(crate) fn setup_model_catalog(host: &str) -> Vec<SetupModelOption> {
                 efforts: &["high", "max"],
                 tier: "premium",
             },
+            SetupModelOption {
+                id: "openrouter/auto",
+                efforts: &["low", "medium", "high", "max"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "openrouter/google/gemini-3.6-flash",
+                efforts: &["low", "medium", "high", "max"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "openrouter/x-ai/grok-4.5",
+                efforts: &["low", "medium", "high", "max"],
+                tier: "premium",
+            },
         ],
         "pi" => vec![
             SetupModelOption {
-                id: "openai/gpt-4o-mini",
+                id: "openai-codex/gpt-5.6-luna",
                 efforts: &["low", "medium", "high", "xhigh"],
                 tier: "standard",
             },
             SetupModelOption {
-                id: "google/gemini-2.5-flash",
+                id: "openai-codex/gpt-5.6-terra",
                 efforts: &["low", "medium", "high", "xhigh"],
                 tier: "standard",
             },
             SetupModelOption {
-                id: "anthropic/claude-sonnet-4-5",
+                id: "openai-codex/gpt-5.6-sol",
                 efforts: &["low", "medium", "high", "xhigh"],
                 tier: "premium",
+            },
+            SetupModelOption {
+                id: "anthropic/claude-sonnet-5",
+                efforts: &["low", "medium", "high", "xhigh"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "anthropic/claude-opus-5",
+                efforts: &["low", "medium", "high", "xhigh"],
+                tier: "premium",
+            },
+            SetupModelOption {
+                id: "anthropic/claude-fable-5",
+                efforts: &["low", "medium", "high", "xhigh"],
+                tier: "premium",
+            },
+            SetupModelOption {
+                id: "openrouter/google/gemini-3.5-flash-lite",
+                efforts: &["low", "medium", "high"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "openrouter/google/gemini-3.6-flash",
+                efforts: &["low", "medium", "high"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "openrouter/x-ai/grok-4.5",
+                efforts: &["low", "medium", "high"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "openrouter/moonshotai/kimi-k3",
+                efforts: &["low", "medium", "high"],
+                tier: "premium",
+            },
+            SetupModelOption {
+                id: "openrouter/minimax/minimax-m3",
+                efforts: &["low", "medium", "high"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "openrouter/z-ai/glm-5.2",
+                efforts: &["low", "medium", "high"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "openrouter/stepfun/step-3.7-flash",
+                efforts: &["low", "medium", "high"],
+                tier: "standard",
+            },
+            SetupModelOption {
+                id: "openrouter/xiaomi/mimo-v2.5",
+                efforts: &["low", "medium", "high"],
+                tier: "standard",
             },
         ],
         "mixed-host" => vec![
@@ -1302,7 +1372,7 @@ pub(crate) fn setup_artifact_path(
         "claude-code" => format!(".claude/agents/switchloom-{file_role}.md"),
         "cursor" => format!(".cursor/agents/switchloom-{file_role}.md"),
         "opencode" => format!(".opencode/agents/switchloom-{file_role}.md"),
-        "pi" => format!(".pi/workflows/switchloom-{file_role}.json"),
+        "pi" => format!(".pi/agents/switchloom-{file_role}.md"),
         "mixed-host" => format!(".model-routing/roles/{file_role}.toml"),
         other => bail!("unsupported setup runtime host `{other}`"),
     })

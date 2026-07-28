@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "coding_agent": "opencode",
+  "execution_path": "native",
+  "validation_status": "experimental",
+  "parent_model": "runtime-managed",
+  "topology": "role-dispatch",
+  "roles": {
+    "implementer": { "provider": "openai", "model": "gpt-5-nano", "thinking": "high", "fallback_models": [] },
+    "reviewer": { "provider": "openrouter", "model": "google/gemini-3.6-flash", "thinking": "medium", "fallback_models": [] }
+  }
+}

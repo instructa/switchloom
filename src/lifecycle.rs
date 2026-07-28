@@ -1700,12 +1700,16 @@ pub(crate) fn allowed_repository_target(path: &str) -> bool {
     if path == ".codex/config.toml" {
         return true;
     }
+    if path == ".pi/settings.json" {
+        return true;
+    }
     [
         ".codex/agents/",
         ".claude/agents/",
         ".cursor/agents/",
         ".opencode/agents/",
-        ".pi/workflows/",
+        ".pi/agents/",
+        ".pi/chains/",
         ".planr/",
     ]
     .iter()

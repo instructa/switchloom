@@ -33,6 +33,7 @@ const CURRENT_MAINTAINER_DOCS: &[&str] = &[
     "preset-composition.md",
     "preset-evaluation.md",
     "preset-registry.md",
+    "workflow-capabilities.md",
 ];
 const REMOVED_BROWSER_ARTIFACT_WORDING: &[&str] = &[
     "download .switchloom/config.toml",

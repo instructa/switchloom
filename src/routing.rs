@@ -571,12 +571,7 @@ pub(crate) fn compile_setup_adapter(
     let profiles = setup_profiles_from_intent(spec, binding)?;
     let routes = setup_routes_from_intent(spec);
     let route_default = setup_default_route_from_intent(spec);
-    let artifacts = setup_artifacts_from_intent(
-        runtime_host,
-        &spec.selected_roles,
-        binding,
-        binding_artifacts,
-    )?;
+    let artifacts = setup_artifacts_from_intent(runtime_host, spec, binding, binding_artifacts)?;
     let mut adapter_contract = adapter_contract_for_binding(policy_id, binding, spec.integration)?;
     adapter_contract.routing_intent.semantic_roles = profiles.keys().cloned().collect();
     adapter_contract.routing_intent.role_requests = role_intents_for_profiles(&profiles);
@@ -690,6 +685,9 @@ pub(crate) fn setup_default_route_from_intent(spec: &SetupSpecV1) -> Option<Defa
 }
 
 pub(crate) fn setup_matches_binding(spec: &SetupSpecV1, binding: &HostBinding) -> Result<bool> {
+    if spec.workflow.is_some() {
+        return Ok(false);
+    }
     if canonical_binding_id(&spec.host) != binding.id {
         return Ok(false);
     }
@@ -734,10 +732,17 @@ pub(crate) fn setup_matches_binding(spec: &SetupSpecV1, binding: &HostBinding) -
 
 pub(crate) fn setup_artifacts_from_intent(
     runtime_host: &str,
-    roles: &BTreeMap<String, SetupRoleSelection>,
+    spec: &SetupSpecV1,
     binding: &HostBinding,
     binding_artifacts: &[SourceArtifact],
 ) -> Result<Vec<SourceArtifact>> {
+    if runtime_host == "pi" && spec.workflow.is_some() {
+        return pi_subagents_artifacts(spec);
+    }
+    if runtime_host == "opencode" && spec.workflow.is_some() {
+        return opencode_workflow_artifacts(spec);
+    }
+    let roles = &spec.selected_roles;
     roles
         .iter()
         .map(|(role, selection)| {
@@ -800,26 +805,9 @@ pub(crate) fn setup_artifacts_from_intent(
                         ),
                     )
                 }
-                "pi" => {
-                    let effort = selection
-                        .effort
-                        .clone()
-                        .unwrap_or_else(|| "medium".to_string());
-                    let (provider, model) = selection.model.split_once('/').ok_or_else(|| {
-                        product_error!(
-                            "setup role `{role}` Pi model `{}` must use provider/model form",
-                            selection.model
-                        )
-                    })?;
-                    let agent_type = format!("switchloom-pi-{file_role}");
-                    (
-                        "pi_workflow",
-                        format!(
-                            "{{\n  \"schema_version\": 1,\n  \"workflow\": \"switchloom-{file_role}\",\n  \"runner\": \"pi\",\n  \"runtime_class\": \"external-runner\",\n  \"arguments\": {{\n    \"agent_type\": \"{agent_type}\",\n    \"provider_model\": \"{}\",\n    \"thinking\": \"{effort}\",\n    \"isolation\": {{\n      \"session\": \"none\",\n      \"tools\": \"none\",\n      \"extensions\": \"none\",\n      \"skills\": \"none\",\n      \"agent_dir\": \"report-workdir/.pi-agent\"\n    }},\n    \"task\": {{\n      \"semantic_role\": \"{role}\",\n      \"profile\": \"{agent_type}\",\n      \"returns\": \"nonce-only\"\n    }}\n  }},\n  \"process\": {{\n    \"argv\": [\"pi\", \"--print\", \"--no-session\", \"--no-tools\", \"--no-extensions\", \"--no-skills\", \"--provider\", \"{provider}\", \"--model\", \"{model}\", \"--thinking\", \"{effort}\"],\n    \"state_boundary\": \"PI_CODING_AGENT_DIR is set to a report-local directory for every certification run\"\n  }},\n  \"security\": {{\n    \"filesystem_tools\": \"disabled\",\n    \"session_persistence\": \"disabled\",\n    \"native_subagents\": \"not used\",\n    \"certification_requirement\": \"A persisted workflow receipt must include the dynamic nonce returned by a live Pi child process before advisory runtime evidence is accepted.\"\n  }}\n}}\n",
-                            selection.model
-                        ),
-                    )
-                }
+                "pi" => bail!(
+                    "Pi setup must use the native Pi Subagents workflow request"
+                ),
                 "mixed-host" => {
                     (
                         "routing_role",
@@ -845,6 +833,135 @@ pub(crate) fn setup_artifacts_from_intent(
             })
         })
         .collect()
+}
+
+fn pi_subagents_artifacts(spec: &SetupSpecV1) -> Result<Vec<SourceArtifact>> {
+    let workflow = spec
+        .workflow
+        .as_ref()
+        .ok_or_else(|| product_error!("Pi workflow request is required"))?;
+    let mut artifacts = Vec::new();
+    let overrides = workflow
+        .roles
+        .iter()
+        .map(|(role, selection)| {
+            let fallback_models = selection
+                .fallback_models
+                .iter()
+                .map(|fallback| {
+                    let model = workflow_provider_models_for_fallback(workflow, fallback)?;
+                    Ok(serde_json::Value::String(model))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            Ok((
+                format!("switchloom-{role}"),
+                serde_json::json!({
+                    "model": format!("{}/{}", selection.provider, selection.model),
+                    "thinking": selection.thinking,
+                    "fallbackModels": fallback_models,
+                }),
+            ))
+        })
+        .collect::<Result<serde_json::Map<String, serde_json::Value>>>()?;
+    let settings = serde_json::to_string_pretty(&serde_json::json!({
+        "extensions": ["npm:pi-subagents"],
+        "subagents": { "agentOverrides": overrides }
+    }))? + "\n";
+    artifacts.push(SourceArtifact {
+        path: ".pi/settings.json".to_string(),
+        media_type: "application/json".to_string(),
+        mode: "create".to_string(),
+        content: settings,
+    });
+    for (role, selection) in &workflow.roles {
+        let fallbacks = selection
+            .fallback_models
+            .iter()
+            .map(|fallback| workflow_provider_models_for_fallback(workflow, fallback))
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .collect::<Vec<_>>()
+            .join(", ");
+        let fallback_line = if fallbacks.is_empty() {
+            String::new()
+        } else {
+            format!("fallbackModels: {fallbacks}\n")
+        };
+        let content = format!(
+            "---\nname: switchloom-{role}\ndescription: Switchloom-managed {role} role\nmodel: {}/{}\nthinking: {}\n{}inheritProjectContext: true\n---\n\nExecute the assigned {role} task. Report concrete results to the Pi parent.\n",
+            selection.provider,
+            selection.model,
+            selection.thinking.as_deref().unwrap_or("medium"),
+            fallback_line
+        );
+        artifacts.push(SourceArtifact {
+            path: format!(".pi/agents/switchloom-{role}.md"),
+            media_type: "text/markdown".to_string(),
+            mode: "create".to_string(),
+            content,
+        });
+    }
+    let steps = workflow
+        .roles
+        .keys()
+        .map(|role| format!("## switchloom-{role}\n\nRun the {role} role for {{task}}\n"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let content = format!(
+        "---\nname: switchloom-workflow\ndescription: Switchloom-managed Pi Subagents workflow\n---\n\n{steps}"
+    );
+    artifacts.push(SourceArtifact {
+        path: ".pi/chains/switchloom-workflow.chain.md".to_string(),
+        media_type: "text/markdown".to_string(),
+        mode: "create".to_string(),
+        content,
+    });
+    Ok(artifacts)
+}
+
+fn workflow_provider_models_for_fallback(
+    workflow: &WorkflowRequestV1,
+    fallback: &str,
+) -> Result<String> {
+    workflow_qualified_model(workflow.coding_agent, fallback).ok_or_else(|| {
+        product_error!(
+            "workflow fallback model `{fallback}` is not supported by the runtime capability"
+        )
+    })
+}
+
+pub(crate) fn opencode_workflow_artifacts(spec: &SetupSpecV1) -> Result<Vec<SourceArtifact>> {
+    let workflow = spec
+        .workflow
+        .as_ref()
+        .ok_or_else(|| product_error!("OpenCode workflow request is required"))?;
+    let mut artifacts = Vec::new();
+    for (role, selection) in &workflow.roles {
+        let effort = selection.thinking.as_deref().unwrap_or("medium");
+        let fallbacks = selection
+            .fallback_models
+            .iter()
+            .map(|fallback| workflow_provider_models_for_fallback(workflow, fallback))
+            .collect::<Result<Vec<_>>>()?;
+        let fallback_note = if fallbacks.is_empty() {
+            "No provider/model startup fallback is configured.".to_string()
+        } else {
+            format!(
+                "Provider/model startup fallbacks (in order): {}.",
+                fallbacks.join(", ")
+            )
+        };
+        artifacts.push(SourceArtifact {
+            path: format!(".opencode/agents/switchloom-{}.md", identifier_token(role)),
+            media_type: "text/markdown".to_string(),
+            mode: "create".to_string(),
+            content: format!(
+                "---\ndescription: Switchloom-managed {role} role.\nmode: subagent\nmodel: {}/{}\nvariant: {effort}\npermission:\n  edit: allow\n  bash: ask\n  task:\n    \"*\": deny\n---\n\nWorkflow topology: role-dispatch.\n{fallback_note}\n\nExecute the assigned {role} task and report concrete results to the OpenCode parent.\n",
+                selection.provider, selection.model
+            ),
+        });
+    }
+    Ok(artifacts)
 }
 
 pub(crate) fn compile_host_adapter(

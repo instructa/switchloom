@@ -33,7 +33,6 @@ enum CertifyCommand {
     Codex(CodexArgs),
     Cursor(CursorArgs),
     Opencode(OpencodeArgs),
-    Pi(PiArgs),
     Planr(PlanrArgs),
 }
 
@@ -104,40 +103,6 @@ struct OpencodeArgs {
     variant: Option<String>,
     #[arg(long)]
     worker: Option<String>,
-    #[arg(long, default_value = "target/debug/model-routing")]
-    routing_bin: PathBuf,
-    #[arg(long, default_value = "reports/native-host-certification")]
-    report_root: PathBuf,
-    #[arg(long, default_value_t = 180)]
-    timeout_seconds: u64,
-}
-
-#[derive(Debug, Args)]
-struct PiArgs {
-    #[arg(long)]
-    workflow: Option<PathBuf>,
-    #[arg(long)]
-    invocation: Option<PathBuf>,
-    #[arg(long)]
-    stdout: Option<PathBuf>,
-    #[arg(long)]
-    stderr: Option<PathBuf>,
-    #[arg(long)]
-    workflow_receipt: Option<PathBuf>,
-    #[arg(long)]
-    dispatch_receipt: Option<PathBuf>,
-    #[arg(long)]
-    package_digest: Option<String>,
-    #[arg(long)]
-    host_version: Option<String>,
-    #[arg(long)]
-    profile: Option<String>,
-    #[arg(long)]
-    model: Option<String>,
-    #[arg(long)]
-    thinking: Option<String>,
-    #[arg(long)]
-    agent_type: Option<String>,
     #[arg(long, default_value = "target/debug/model-routing")]
     routing_bin: PathBuf,
     #[arg(long, default_value = "reports/native-host-certification")]
@@ -305,19 +270,6 @@ fn run(cli: Cli) -> Result<()> {
                 ))?;
                 return Ok(());
             }
-            CertifyCommand::Pi(args) => {
-                if args.workflow.is_some() {
-                    certify::validate_pi(args.try_into()?)?;
-                    println!("pi runtime evidence validated");
-                    return Ok(());
-                }
-                certify::run_live_pi(certify::LiveRunArgs::new(
-                    args.routing_bin,
-                    args.report_root,
-                    args.timeout_seconds,
-                ))?;
-                return Ok(());
-            }
             CertifyCommand::Planr(args) => {
                 certify::run_planr(certify::PlanrRunArgs {
                     live: certify::LiveRunArgs::new(
@@ -425,7 +377,6 @@ mod tests {
                 "certify codex",
                 "certify cursor",
                 "certify opencode",
-                "certify pi",
                 "certify planr",
                 "verify offline",
                 "release prepare",

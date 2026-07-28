@@ -13,6 +13,9 @@ export type RoleId = (typeof ROLE_IDS)[number];
 export type HostId = (typeof HOST_IDS)[number];
 export type PresetId = (typeof PRESET_IDS)[number];
 export type SetupIntegration = "standalone" | "planr";
+export type OrchestrationPath = "native" | "extension";
+export type WorkflowValidationStatus = "certified" | "experimental" | "planned";
+export type WorkflowCapability = { codingAgent: string; executionPath: string; validationStatus: WorkflowValidationStatus; parentModel: string };
 
 export type ModelOption = {
   id: string;
@@ -26,10 +29,12 @@ export type ModelOption = {
 export type RoleAssignment = { model: string; effort?: string };
 export type GeneratorConfig = {
   host: HostId;
+  orchestration: OrchestrationPath;
   integration: SetupIntegration;
   usagePolicy: string;
   roles: ChildRoleId[];
   assignments: Record<RoleId, RoleAssignment>;
+  fallbackModels: Record<RoleId, string[]>;
 };
 export type PresetSelection = {
   selected: PresetId | "custom";
@@ -129,15 +134,15 @@ export const HOSTS: Record<HostId, {
   },
   pi: {
     label: "Pi",
-    note: "External runner workflows using isolated print-mode process execution; separate from host-native child threads.",
-    runtime: "external runner",
+    note: "Your active Pi session is the Orchestrator and delegates provider-qualified child roles through Pi Subagents.",
+    runtime: "Pi Subagents",
     effortLabel: "Thinking",
-    capabilities: { nativeParentRecommendation: false },
+    capabilities: { nativeParentRecommendation: true },
     defaults: {
-      orchestrator: { model: "openai/gpt-4o-mini", effort: "medium" },
-      implementer: { model: "openai/gpt-4o-mini", effort: "low" },
-      reviewer: { model: "anthropic/claude-sonnet-4-5", effort: "high" },
-      verifier: { model: "google/gemini-2.5-flash", effort: "low" },
+      orchestrator: { model: "openai-codex/gpt-5.6-terra", effort: "medium" },
+      implementer: { model: "anthropic/claude-sonnet-5", effort: "medium" },
+      reviewer: { model: "anthropic/claude-fable-5", effort: "high" },
+      verifier: { model: "openrouter/google/gemini-3.6-flash", effort: "low" },
     },
   },
 };
@@ -217,17 +222,17 @@ const PRESET_ASSIGNMENTS: Record<HostId, Record<PresetId, Record<RoleId, RoleAss
   },
   pi: {
     light: {
-      orchestrator: { model: "google/gemini-2.5-flash", effort: "low" },
-      implementer: { model: "google/gemini-2.5-flash", effort: "low" },
-      reviewer: { model: "openai/gpt-4o-mini", effort: "low" },
-      verifier: { model: "google/gemini-2.5-flash", effort: "low" },
+      orchestrator: { model: "openai-codex/gpt-5.6-luna", effort: "low" },
+      implementer: { model: "openai-codex/gpt-5.6-luna", effort: "low" },
+      reviewer: { model: "openai-codex/gpt-5.6-luna", effort: "low" },
+      verifier: { model: "openrouter/google/gemini-3.5-flash-lite", effort: "low" },
     },
     balanced: HOSTS.pi.defaults,
     high: {
-      orchestrator: { model: "anthropic/claude-sonnet-4-5", effort: "high" },
-      implementer: { model: "openai/gpt-4o-mini", effort: "high" },
-      reviewer: { model: "anthropic/claude-sonnet-4-5", effort: "xhigh" },
-      verifier: { model: "openai/gpt-4o-mini", effort: "xhigh" },
+      orchestrator: { model: "anthropic/claude-fable-5", effort: "high" },
+      implementer: { model: "openai-codex/gpt-5.6-sol", effort: "high" },
+      reviewer: { model: "anthropic/claude-opus-5", effort: "xhigh" },
+      verifier: { model: "openai-codex/gpt-5.6-terra", effort: "high" },
     },
   },
 };
@@ -244,9 +249,21 @@ function modelLabel(model: string) {
     "grok-4.5": "Grok 4.5",
     "composer-2.5": "Composer 2.5",
     "opencode/gpt-5-nano": "GPT 5 Nano",
-    "openai/gpt-4o-mini": "GPT 4o Mini",
-    "google/gemini-2.5-flash": "Gemini 2.5 Flash",
-    "anthropic/claude-sonnet-4-5": "Claude Sonnet 4.5",
+    "openai-codex/gpt-5.6-luna": "GPT-5.6 Luna",
+    "openai-codex/gpt-5.6-terra": "GPT-5.6 Terra",
+    "openai-codex/gpt-5.6-sol": "GPT-5.6 Sol",
+    "anthropic/claude-sonnet-5": "Claude Sonnet 5",
+    "anthropic/claude-opus-5": "Claude Opus 5",
+    "anthropic/claude-fable-5": "Claude Fable 5",
+    "openrouter/google/gemini-3.5-flash-lite": "Gemini 3.5 Flash-Lite",
+    "openrouter/google/gemini-3.6-flash": "Gemini 3.6 Flash",
+    "openrouter/x-ai/grok-4.5": "Grok 4.5",
+    "openrouter/moonshotai/kimi-k3": "Kimi K3",
+    "openrouter/minimax/minimax-m3": "MiniMax M3",
+    "openrouter/z-ai/glm-5.2": "GLM-5.2",
+    "openrouter/stepfun/step-3.7-flash": "Step 3.7 Flash",
+    "openrouter/xiaomi/mimo-v2.5": "MiMo V2.5",
+    "openrouter/auto": "Auto Router (dynamic)",
     "anthropic/claude-opus-4-5": "Claude Opus 4.5",
     opus: "Opus",
     sonnet: "Sonnet",
@@ -257,7 +274,16 @@ function modelLabel(model: string) {
 function modelProvider(model: string) {
   if (model.startsWith("gpt-")) return "OpenAI";
   if (model.startsWith("openai/")) return "OpenAI";
+  if (model.startsWith("openai-codex/")) return "OpenAI Codex";
   if (model.startsWith("google/")) return "Google";
+  if ([
+    "openrouter/moonshotai/kimi-k3",
+    "openrouter/minimax/minimax-m3",
+    "openrouter/z-ai/glm-5.2",
+    "openrouter/stepfun/step-3.7-flash",
+    "openrouter/xiaomi/mimo-v2.5",
+  ].includes(model)) return "OpenRouter · open weights";
+  if (model.startsWith("openrouter/")) return "OpenRouter";
   if (model.startsWith("opencode/")) return "OpenCode";
   if (model.startsWith("anthropic/")) return "Anthropic";
   if (model.startsWith("claude-") || model === "opus" || model === "sonnet" || model === "fable-5") return "Anthropic";
@@ -274,7 +300,15 @@ type CatalogShape = {
       binding?: string;
       models?: Array<{ id?: string; efforts?: string[]; tier?: string }>;
     }>;
+    workflowCapabilities?: { capabilities?: CatalogWorkflowCapability[] };
   };
+};
+
+type CatalogWorkflowCapability = {
+  codingAgent?: unknown;
+  executionPath?: unknown;
+  validationStatus?: unknown;
+  parentModel?: unknown;
 };
 
 export function hostCatalogFrom(catalog: CatalogShape): HostCatalog {
@@ -283,7 +317,7 @@ export function hostCatalogFrom(catalog: CatalogShape): HostCatalog {
   for (const host of HOST_IDS) {
     const setupHost = setupHosts.get(host);
     if (!setupHost?.binding) throw new Error(`canonical setup contract has no ${host} binding`);
-    const models = setupHost.models?.map((model) => {
+    const models = setupHost.models?.filter((model) => !model.id?.startsWith("openai-compatible/")).map((model) => {
       if (!model.id || !Array.isArray(model.efforts) || (model.tier !== "standard" && model.tier !== "premium")) {
         throw new Error(`canonical setup contract has invalid ${host} model entry`);
       }
@@ -316,6 +350,29 @@ export function hostCatalogFrom(catalog: CatalogShape): HostCatalog {
   return result;
 }
 
+export function workflowCapabilitiesFrom(catalog: CatalogShape): WorkflowCapability[] {
+  return (catalog.setupContract?.workflowCapabilities?.capabilities ?? []).map((capability, index) => {
+    if (
+      typeof capability.codingAgent !== "string"
+      || typeof capability.executionPath !== "string"
+      || typeof capability.parentModel !== "string"
+      || !isWorkflowValidationStatus(capability.validationStatus)
+    ) {
+      throw new Error(`canonical setup contract has invalid workflow capability at index ${index}`);
+    }
+    return {
+      codingAgent: capability.codingAgent,
+      executionPath: capability.executionPath,
+      validationStatus: capability.validationStatus,
+      parentModel: capability.parentModel,
+    };
+  });
+}
+
+function isWorkflowValidationStatus(value: unknown): value is WorkflowValidationStatus {
+  return value === "certified" || value === "experimental" || value === "planned";
+}
+
 export function setupTransportFrom(catalog: CatalogShape) {
   const recipePrefix = catalog.setupContract?.recipePrefix;
   const configPath = catalog.setupContract?.configPath;
@@ -326,11 +383,17 @@ export function setupTransportFrom(catalog: CatalogShape) {
 export function createConfig(host: HostId = "codex"): GeneratorConfig {
   return {
     host,
+    orchestration: host === "pi" ? "extension" : "native",
     integration: "standalone",
     usagePolicy: "balanced",
     roles: [...CHILD_ROLE_IDS],
     assignments: structuredClone(HOSTS[host].defaults),
+    fallbackModels: emptyFallbackModels(),
   };
+}
+
+function emptyFallbackModels(): Record<RoleId, string[]> {
+  return { orchestrator: [], implementer: [], reviewer: [], verifier: [] };
 }
 
 export function isPrimaryRecommendationId(role: string): role is PrimaryRecommendationId {
@@ -371,6 +434,9 @@ export function parentRecommendationEffortCopy(config: GeneratorConfig, preset: 
   if (!recommendation.assignment.effort || !effortLabel) {
     return `${PRESETS[preset].label} keeps ${host.label} parent orchestration host-managed.`;
   }
+  if (config.host === "pi") {
+    return `Use ${modelLabel(recommendation.assignment.model)} with Pi ${effortLabel} ${effortDisplayName(recommendation.assignment.effort)} in the active session.`;
+  }
   return `Set ${host.label} ${effortLabel} to ${effortDisplayName(recommendation.assignment.effort)}.`;
 }
 
@@ -398,6 +464,17 @@ export function changeHost(config: GeneratorConfig, host: HostId): GeneratorConf
   return { ...createConfig(host), integration: config.integration, roles: [...config.roles] };
 }
 
+export function setOrchestration(config: GeneratorConfig, orchestration: OrchestrationPath): GeneratorConfig {
+  if (config.host === "pi" && orchestration !== "extension") throw new Error("Pi uses Pi Subagents");
+  if (orchestration === "extension" && config.host !== "pi") throw new Error("Pi is the only extension-backed runtime");
+  return { ...config, orchestration };
+}
+
+export function workflowValidationStatus(config: GeneratorConfig, capabilities: readonly WorkflowCapability[]): WorkflowValidationStatus {
+  const path = config.host === "pi" ? "extension" : config.host === "claude-code" ? "sidecar" : "native";
+  return capabilities.find((entry) => entry.codingAgent === config.host && entry.executionPath === path)?.validationStatus ?? "experimental";
+}
+
 export function setIntegration(config: GeneratorConfig, integration: SetupIntegration): GeneratorConfig {
   return { ...config, integration };
 }
@@ -413,10 +490,15 @@ export function applyPreset(config: GeneratorConfig, preset: PresetId, catalog: 
       throw new Error(`${preset} preset has no ${config.host} effort for ${role}: ${assignment.effort}`);
     }
   }
-  return { ...config, usagePolicy: PRESET_USAGE_POLICIES[preset], assignments };
+  return { ...config, usagePolicy: PRESET_USAGE_POLICIES[preset], assignments, fallbackModels: emptyFallbackModels() };
 }
 
 export function setRoles(config: GeneratorConfig, roles: readonly string[]): GeneratorConfig {
+  if (config.host === "pi") {
+    const alreadyComplete = config.roles.length === CHILD_ROLE_IDS.length
+      && CHILD_ROLE_IDS.every((role, index) => config.roles[index] === role);
+    return alreadyComplete ? config : { ...config, roles: [...CHILD_ROLE_IDS] };
+  }
   const selected = new Set(roles);
   const valid = CHILD_ROLE_IDS.filter((role) => selected.has(role));
   return { ...config, roles: valid.length > 0 ? valid : config.roles };
@@ -468,6 +550,13 @@ export function setEffort(config: GeneratorConfig, role: RoleId, effort: string,
   return { ...config, assignments: { ...config.assignments, [role]: { ...assignment, effort } } };
 }
 
+export function setFallbackModels(config: GeneratorConfig, role: RoleId, models: readonly string[], catalog: HostCatalog): GeneratorConfig {
+  if (config.host !== "pi") throw new Error("fallbacks require Pi Subagents");
+  const supported = new Set(catalog.pi.models.map((model) => model.id));
+  if (models.some((model) => !supported.has(model) || model === config.assignments[role].model)) throw new Error("unsupported Pi fallback model");
+  return { ...config, fallbackModels: { ...config.fallbackModels, [role]: [...new Set(models)] } };
+}
+
 export type SetupSpecV1 = {
   schema_version: 1;
   host: string;
@@ -484,6 +573,15 @@ export type SetupSpecV1 = {
   }>;
   routes: Array<{ work_type: string; role: string; fallbacks: string[] }>;
   route_default?: { role: string; fallbacks: string[] };
+  workflow?: {
+    schema_version: 1;
+    coding_agent: "pi";
+    execution_path: "extension";
+    validation_status: "experimental";
+    parent_model: "runtime-managed";
+    topology: "sequential";
+    roles: Record<string, { provider: string; model: string; thinking?: string; fallback_models: string[] }>;
+  };
 };
 
 function routingRole(config: GeneratorConfig, preferred: ChildRoleId, fallbacks: readonly ChildRoleId[] = []) {
@@ -493,6 +591,17 @@ function routingRole(config: GeneratorConfig, preferred: ChildRoleId, fallbacks:
     if (selected.has(role)) return role;
   }
   return selectedRoles[0];
+}
+
+function splitProviderModel(qualifiedModel: string) {
+  const separator = qualifiedModel.indexOf("/");
+  if (separator <= 0 || separator === qualifiedModel.length - 1) {
+    throw new Error(`model must use provider/model form: ${qualifiedModel}`);
+  }
+  return {
+    provider: qualifiedModel.slice(0, separator),
+    model: qualifiedModel.slice(separator + 1),
+  };
 }
 
 export function setupSpec(config: GeneratorConfig, catalog: HostCatalog): SetupSpecV1 {
@@ -514,9 +623,43 @@ export function setupSpec(config: GeneratorConfig, catalog: HostCatalog): SetupS
         : {}),
     };
   }
+  const codeRole = routingRole(config, "implementer", ["reviewer", "verifier"]);
+  const reviewRole = routingRole(config, "reviewer", ["verifier", "implementer"]);
+  const verificationRole = routingRole(config, "verifier", ["reviewer", "implementer"]);
+  if (config.host === "pi") {
+    return {
+      schema_version: 1,
+      host: catalog.pi.binding,
+      integration: config.integration,
+      usage_policy: config.usagePolicy,
+      selected_roles,
+      routes: [
+        { work_type: "code", role: codeRole, fallbacks: [] },
+        { work_type: "review", role: reviewRole, fallbacks: [] },
+        { work_type: "verification", role: verificationRole, fallbacks: [] },
+      ],
+      workflow: {
+        schema_version: 1,
+        coding_agent: "pi",
+        execution_path: "extension",
+        validation_status: "experimental",
+        parent_model: "runtime-managed",
+        topology: "sequential",
+        roles: Object.fromEntries((Object.entries(selected_roles) as [ChildRoleId, SetupSpecV1["selected_roles"][ChildRoleId]][]).map(([role, selection]) => {
+          const { provider, model } = splitProviderModel(selection.model);
+          return [role, {
+            provider,
+            model,
+            ...(selection.effort ? { thinking: selection.effort } : {}),
+            fallback_models: config.fallbackModels[role].map((fallback) => splitProviderModel(fallback).model),
+          }];
+        })),
+      },
+    };
+  }
   if (!hasNativeParentRecommendation) {
     const reviewFallback = routingRole(config, "reviewer");
-    return {
+    const spec: SetupSpecV1 = {
       schema_version: 1,
       host: catalog[config.host].binding,
       integration: config.integration,
@@ -530,10 +673,8 @@ export function setupSpec(config: GeneratorConfig, catalog: HostCatalog): SetupS
       ],
       route_default: { role: PRIMARY_RECOMMENDATION_ID, fallbacks: [] },
     };
+    return spec;
   }
-  const codeRole = routingRole(config, "implementer", ["reviewer", "verifier"]);
-  const reviewRole = routingRole(config, "reviewer", ["verifier", "implementer"]);
-  const verificationRole = routingRole(config, "verifier", ["reviewer", "implementer"]);
   return {
     schema_version: 1,
     host: catalog[config.host].binding,
@@ -562,6 +703,78 @@ export function setupRecipe(config: GeneratorConfig, catalog: HostCatalog, recip
   return `${recipePrefix}${base64Url(new TextEncoder().encode(jsonRecipePayload(setupSpec(config, catalog))))}`;
 }
 
+function decodeBase64Url(value: string) {
+  const padded = value.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  const binary = atob(padded);
+  return new TextDecoder().decode(Uint8Array.from(binary, (character) => character.charCodeAt(0)));
+}
+
+/**
+ * Restores only recipes this version can reproduce exactly. This keeps stale or
+ * hand-edited links from silently becoming a different team configuration.
+ */
+export function configFromRecipe(recipe: string, catalog: HostCatalog, recipePrefix = "sw1_"): GeneratorConfig | null {
+  if (!recipe.startsWith(recipePrefix)) return null;
+  try {
+    const spec = JSON.parse(decodeBase64Url(recipe.slice(recipePrefix.length))) as Partial<SetupSpecV1>;
+    const host = HOST_IDS.find((id) => catalog[id].binding === spec.host);
+    if (!host || (spec.integration !== "standalone" && spec.integration !== "planr") || typeof spec.usage_policy !== "string") return null;
+    if (!spec.selected_roles || typeof spec.selected_roles !== "object") return null;
+
+    const orchestration: OrchestrationPath = host === "pi" ? "extension" : "native";
+    const roleEntries = Object.entries(spec.selected_roles);
+    const selectedRoles = roleEntries.map(([role]) => role);
+    const childRoles = CHILD_ROLE_IDS.filter((role) => selectedRoles.includes(role));
+    if (host === "pi" && (childRoles.length !== CHILD_ROLE_IDS.length || CHILD_ROLE_IDS.some((role) => !childRoles.includes(role)))) return null;
+    const restoredBase = { ...createConfig(host), orchestration };
+    const expectedRoles = canRenderParentRecommendation(restoredBase) ? childRoles : [PRIMARY_RECOMMENDATION_ID, ...childRoles];
+    if (childRoles.length === 0 || selectedRoles.length !== expectedRoles.length || expectedRoles.some((role) => !selectedRoles.includes(role))) return null;
+
+    const config: GeneratorConfig = {
+      ...restoredBase,
+      orchestration,
+      integration: spec.integration,
+      usagePolicy: spec.usage_policy,
+      roles: childRoles,
+    };
+    for (const role of expectedRoles) {
+      const selection = spec.selected_roles[role];
+      const model = catalog[host].models.find((candidate) => candidate.id === selection?.model);
+      if (!model || (selection.effort !== undefined && !model.efforts.includes(selection.effort))) return null;
+      config.assignments[role] = { model: selection.model, ...(selection.effort ? { effort: selection.effort } : {}) };
+    }
+    if (host === "pi") {
+      const workflow = spec.workflow;
+      if (
+        !workflow
+        || workflow.coding_agent !== "pi"
+        || workflow.execution_path !== "extension"
+        || !workflow.roles
+        || "model_access" in workflow
+        || (workflow as { selection_mode?: unknown }).selection_mode === "gateway_auto"
+      ) return null;
+      for (const role of expectedRoles) {
+        const workflowRole = workflow.roles[role];
+        if (!workflowRole || !Array.isArray(workflowRole.fallback_models)) return null;
+        const fallbacks = workflowRole.fallback_models.map((fallback) =>
+          catalog.pi.models.find((candidate) => splitProviderModel(candidate.id).model === fallback)?.id,
+        );
+        if (fallbacks.some((fallback) => !fallback)) return null;
+        config.fallbackModels[role] = fallbacks as string[];
+      }
+    }
+    return setupRecipe(config, catalog, recipePrefix) === recipe ? config : null;
+  } catch {
+    return null;
+  }
+}
+
+export function shareUrl(config: GeneratorConfig, catalog: HostCatalog, currentUrl: string, recipePrefix = "sw1_") {
+  const url = new URL(currentUrl);
+  url.searchParams.set("recipe", setupRecipe(config, catalog, recipePrefix));
+  return url.toString();
+}
+
 function tomlString(value: string) {
   return JSON.stringify(value);
 }
@@ -584,6 +797,27 @@ export function setupConfigToml(config: GeneratorConfig, catalog: HostCatalog) {
   }
   if (spec.route_default) {
     lines.push("[route_default]", `role = ${tomlString(spec.route_default.role)}`, `fallbacks = ${tomlArray(spec.route_default.fallbacks)}`, "");
+  }
+  if (spec.workflow) {
+    lines.push(
+      "[workflow]",
+      `schema_version = ${spec.workflow.schema_version}`,
+      `coding_agent = ${tomlString(spec.workflow.coding_agent)}`,
+      `execution_path = ${tomlString(spec.workflow.execution_path)}`,
+      `validation_status = ${tomlString(spec.workflow.validation_status)}`,
+      `parent_model = ${tomlString(spec.workflow.parent_model)}`,
+      `topology = ${tomlString(spec.workflow.topology)}`,
+      "",
+    );
+    for (const [role, selection] of Object.entries(spec.workflow.roles)) {
+      lines.push(
+        `[workflow.roles.${role}]`,
+        `provider = ${tomlString(selection.provider)}`,
+        `model = ${tomlString(selection.model)}`,
+      );
+      if (selection.thinking) lines.push(`thinking = ${tomlString(selection.thinking)}`);
+      lines.push(`fallback_models = ${tomlArray(selection.fallback_models)}`, "");
+    }
   }
   for (const role of setupSpecRoleIds(config)) {
     const selection = spec.selected_roles[role];
@@ -610,6 +844,9 @@ export function shellQuote(value: string) {
 }
 
 export function recipeApplyCommand(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_") {
+  if (config.host === "pi") {
+    return "# Pi Subagents is Experimental until credentialed live runtime receipts are available; no applyable recipe is emitted.";
+  }
   return `npx switchloom@${SWITCHLOOM_VERSION} apply --recipe ${shellQuote(setupRecipe(config, catalog, recipePrefix))} --repository .`;
 }
 

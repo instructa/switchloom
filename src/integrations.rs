@@ -1,5 +1,4 @@
 use crate::contracts::*;
-use serde_json::{Value, json};
 
 pub(crate) fn render_planr_native_role(artifact: &SourceArtifact) -> String {
     let protocol = if is_reviewer_role(artifact) {
@@ -18,9 +17,7 @@ pub(crate) fn render_planr_native_role(artifact: &SourceArtifact) -> String {
     let Some((protocol_name, instructions)) = protocol else {
         return artifact.content.clone();
     };
-    if artifact.path.starts_with(".pi/workflows/") {
-        rewrite_json_workflow_protocol_preload(&artifact.content, protocol_name, instructions)
-    } else if artifact.path.starts_with(".codex/agents/") {
+    if artifact.path.starts_with(".codex/agents/") {
         rewrite_codex_developer_instructions(&artifact.content, protocol_name, instructions)
     } else {
         rewrite_markdown_agent_body(&artifact.content, protocol_name, instructions)
@@ -35,7 +32,6 @@ pub(crate) fn is_worker_role(artifact: &SourceArtifact) -> bool {
     artifact.path.contains("terra-high")
         || artifact.path.contains("luna-xhigh")
         || artifact.path.contains("preset-worker")
-        || artifact.path.starts_with(".pi/workflows/")
         || artifact.path.contains("implementer")
         || artifact.content.contains("Normal implementation")
         || artifact.content.contains("Bounded checklist")
@@ -90,26 +86,4 @@ pub(crate) fn rewrite_markdown_agent_body(
         }
     }
     format!("Protocol preload: {protocol_name}\n\n{instructions}\n")
-}
-
-pub(crate) fn rewrite_json_workflow_protocol_preload(
-    content: &str,
-    protocol_name: &str,
-    instructions: &str,
-) -> String {
-    let mut value: Value = serde_json::from_str(content).unwrap_or_else(|_| json!({}));
-    if let Some(object) = value.as_object_mut() {
-        object.insert(
-            "protocol_preload".to_string(),
-            json!({
-                "marker": format!("Protocol preload: {protocol_name}"),
-                "instructions": instructions
-            }),
-        );
-    }
-    let mut output = serde_json::to_string_pretty(&value).unwrap_or_else(|_| {
-        format!("{content}\n\nProtocol preload: {protocol_name}\n{instructions}\n")
-    });
-    output.push('\n');
-    output
 }
