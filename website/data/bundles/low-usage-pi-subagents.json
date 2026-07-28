@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "bundle_id": "low-usage-pi-external@1.0.0+1.0.0",
+  "bundle_id": "low-usage-pi-subagents@1.0.0+1.0.0",
   "policy_id": "low-usage",
   "policy_version": "1.0.0",
   "generated_at": "2026-07-16T00:00:00Z",
   "source": {
     "package": "model-routing",
-    "package_version": "0.3.4",
+    "package_version": "0.3.5",
     "integration": "standalone"
   },
   "policy": {
@@ -88,17 +88,24 @@
     }
   ],
   "profiles": {
-    "pi-driver": {
+    "pi-implementer": {
       "client": "pi",
-      "model": "openai/gpt-4o-mini",
-      "agent_type": "switchloom-pi-driver",
+      "model": "openai-codex/gpt-5.6-terra",
       "effort": "medium",
       "cost_tier": "standard"
     },
-    "pi-worker": {
+    "pi-reviewer": {
       "client": "pi",
-      "model": "openai/gpt-4o-mini",
-      "agent_type": "switchloom-pi-worker",
+      "model": "anthropic/claude-fable-5",
+      "effort": "medium",
+      "cost_tier": "premium",
+      "fork_turns": {
+        "mode": "none"
+      }
+    },
+    "pi-verifier": {
+      "client": "pi",
+      "model": "openrouter/google/gemini-3.6-flash",
       "effort": "low",
       "cost_tier": "standard",
       "fork_turns": {
@@ -111,28 +118,58 @@
       "match": {
         "work_type": "code"
       },
-      "profile": "pi-worker",
+      "profile": "pi-implementer",
       "fallbacks": [
-        "pi-driver"
+        "pi-reviewer"
+      ]
+    },
+    {
+      "match": {
+        "work_type": "review"
+      },
+      "profile": "pi-reviewer",
+      "fallbacks": [
+        "pi-verifier"
       ]
     }
   ],
   "route_default": {
-    "profile": "pi-driver",
+    "profile": "pi-implementer",
     "fallbacks": []
   },
   "artifacts": [
     {
-      "path": ".pi/workflows/model-routing-preset-runner.json",
+      "path": ".pi/agents/switchloom-implementer.md",
+      "media_type": "text/markdown",
+      "mode": "create",
+      "content": "---\nname: switchloom-implementer\nmodel: openai-codex/gpt-5.6-terra\nthinking: medium\ninheritProjectContext: true\n---\nExecute the assigned implementation task and report concrete results to the active Pi parent session.\n",
+      "sha256": "42911106bb4744bf738723e44ebd5b2a61e2dd065554266226110d06dd25d43c"
+    },
+    {
+      "path": ".pi/agents/switchloom-reviewer.md",
+      "media_type": "text/markdown",
+      "mode": "create",
+      "content": "---\nname: switchloom-reviewer\nmodel: anthropic/claude-fable-5\nthinking: medium\ninheritProjectContext: true\n---\nReview the assigned change and report concrete findings to the active Pi parent session.\n",
+      "sha256": "4248ffda48e22c5d8c3fe46fcdb3f49ce79a9f63628f16dc26a6f067515ae0b5"
+    },
+    {
+      "path": ".pi/agents/switchloom-verifier.md",
+      "media_type": "text/markdown",
+      "mode": "create",
+      "content": "---\nname: switchloom-verifier\nmodel: openrouter/google/gemini-3.6-flash\nthinking: low\ninheritProjectContext: true\n---\nVerify the assigned change and report concrete evidence to the active Pi parent session.\n",
+      "sha256": "620ff9614032c58d1b4749bf0c90cb687d92561beea10505aea7db391ec8dbc8"
+    },
+    {
+      "path": ".pi/settings.json",
       "media_type": "application/json",
       "mode": "create",
-      "content": "{\n  \"schema_version\": 1,\n  \"workflow\": \"model-routing-preset-runner\",\n  \"runner\": \"pi\",\n  \"runtime_class\": \"external-runner\",\n  \"arguments\": {\n    \"agent_type\": \"switchloom-pi-worker\",\n    \"provider_model\": \"openai/gpt-4o-mini\",\n    \"thinking\": \"low\",\n    \"isolation\": {\n      \"session\": \"none\",\n      \"tools\": \"none\",\n      \"extensions\": \"none\",\n      \"skills\": \"none\",\n      \"agent_dir\": \"report-workdir/.pi-agent\"\n    },\n    \"task\": {\n      \"semantic_role\": \"worker\",\n      \"profile\": \"pi-worker\",\n      \"returns\": \"nonce-only\"\n    }\n  },\n  \"process\": {\n    \"argv\": [\n      \"pi\",\n      \"--print\",\n      \"--no-session\",\n      \"--no-tools\",\n      \"--no-extensions\",\n      \"--no-skills\",\n      \"--provider\",\n      \"openai\",\n      \"--model\",\n      \"gpt-4o-mini\",\n      \"--thinking\",\n      \"low\"\n    ],\n    \"state_boundary\": \"PI_CODING_AGENT_DIR is set to a report-local directory for every certification run\"\n  },\n  \"security\": {\n    \"filesystem_tools\": \"disabled\",\n    \"session_persistence\": \"disabled\",\n    \"native_subagents\": \"not used\",\n    \"certification_requirement\": \"A persisted workflow receipt must include the dynamic nonce returned by a live Pi child process before advisory runtime evidence is accepted.\"\n  }\n}\n",
-      "sha256": "cc139567f4ee91ed0ef1fb39b11df1e5ffbb24e1a66a0b57ed2e6c904db1488b"
+      "content": "{\n  \"extensions\": [\"npm:pi-subagents\"],\n  \"subagents\": {\n    \"agentOverrides\": {\n      \"switchloom-implementer\": { \"model\": \"openai-codex/gpt-5.6-terra\", \"thinking\": \"medium\" },\n      \"switchloom-reviewer\": { \"model\": \"anthropic/claude-fable-5\", \"thinking\": \"medium\" },\n      \"switchloom-verifier\": { \"model\": \"openrouter/google/gemini-3.6-flash\", \"thinking\": \"low\" }\n    }\n  }\n}\n",
+      "sha256": "0de87fc36e862dee77576ef6edc20c69b03bbc6686bdfb88cef57bb93b787f44"
     }
   ],
   "evidence": {
     "evaluation_ids": [
-      "builtin-pi-external-v1"
+      "builtin-pi-subagents-v1"
     ],
     "status": "experimental"
   },
@@ -142,21 +179,28 @@
       "schema_version": 1,
       "integration": "standalone",
       "semantic_roles": [
-        "driver",
-        "worker"
+        "implementer",
+        "reviewer",
+        "verifier"
       ],
       "role_requests": [
         {
-          "semantic_role": "driver",
-          "requested_model": "openai/gpt-4o-mini",
+          "semantic_role": "implementer",
+          "requested_model": "openai-codex/gpt-5.6-terra",
           "requested_effort": "medium",
-          "instructions": "Route `driver` through `pi-driver`."
+          "instructions": "Route `implementer` through `pi-implementer`."
         },
         {
-          "semantic_role": "worker",
-          "requested_model": "openai/gpt-4o-mini",
+          "semantic_role": "reviewer",
+          "requested_model": "anthropic/claude-fable-5",
+          "requested_effort": "medium",
+          "instructions": "Route `reviewer` through `pi-reviewer`."
+        },
+        {
+          "semantic_role": "verifier",
+          "requested_model": "openrouter/google/gemini-3.6-flash",
           "requested_effort": "low",
-          "instructions": "Route `worker` through `pi-worker`."
+          "instructions": "Route `verifier` through `pi-verifier`."
         }
       ],
       "required_guarantees": [
@@ -170,9 +214,9 @@
       "host_version_constraints": {
         "evidence_max_age_seconds": 31536000
       },
-      "runtime_class": "external-runner",
+      "runtime_class": "native-subagent",
       "runtime_behavior": {
-        "capability_version": "builtin-pi-external-v1",
+        "capability_version": "builtin-pi-subagents-v1",
         "installed_host_version_source": "pi --version",
         "backend_selection_source": "host account, workspace, provider, or runner configuration outside Switchloom ownership",
         "trust_boundary": "repository-local generated artifacts are Switchloom-managed; host authentication, account policy, and execution state are host-owned",
@@ -181,30 +225,24 @@
           "Switchloom declares requested semantic role, profile, model, effort, and artifacts",
           "the host runtime remains the authority for effective execution"
         ],
-        "shared_filesystem": false,
+        "shared_filesystem": true,
         "delegation_modes": {
           "explicit_agent_type_dispatch": true,
           "ultra_auto_delegation": false,
           "automatic_delegation_requires_ultra": false
         },
         "source_references": [
-          "builtin-pi-external-runner-contract",
-          "pi-print-mode-process-contract"
+          "builtin-pi-subagents-contract"
         ]
       },
       "discovery_artifacts": [
-        "builtin-pi-external-runner-contract",
-        "pi-print-mode-process-contract"
+        "builtin-pi-subagents-contract"
       ],
       "dispatch_fields": [
         "profile",
         "model",
-        "provider",
         "effort",
-        "agent_type",
-        "fork_turns",
-        "isolation",
-        "task"
+        "fork_turns"
       ],
       "model_control": {
         "level": "advisory",
@@ -234,8 +272,7 @@
         "effective_identity": "advisory",
         "effective_model": "advisory",
         "raw_evidence_refs": [
-          "builtin-pi-external-runner-contract",
-          "pi-print-mode-process-contract"
+          "builtin-pi-subagents-contract"
         ]
       },
       "guarantees": {
@@ -266,34 +303,32 @@
         }
       },
       "known_limitations": [
-        "Pi external runner execution is process-isolated from native subagent discovery and does not create host-native child agents",
-        "Provider credentials, model availability, and network policy are controlled by Pi and the configured provider",
-        "The workflow receipt is advisory unless a live Pi print-mode child returns the nonce from an isolated session directory"
+        "Effective child model remains advisory until a live Pi Subagents receipt exposes the executed identity",
+        "Provider credentials and model availability are configured in Pi, never in Switchloom artifacts"
       ]
     },
     "adapter": {
       "schema_version": 1,
-      "adapter_id": "pi-external",
+      "adapter_id": "pi-subagents",
       "adapter_version": "1.0.0",
-      "runtime_class": "external-runner",
+      "runtime_class": "native-subagent",
       "accepts_intent_schema": "RoutingIntentV1",
       "emitted_artifact_modes": [
         "create"
       ],
       "dispatch_recipe": {
-        "invocation": "external-runner-process",
+        "invocation": "host-native-subagent",
         "required_fields": [
           "profile",
           "model",
-          "provider",
           "effort",
-          "agent_type",
-          "fork_turns",
-          "isolation",
-          "task"
+          "fork_turns"
         ],
         "artifact_paths": [
-          ".pi/workflows/model-routing-preset-runner.json"
+          ".pi/agents/switchloom-implementer.md",
+          ".pi/agents/switchloom-reviewer.md",
+          ".pi/agents/switchloom-verifier.md",
+          ".pi/settings.json"
         ]
       },
       "lifecycle_owner": "switchloom-managed"
@@ -309,7 +344,7 @@
     },
     "planr_handoff": {
       "schema_version": 1,
-      "switchloom_package": "switchloom@0.3.4",
+      "switchloom_package": "switchloom@0.3.5",
       "semantic_role_contract": "Planr supplies usage policy `low-usage`, work_type routes, and semantic roles; Switchloom owns the selected host binding, model, effort, fork/context policy, and generated dispatch artifacts.",
       "required_consumer_behavior": [
         "Consume RoutingIntentV1 as the only source for semantic_role, work_type, selected profile, model, effort, agent_type, and fork_turns inputs.",
