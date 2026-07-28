@@ -1,6 +1,5 @@
-use super::{OpencodeInput, PiInput, validate_codex, validate_opencode, validate_pi};
+use super::{OpencodeInput, validate_codex, validate_opencode};
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 use std::{
     fs,
     path::PathBuf,
@@ -176,63 +175,4 @@ fn opencode_accepts_only_correlated_structured_task_results() {
     assert!(validate_opencode(opencode_input(&dir, &[json!({"type":"message","agent":"driver","text":"model-routing-preset-worker returned nonce-123"})])).is_err());
     let dir = TempDir::new("opencode-tamper");
     assert!(validate_opencode(opencode_input(&dir, &[json!({"type":"tool_call","tool":"Task","id":"call-1","agent":"model-routing-preset-worker"}), json!({"type":"tool_result","toolCallID":"call-1","agent":"other-worker","result":"nonce-123"})])).is_err());
-}
-
-fn pi_fixture(dir: &TempDir) -> PiInput {
-    let argv = [
-        "pi",
-        "--print",
-        "--no-session",
-        "--no-tools",
-        "--no-extensions",
-        "--no-skills",
-        "--provider",
-        "openai",
-        "--model",
-        "gpt-4o-mini",
-        "--thinking",
-        "low",
-    ];
-    let nonce = "nonce-123";
-    let prompt = format!(
-        "sha256:{:x}",
-        Sha256::digest(format!("Return only this nonce and no other text: {nonce}"))
-    );
-    let workflow = json!({"schema_version":1,"workflow":"model-routing-preset-runner","runner":"pi","runtime_class":"external-runner","arguments":{"agent_type":"switchloom-pi-worker","provider_model":"openai/gpt-4o-mini","thinking":"low","isolation":{"session":"none","tools":"none","extensions":"none","skills":"none","agent_dir":"report-workdir/.pi-agent"},"task":{"semantic_role":"worker","returns":"nonce-only"}},"process":{"argv":argv}});
-    let invocation_argv = ["env", "PI_CODING_AGENT_DIR=.pi-agent", "PI_OFFLINE=1"]
-        .into_iter()
-        .chain(argv)
-        .collect::<Vec<_>>();
-    let invocation = json!({"nonce":nonce,"argv":invocation_argv,"env":{"PI_CODING_AGENT_DIR":".pi-agent","PI_OFFLINE":"1"},"prompt_sha256":prompt});
-    PiInput {
-        workflow: dir.write("workflow.json", serde_json::to_vec(&workflow).unwrap()),
-        invocation: dir.write("invocation.json", serde_json::to_vec(&invocation).unwrap()),
-        stdout: dir.write("stdout", nonce),
-        stderr: dir.write("stderr", ""),
-        workflow_receipt: dir.0.join("workflow-receipt.json"),
-        dispatch_receipt: dir.0.join("dispatch.json"),
-        package_digest: format!("sha256:{}", "b".repeat(64)),
-        host_version: "0.66.1".into(),
-        profile: "pi-worker".into(),
-        model: "openai/gpt-4o-mini".into(),
-        thinking: "low".into(),
-        agent_type: "switchloom-pi-worker".into(),
-    }
-}
-
-#[test]
-fn pi_accepts_nonce_only_and_rejects_prose_or_tampered_workflow() {
-    let dir = TempDir::new("pi-valid");
-    validate_pi(pi_fixture(&dir)).unwrap();
-    let dir = TempDir::new("pi-prose");
-    let mut input = pi_fixture(&dir);
-    input.stdout = dir.write("stdout-bad", "nonce-123 plus prose");
-    assert!(validate_pi(input).is_err());
-    let dir = TempDir::new("pi-tamper");
-    let input = pi_fixture(&dir);
-    let mut workflow: Value =
-        serde_json::from_str(&fs::read_to_string(&input.workflow).unwrap()).unwrap();
-    workflow["arguments"]["isolation"]["tools"] = json!("default");
-    fs::write(&input.workflow, serde_json::to_vec(&workflow).unwrap()).unwrap();
-    assert!(validate_pi(input).is_err());
 }

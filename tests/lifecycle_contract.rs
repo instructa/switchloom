@@ -45,6 +45,40 @@ fn write_bundle_file(repository: &Path, name: &str, bundle: &RoutingBundleV1) ->
     bundle_file
 }
 
+fn assert_non_actionable_workflow_lifecycle(
+    repository: &Path,
+    spec: &SetupSpecV1,
+    runtime_artifacts: &[&str],
+) {
+    let config_file = repository.join("non-actionable-workflow.setup.toml");
+    fs::write(
+        &config_file,
+        toml::to_string_pretty(spec).expect("workflow setup config serializes"),
+    )
+    .unwrap();
+
+    let expected = "workflow is experimental and cannot be applied as certified support";
+    assert_eq!(
+        preview_setup_config_file(repository, &config_file)
+            .unwrap_err()
+            .to_string(),
+        expected
+    );
+    assert_eq!(
+        apply_setup_config_file(repository, &config_file)
+            .unwrap_err()
+            .to_string(),
+        expected
+    );
+    assert!(!repository.join(".switchloom/manifest.json").exists());
+    for artifact in runtime_artifacts {
+        assert!(
+            !repository.join(artifact).exists(),
+            "rejected workflow must not create {artifact}"
+        );
+    }
+}
+
 fn assert_codex_config_entry(content: &str, agent_type: &str, config_file: &str) {
     let parsed: toml::Value = toml::from_str(content).unwrap();
     assert_eq!(
@@ -204,6 +238,212 @@ fn setup_recipe_apply_persists_config_and_rejects_existing_conflicts() {
 }
 
 #[test]
+fn pi_subagents_workflow_lifecycle_manages_extension_agents_and_chain() {
+    let repository = temp_repo("pi-subagents-workflow");
+    let mut spec = setup_spec_for_policy("balanced", "pi", Integration::Standalone).unwrap();
+    spec.selected_roles.get_mut("implementer").unwrap().model =
+        "openai-codex/gpt-5.6-terra".to_string();
+    spec.selected_roles.get_mut("implementer").unwrap().effort = Some("medium".to_string());
+    spec.selected_roles.get_mut("reviewer").unwrap().model = "anthropic/claude-fable-5".to_string();
+    spec.selected_roles.get_mut("reviewer").unwrap().effort = Some("high".to_string());
+    spec.selected_roles.get_mut("verifier").unwrap().model =
+        "openrouter/google/gemini-3.6-flash".to_string();
+    spec.selected_roles.get_mut("verifier").unwrap().effort = Some("low".to_string());
+    spec.workflow = Some(WorkflowRequestV1 {
+        schema_version: 1,
+        coding_agent: CodingAgentRuntime::Pi,
+        execution_path: ExecutionPath::Extension,
+        validation_status: ValidationStatus::Experimental,
+        parent_model: ParentModelGuidance::RuntimeManaged,
+        topology: WorkflowTopology::Sequential,
+        model_access: None,
+        roles: std::collections::BTreeMap::from([
+            (
+                "implementer".to_string(),
+                WorkflowRoleRequestV1 {
+                    provider: "openai-codex".to_string(),
+                    model: "gpt-5.6-terra".to_string(),
+                    selection_mode: ModelSelectionMode::Fixed,
+                    thinking: Some("medium".to_string()),
+                    fallback_models: vec!["google/gemini-3.6-flash".to_string()],
+                },
+            ),
+            (
+                "reviewer".to_string(),
+                WorkflowRoleRequestV1 {
+                    provider: "anthropic".to_string(),
+                    model: "claude-fable-5".to_string(),
+                    selection_mode: ModelSelectionMode::Fixed,
+                    thinking: Some("high".to_string()),
+                    fallback_models: Vec::new(),
+                },
+            ),
+            (
+                "verifier".to_string(),
+                WorkflowRoleRequestV1 {
+                    provider: "openrouter".to_string(),
+                    model: "google/gemini-3.6-flash".to_string(),
+                    selection_mode: ModelSelectionMode::Fixed,
+                    thinking: Some("low".to_string()),
+                    fallback_models: Vec::new(),
+                },
+            ),
+        ]),
+    });
+    assert_non_actionable_workflow_lifecycle(
+        &repository,
+        &spec,
+        &[
+            ".pi/settings.json",
+            ".pi/agents/switchloom-implementer.md",
+            ".pi/chains/switchloom-workflow.chain.md",
+        ],
+    );
+}
+
+#[test]
+fn opencode_access_bearing_workflow_is_rejected_before_lifecycle_writes() {
+    let repository = temp_repo("opencode-access-workflow");
+    let mut spec = setup_spec_for_policy("balanced", "opencode", Integration::Standalone).unwrap();
+    for selection in spec.selected_roles.values_mut() {
+        selection.model = "openrouter/auto".to_string();
+        selection.effort = Some("medium".to_string());
+    }
+    spec.workflow = Some(WorkflowRequestV1 {
+        schema_version: 1,
+        coding_agent: CodingAgentRuntime::OpenCode,
+        execution_path: ExecutionPath::Native,
+        validation_status: ValidationStatus::Experimental,
+        parent_model: ParentModelGuidance::RuntimeManaged,
+        topology: WorkflowTopology::RoleDispatch,
+        model_access: Some(ModelAccessProfileV1 {
+            id: "opencode-openrouter".to_string(),
+            kind: ModelAccessKind::HostedGateway,
+            provider: Some("openrouter".to_string()),
+            credential_reference: Some("env:OPENROUTER_API_KEY".to_string()),
+        }),
+        roles: std::collections::BTreeMap::from([
+            (
+                "implementer".to_string(),
+                WorkflowRoleRequestV1 {
+                    provider: "openrouter".to_string(),
+                    model: "auto".to_string(),
+                    selection_mode: ModelSelectionMode::GatewayAuto,
+                    thinking: Some("medium".to_string()),
+                    fallback_models: vec!["google/gemini-3.6-flash".to_string()],
+                },
+            ),
+            (
+                "reviewer".to_string(),
+                WorkflowRoleRequestV1 {
+                    provider: "openrouter".to_string(),
+                    model: "auto".to_string(),
+                    selection_mode: ModelSelectionMode::GatewayAuto,
+                    thinking: Some("medium".to_string()),
+                    fallback_models: Vec::new(),
+                },
+            ),
+        ]),
+    });
+    let config_file = repository.join("stale-opencode-access.setup.toml");
+    fs::write(&config_file, toml::to_string_pretty(&spec).unwrap()).unwrap();
+    let expected =
+        "workflow model_access is no longer supported for Pi or OpenCode; regenerate the recipe";
+    assert_eq!(
+        preview_setup_config_file(&repository, &config_file)
+            .unwrap_err()
+            .to_string(),
+        expected
+    );
+    assert_eq!(
+        apply_setup_config_file(&repository, &config_file)
+            .unwrap_err()
+            .to_string(),
+        expected
+    );
+    assert!(!repository.join(".switchloom/manifest.json").exists());
+    assert!(
+        !repository
+            .join(".opencode/agents/switchloom-driver.md")
+            .exists()
+    );
+}
+
+#[test]
+fn pi_access_bearing_workflow_is_rejected_before_lifecycle_writes() {
+    let repository = temp_repo("pi-compatible-proxy-workflow");
+    let mut spec = setup_spec_for_policy("balanced", "pi", Integration::Standalone).unwrap();
+    for selection in spec.selected_roles.values_mut() {
+        selection.model = "openai-compatible/configured-by-user".to_string();
+        selection.effort = Some("medium".to_string());
+    }
+    spec.workflow = Some(WorkflowRequestV1 {
+        schema_version: 1,
+        coding_agent: CodingAgentRuntime::Pi,
+        execution_path: ExecutionPath::Extension,
+        validation_status: ValidationStatus::Experimental,
+        parent_model: ParentModelGuidance::RuntimeManaged,
+        topology: WorkflowTopology::Sequential,
+        model_access: Some(ModelAccessProfileV1 {
+            id: "pi-compatible-proxy".to_string(),
+            kind: ModelAccessKind::SelfHostedProxy,
+            provider: Some("openai-compatible".to_string()),
+            credential_reference: Some("env:COMPATIBLE_PROXY_API_KEY".to_string()),
+        }),
+        roles: std::collections::BTreeMap::from([
+            (
+                "implementer".to_string(),
+                WorkflowRoleRequestV1 {
+                    provider: "openai-compatible".to_string(),
+                    model: "configured-by-user".to_string(),
+                    selection_mode: ModelSelectionMode::Fixed,
+                    thinking: Some("medium".to_string()),
+                    fallback_models: Vec::new(),
+                },
+            ),
+            (
+                "reviewer".to_string(),
+                WorkflowRoleRequestV1 {
+                    provider: "openai-compatible".to_string(),
+                    model: "configured-by-user".to_string(),
+                    selection_mode: ModelSelectionMode::Fixed,
+                    thinking: Some("medium".to_string()),
+                    fallback_models: Vec::new(),
+                },
+            ),
+            (
+                "verifier".to_string(),
+                WorkflowRoleRequestV1 {
+                    provider: "openai-compatible".to_string(),
+                    model: "configured-by-user".to_string(),
+                    selection_mode: ModelSelectionMode::Fixed,
+                    thinking: Some("medium".to_string()),
+                    fallback_models: Vec::new(),
+                },
+            ),
+        ]),
+    });
+    let config_file = repository.join("stale-pi-access.setup.toml");
+    fs::write(&config_file, toml::to_string_pretty(&spec).unwrap()).unwrap();
+    let expected =
+        "workflow model_access is no longer supported for Pi or OpenCode; regenerate the recipe";
+    assert_eq!(
+        preview_setup_config_file(&repository, &config_file)
+            .unwrap_err()
+            .to_string(),
+        expected
+    );
+    assert_eq!(
+        apply_setup_config_file(&repository, &config_file)
+            .unwrap_err()
+            .to_string(),
+        expected
+    );
+    assert!(!repository.join(".switchloom/manifest.json").exists());
+    assert!(!repository.join(".pi/settings.json").exists());
+}
+
+#[test]
 fn opencode_native_lifecycle_manages_project_agents() {
     let repository = temp_repo("opencode-lifecycle");
     let bundle = compile_policy("balanced", "opencode-native", Integration::Standalone).unwrap();
@@ -234,30 +474,43 @@ fn opencode_native_lifecycle_manages_project_agents() {
 }
 
 #[test]
-fn pi_external_lifecycle_manages_workflow_artifacts() {
-    let repository = temp_repo("pi-external-lifecycle");
-    let bundle = compile_policy("balanced", "pi-external", Integration::Standalone).unwrap();
+fn pi_subagents_lifecycle_manages_native_child_artifacts() {
+    let repository = temp_repo("pi-subagents-lifecycle");
+    let bundle = compile_policy("balanced", "pi-subagents", Integration::Standalone).unwrap();
     let preview = preview_bundle_with_bundle(&repository, &bundle).unwrap();
     assert!(preview.artifacts.iter().any(|artifact| {
-        artifact.path == ".pi/workflows/model-routing-preset-runner.json"
-            && artifact.status == "create"
+        artifact.path == ".pi/agents/switchloom-implementer.md" && artifact.status == "create"
     }));
 
     apply_bundle_file_with_bundle(&repository, &bundle).unwrap();
-    let workflow = repository.join(".pi/workflows/model-routing-preset-runner.json");
-    assert!(workflow.exists());
-    let workflow_content = fs::read_to_string(&workflow).unwrap();
-    assert!(workflow_content.contains("\"external-runner\""));
-    assert!(workflow_content.contains("\"--no-tools\""));
-    assert!(workflow_content.contains("\"PI_CODING_AGENT_DIR"));
+    let implementer = repository.join(".pi/agents/switchloom-implementer.md");
+    assert!(implementer.exists());
+    let implementer_content = fs::read_to_string(&implementer).unwrap();
+    assert!(implementer_content.contains("openai-codex/gpt-5.6-terra"));
+    assert!(!implementer_content.contains("endpoint"));
+    assert!(!implementer_content.contains("credential"));
+    assert!(
+        !repository
+            .join(".pi/agents/switchloom-orchestrator.md")
+            .exists()
+    );
+    assert!(
+        fs::read_to_string(repository.join(".pi/agents/switchloom-reviewer.md"))
+            .unwrap()
+            .contains("anthropic/claude-fable-5")
+    );
+    assert!(
+        fs::read_to_string(repository.join(".pi/agents/switchloom-verifier.md"))
+            .unwrap()
+            .contains("openrouter/google/gemini-3.6-flash")
+    );
 
     let status = status_repository(&repository).unwrap();
     assert!(status.artifacts.iter().any(|artifact| {
-        artifact.path == ".pi/workflows/model-routing-preset-runner.json"
-            && artifact.status == "managed"
+        artifact.path == ".pi/agents/switchloom-implementer.md" && artifact.status == "managed"
     }));
     uninstall_repository(&repository).unwrap();
-    assert!(!workflow.exists());
+    assert!(!implementer.exists());
     assert!(!repository.join(".model-routing/manifest.json").exists());
 }
 

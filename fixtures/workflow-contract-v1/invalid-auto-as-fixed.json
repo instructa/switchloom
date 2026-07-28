@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "coding_agent": "opencode",
+  "execution_path": "native",
+  "validation_status": "experimental",
+  "parent_model": "runtime-managed",
+  "topology": "role-dispatch",
+  "model_access": { "id": "opencode-openrouter", "kind": "hosted_gateway", "provider": "openrouter" },
+  "roles": { "implementer": { "provider": "openrouter", "model": "auto", "selection_mode": "fixed" } }
+}

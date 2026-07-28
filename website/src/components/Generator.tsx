@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowCounterClockwiseIcon,
   CheckIcon,
   CopyIcon,
   GithubLogoIcon,
+  LinkIcon,
   QuestionIcon,
   RobotIcon,
   ShieldCheckIcon,
@@ -50,6 +51,7 @@ import {
   changeHost,
   choosePreset,
   createConfig,
+  configFromRecipe,
   createPresetSelection,
   HOST_IDS,
   HOSTS,
@@ -71,9 +73,13 @@ import {
   type RoleId,
   setEffort,
   setIntegration,
+  workflowValidationStatus,
+  type WorkflowCapability,
+  setFallbackModels,
   setModel,
   setupSpec,
   setupSpecRoleIds,
+  shareUrl,
 } from "@/lib/generator";
 import { providerOnboarding } from "@/lib/onboarding";
 
@@ -97,18 +103,21 @@ function truncateCommandPreview(command: string) {
 
 type GeneratorProps = {
   hostCatalog: HostCatalog;
-  setupTransport: { recipePrefix: string; configPath: string };
+  setupTransport: { recipePrefix: string; configPath: string }; workflowCapabilities: WorkflowCapability[];
 };
 
 type GeneratorConfigState = ReturnType<typeof createConfig>;
 type PresetSelectionState = ReturnType<typeof createPresetSelection>;
 type OnboardingState = ReturnType<typeof providerOnboarding>;
 
-export default function Generator({ hostCatalog, setupTransport }: GeneratorProps) {
+export default function Generator({ hostCatalog, setupTransport, workflowCapabilities = [] }: GeneratorProps) {
   const [config, setConfig] = useState(() => createConfig());
   const [preset, setPreset] = useState(() => createPresetSelection());
   const [copiedCommandId, setCopiedCommandId] = useState<string | null>(null);
+  const [copiedShareLink, setCopiedShareLink] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [urlStateReady, setUrlStateReady] = useState(false);
+  const [recipeRestoreError, setRecipeRestoreError] = useState(false);
   const setup = useMemo(() => setupSpec(config, hostCatalog), [config, hostCatalog]);
   const copyCommand = useMemo(() => recipeApplyCommand(config, hostCatalog, setupTransport.recipePrefix), [config, hostCatalog, setupTransport.recipePrefix]);
   const commands = useMemo(() => lifecycleCommands(config, hostCatalog, setupTransport.recipePrefix), [config, hostCatalog, setupTransport.recipePrefix]);
@@ -119,6 +128,20 @@ export default function Generator({ hostCatalog, setupTransport }: GeneratorProp
   const childRoleCount = config.roles.length;
   const outputRoleIds = useMemo(() => setupSpecRoleIds(config), [config]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const initialRecipe = new URLSearchParams(window.location.search).get("recipe");
+    const restoredConfig = initialRecipe ? configFromRecipe(initialRecipe, hostCatalog, setupTransport.recipePrefix) : null;
+    if (restoredConfig) setConfig(restoredConfig);
+    if (initialRecipe && !restoredConfig) setRecipeRestoreError(true);
+    setUrlStateReady(true);
+  }, [hostCatalog, setupTransport.recipePrefix]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !urlStateReady) return;
+    window.history.replaceState(null, "", shareUrl(config, hostCatalog, window.location.href, setupTransport.recipePrefix));
+  }, [config, hostCatalog, setupTransport.recipePrefix, urlStateReady]);
+
   async function copyLifecycleCommand(id: string, command: string) {
     try {
       await navigator.clipboard.writeText(command);
@@ -126,6 +149,17 @@ export default function Generator({ hostCatalog, setupTransport }: GeneratorProp
       window.setTimeout(() => setCopiedCommandId((current) => current === id ? null : current), 1400);
     } catch {
       setCopiedCommandId(null);
+    }
+  }
+
+  async function copyShareLink() {
+    if (typeof window === "undefined") return;
+    try {
+      await navigator.clipboard.writeText(shareUrl(config, hostCatalog, window.location.href, setupTransport.recipePrefix));
+      setCopiedShareLink(true);
+      window.setTimeout(() => setCopiedShareLink(false), 1400);
+    } catch {
+      setCopiedShareLink(false);
     }
   }
 
@@ -191,11 +225,18 @@ export default function Generator({ hostCatalog, setupTransport }: GeneratorProp
           </section>
 
           <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+            {recipeRestoreError && (
+              <Alert className="lg:col-span-2" aria-label="Unsupported shared recipe">
+                <WarningCircleIcon aria-hidden="true" />
+                <AlertTitle>Unsupported shared recipe</AlertTitle>
+                <AlertDescription>This link uses a retired setup shape and was not loaded. Choose the active runtime options and create a new share link.</AlertDescription>
+              </Alert>
+            )}
             <GeneratorConfigPanel
               config={config}
               hasHostManagedParent={hasHostManagedParent}
               host={host}
-              hostCatalog={hostCatalog}
+              hostCatalog={hostCatalog} workflowCapabilities={workflowCapabilities}
               preset={preset}
               resetDialogOpen={resetDialogOpen}
               rolesDirty={rolesDirty}
@@ -209,6 +250,7 @@ export default function Generator({ hostCatalog, setupTransport }: GeneratorProp
                 setConfig(setModel(config, role, model, hostCatalog));
                 setPreset(markPresetCustom(preset));
               }}
+              onFallbacks={(role, models) => { setConfig(setFallbackModels(config, role, models, hostCatalog)); setPreset(markPresetCustom(preset)); }}
               onPreset={selectPreset}
               onRemoveRole={removeRole}
               onResetDialogOpenChange={setResetDialogOpen}
@@ -226,6 +268,8 @@ export default function Generator({ hostCatalog, setupTransport }: GeneratorProp
               outputRoleIds={outputRoleIds}
               setup={setup}
               onCopyCommand={copyLifecycleCommand}
+              copiedShareLink={copiedShareLink}
+              onCopyShareLink={copyShareLink}
             />
           </div>
         </main>
@@ -249,23 +293,28 @@ export default function Generator({ hostCatalog, setupTransport }: GeneratorProp
   );
 }
 
-function GeneratorConfigPanel({ config, hasHostManagedParent, host, hostCatalog, preset, resetDialogOpen, rolesDirty, onConfirmResetRoles, onEffort, onIntegration, onModel, onPreset, onRemoveRole, onResetDialogOpenChange, onSelectHost }: {
+function GeneratorConfigPanel({ config, hasHostManagedParent, host, hostCatalog, workflowCapabilities, preset, resetDialogOpen, rolesDirty, onConfirmResetRoles, onEffort, onIntegration, onModel, onFallbacks, onPreset, onRemoveRole, onResetDialogOpenChange, onSelectHost }: {
   config: GeneratorConfigState;
   hasHostManagedParent: boolean;
   host: (typeof HOSTS)[HostId];
-  hostCatalog: HostCatalog;
+  hostCatalog: HostCatalog; workflowCapabilities: WorkflowCapability[];
   preset: PresetSelectionState;
   resetDialogOpen: boolean;
   rolesDirty: boolean;
   onConfirmResetRoles: () => void;
-  onEffort: (role: ChildRoleId, effort: string) => void;
+  onEffort: (role: RoleId, effort: string) => void;
   onIntegration: (integration: "standalone" | "planr") => void;
-  onModel: (role: ChildRoleId, model: string) => void;
+  onModel: (role: RoleId, model: string) => void;
+  onFallbacks: (role: RoleId, models: string[]) => void;
   onPreset: (preset: PresetId) => void;
   onRemoveRole: (role: ChildRoleId) => void;
   onResetDialogOpenChange: (open: boolean) => void;
   onSelectHost: (host: HostId) => void;
 }) {
+  const showOrchestration = config.host === "pi";
+  const integrationStep = showOrchestration ? 3 : 2;
+  const roleStep = showOrchestration ? 4 : 3;
+
   return (
     <Card className="min-w-0">
       <CardHeader>
@@ -273,9 +322,15 @@ function GeneratorConfigPanel({ config, hasHostManagedParent, host, hostCatalog,
       </CardHeader>
       <CardContent>
         <FieldGroup>
-          <RuntimeFieldSet config={config} host={host} onSelectHost={onSelectHost} />
+          <RuntimeFieldSet config={config} host={host} workflowCapabilities={workflowCapabilities} onSelectHost={onSelectHost} />
+          {showOrchestration && <Separator />}
+          {showOrchestration && (
+            <OrchestrationFieldSet
+              config={config}
+            />
+          )}
           <Separator />
-          <IntegrationFieldSet config={config} onIntegration={onIntegration} />
+          <IntegrationFieldSet config={config} step={integrationStep} onIntegration={onIntegration} />
           <Separator />
           <RoleTuningFieldSet
             config={config}
@@ -285,9 +340,11 @@ function GeneratorConfigPanel({ config, hasHostManagedParent, host, hostCatalog,
             preset={preset}
             resetDialogOpen={resetDialogOpen}
             rolesDirty={rolesDirty}
+            step={roleStep}
             onConfirmResetRoles={onConfirmResetRoles}
             onEffort={onEffort}
             onModel={onModel}
+            onFallbacks={onFallbacks}
             onPreset={onPreset}
             onRemoveRole={onRemoveRole}
             onResetDialogOpenChange={onResetDialogOpenChange}
@@ -298,11 +355,28 @@ function GeneratorConfigPanel({ config, hasHostManagedParent, host, hostCatalog,
   );
 }
 
-function RuntimeFieldSet({ config, host, onSelectHost }: {
+function OrchestrationFieldSet({ config }: {
+  config: GeneratorConfigState;
+}) {
+  const pi = config.host === "pi";
+  return <FieldSet>
+    <FieldLegend>2. {pi ? "Pi Subagents" : "Orchestration"}</FieldLegend>
+    <FieldDescription>
+      {pi
+        ? "Your active Pi session is the Orchestrator. Switchloom generates provider-qualified child roles for Pi Subagents."
+        : "Native uses the host's built-in model catalog."}
+    </FieldDescription>
+    {pi && <Alert><ShieldCheckIcon aria-hidden="true" /><AlertTitle>Active Pi session orchestrates</AlertTitle><AlertDescription>Install <code>pi-subagents</code>. Switchloom writes only child role agents and their sequential workflow.</AlertDescription></Alert>}
+  </FieldSet>;
+}
+
+function RuntimeFieldSet({ config, host, workflowCapabilities, onSelectHost }: {
   config: GeneratorConfigState;
   host: (typeof HOSTS)[HostId];
+  workflowCapabilities: WorkflowCapability[];
   onSelectHost: (host: HostId) => void;
 }) {
+  const status = workflowValidationStatus(config, workflowCapabilities);
   return (
     <FieldSet>
       <div className="mb-2.5 flex items-center gap-1">
@@ -344,12 +418,14 @@ function RuntimeFieldSet({ config, host, onSelectHost }: {
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-      {config.host !== "codex" && (
+      {status !== "certified" && (
         <Alert className="border-amber-300 bg-amber-50 text-amber-950">
           <WarningCircleIcon aria-hidden="true" />
-          <AlertTitle>Experimental configuration</AlertTitle>
+          <AlertTitle>{status === "planned" ? "Planned configuration" : "Experimental configuration"}</AlertTitle>
           <AlertDescription className="text-amber-900/80">
-            The {host.label} configuration is experimental, and its model catalog is not complete yet. Want to help? Open a pull request at{" "}
+            {status === "planned"
+              ? "Claude Code to Codex Sidecar has no generated sidecar configuration yet."
+              : `The ${host.label} configuration is experimental, and its model catalog is not complete yet.`}{" "}
             <a href="https://github.com/instructa/switchloom" rel="noreferrer" target="_blank">
               instructa/switchloom
             </a>
@@ -361,13 +437,14 @@ function RuntimeFieldSet({ config, host, onSelectHost }: {
   );
 }
 
-function IntegrationFieldSet({ config, onIntegration }: {
+function IntegrationFieldSet({ config, step, onIntegration }: {
   config: GeneratorConfigState;
+  step: number;
   onIntegration: (integration: "standalone" | "planr") => void;
 }) {
   return (
     <FieldSet>
-      <FieldLegend>2. Standalone or With Planr?</FieldLegend>
+      <FieldLegend>{step}. Standalone or With Planr?</FieldLegend>
       <FieldDescription>
         Standalone sets up host-native agents in your project. With Planr also adds Planr policy files when the repository already uses Planr.
       </FieldDescription>
@@ -407,7 +484,7 @@ function IntegrationFieldSet({ config, onIntegration }: {
   );
 }
 
-function RoleTuningFieldSet({ config, hasHostManagedParent, host, hostCatalog, preset, resetDialogOpen, rolesDirty, onConfirmResetRoles, onEffort, onModel, onPreset, onRemoveRole, onResetDialogOpenChange }: {
+function RoleTuningFieldSet({ config, hasHostManagedParent, host, hostCatalog, preset, resetDialogOpen, rolesDirty, step, onConfirmResetRoles, onEffort, onModel, onFallbacks, onPreset, onRemoveRole, onResetDialogOpenChange }: {
   config: GeneratorConfigState;
   hasHostManagedParent: boolean;
   host: (typeof HOSTS)[HostId];
@@ -415,9 +492,11 @@ function RoleTuningFieldSet({ config, hasHostManagedParent, host, hostCatalog, p
   preset: PresetSelectionState;
   resetDialogOpen: boolean;
   rolesDirty: boolean;
+  step: number;
   onConfirmResetRoles: () => void;
-  onEffort: (role: ChildRoleId, effort: string) => void;
-  onModel: (role: ChildRoleId, model: string) => void;
+  onEffort: (role: RoleId, effort: string) => void;
+  onModel: (role: RoleId, model: string) => void;
+  onFallbacks: (role: RoleId, models: string[]) => void;
   onPreset: (preset: PresetId) => void;
   onRemoveRole: (role: ChildRoleId) => void;
   onResetDialogOpenChange: (open: boolean) => void;
@@ -426,7 +505,7 @@ function RoleTuningFieldSet({ config, hasHostManagedParent, host, hostCatalog, p
     <FieldSet>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <FieldLegend>3. Tune each role</FieldLegend>
+          <FieldLegend>{step}. Tune each role</FieldLegend>
           <FieldDescription>Start with a team-wide preset, then override any role below.</FieldDescription>
         </div>
         <ResetRolesDialog
@@ -440,9 +519,19 @@ function RoleTuningFieldSet({ config, hasHostManagedParent, host, hostCatalog, p
       </div>
       <FieldGroup>
         <PresetField preset={preset} onPreset={onPreset} />
-        {hasHostManagedParent && (
-          <ParentRecommendationCard config={config} preset={preset.lastSelected} />
-        )}
+        {hasHostManagedParent
+          ? <ParentRecommendationCard config={config} preset={preset.lastSelected} />
+          : (
+            <RoleCard
+              role="orchestrator"
+              config={config}
+              hostCatalog={hostCatalog}
+              canRemove={false}
+              onModel={(model) => onModel("orchestrator", model)}
+              onEffort={(effort) => onEffort("orchestrator", effort)}
+              onFallbacks={(models) => onFallbacks("orchestrator", models)}
+            />
+          )}
         <div className="flex flex-col gap-3">
           {config.roles.map((role, index) => (
             <ConnectedChildCard key={`${config.host}-${role}`} isLast={index === config.roles.length - 1}>
@@ -454,6 +543,7 @@ function RoleTuningFieldSet({ config, hasHostManagedParent, host, hostCatalog, p
                 onRemove={() => onRemoveRole(role)}
                 onModel={(model) => onModel(role, model)}
                 onEffort={(effort) => onEffort(role, effort)}
+                onFallbacks={(models) => onFallbacks(role, models)}
               />
             </ConnectedChildCard>
           ))}
@@ -538,17 +628,19 @@ function PresetField({ preset, onPreset }: {
   );
 }
 
-function GeneratorSummaryPanel({ childRoleCount, commands, config, copiedCommandId, hasHostManagedParent, host, onboarding, outputRoleIds, setup, onCopyCommand }: {
+function GeneratorSummaryPanel({ childRoleCount, commands, config, copiedCommandId, copiedShareLink, hasHostManagedParent, host, onboarding, outputRoleIds, setup, onCopyCommand, onCopyShareLink }: {
   childRoleCount: number;
   commands: ReturnType<typeof lifecycleCommands>;
   config: GeneratorConfigState;
   copiedCommandId: string | null;
+  copiedShareLink: boolean;
   hasHostManagedParent: boolean;
   host: (typeof HOSTS)[HostId];
   onboarding: OnboardingState;
   outputRoleIds: RoleId[];
   setup: ReturnType<typeof setupSpec>;
   onCopyCommand: (id: string, command: string) => void;
+  onCopyShareLink: () => void;
 }) {
   return (
     <Card className="min-w-0 lg:sticky lg:top-6">
@@ -583,6 +675,10 @@ function GeneratorSummaryPanel({ childRoleCount, commands, config, copiedCommand
         </Tabs>
       </CardContent>
       <CardFooter className="flex-col items-stretch gap-2">
+        <Button type="button" variant="outline" onClick={onCopyShareLink} aria-label="Copy share link">
+          {copiedShareLink ? <CheckIcon aria-hidden="true" /> : <LinkIcon aria-hidden="true" />}
+          {copiedShareLink ? "Copied share link" : "Copy share link"}
+        </Button>
         <AgentTeamDialog onboarding={onboarding} />
         <p className="pt-1 text-center text-[0.7rem] leading-5 text-muted-foreground">
           Preview before apply, run doctor to check the host, and review every repository-local change before confirming setup.
@@ -612,6 +708,17 @@ function TeamSummary({ config, hasHostManagedParent }: {
           </div>
         </div>
       )}
+      {!hasHostManagedParent && (
+        <div className="grid grid-cols-[1.5rem_1fr] gap-3">
+          <span className="flex size-6 items-center justify-center bg-muted text-[0.7rem]">P</span>
+          <div className="min-w-0">
+            <p className="font-medium">{ROLES.orchestrator.label}</p>
+            <p className="truncate text-muted-foreground">
+              {config.assignments.orchestrator.model}{config.assignments.orchestrator.effort ? ` · ${config.assignments.orchestrator.effort}` : ""}
+            </p>
+          </div>
+        </div>
+      )}
       {config.roles.map((role, index) => {
         const assignment = config.assignments[role];
         return (
@@ -626,17 +733,6 @@ function TeamSummary({ config, hasHostManagedParent }: {
           </div>
         );
       })}
-      {!hasHostManagedParent && (
-        <div className="grid grid-cols-[1.5rem_1fr] gap-3">
-          <span className="flex size-6 items-center justify-center bg-muted text-[0.7rem]">{config.roles.length + 1}</span>
-          <div className="min-w-0">
-            <p className="font-medium">{ROLES.orchestrator.label}</p>
-            <p className="truncate text-muted-foreground">
-              {config.assignments.orchestrator.model}{config.assignments.orchestrator.effort ? ` · ${config.assignments.orchestrator.effort}` : ""}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -716,20 +812,22 @@ function ParentRecommendationCard({ config, preset }: {
   );
 }
 
-function RoleCard({ role, config, hostCatalog, canRemove, onRemove, onModel, onEffort }: {
-  role: ChildRoleId;
+function RoleCard({ role, config, hostCatalog, canRemove, onRemove, onModel, onEffort, onFallbacks }: {
+  role: RoleId;
   config: ReturnType<typeof createConfig>;
   hostCatalog: HostCatalog;
   canRemove: boolean;
-  onRemove: () => void;
+  onRemove?: () => void;
   onModel: (model: string) => void;
   onEffort: (effort: string) => void;
+  onFallbacks: (models: string[]) => void;
 }) {
   const host = HOSTS[config.host];
   const models = hostCatalog[config.host].models;
   const assignment = config.assignments[role];
   const model = models.find((candidate) => candidate.id === assignment.model)!;
   const family = modelFamilyInfo(model.id);
+  const isChildRole = role !== "orchestrator";
   const removeLabel = canRemove
     ? `Remove ${ROLES[role].label}`
     : `Cannot remove ${ROLES[role].label}; at least one child role is required`;
@@ -743,7 +841,7 @@ function RoleCard({ role, config, hostCatalog, canRemove, onRemove, onModel, onE
             {model.label}{assignment.effort ? ` · ${assignment.effort}` : ""}
           </p>
         </div>
-        <CardAction className="flex items-center gap-1">
+        {isChildRole && <CardAction className="flex items-center gap-1">
           <Button
             type="button"
             size="icon-xs"
@@ -754,9 +852,9 @@ function RoleCard({ role, config, hostCatalog, canRemove, onRemove, onModel, onE
           >
             <TrashIcon aria-hidden="true" />
           </Button>
-        </CardAction>
+        </CardAction>}
       </CardHeader>
-      {!canRemove && (
+      {isChildRole && !canRemove && (
         <CardContent className="pt-0">
           <p className="text-xs leading-5 text-muted-foreground">At least one child role is required.</p>
         </CardContent>
@@ -766,7 +864,7 @@ function RoleCard({ role, config, hostCatalog, canRemove, onRemove, onModel, onE
           <div className="flex flex-wrap items-start gap-4">
               <Field className="min-w-0 flex-1">
                 <FieldTitle>Model</FieldTitle>
-                {config.host === "cursor" ? (
+                {config.host === "cursor" || config.host === "pi" ? (
                   <Combobox
                     items={models}
                     value={model}
@@ -849,6 +947,11 @@ function RoleCard({ role, config, hostCatalog, canRemove, onRemove, onModel, onE
               )}
           </div>
         </FieldGroup>
+        {config.host === "pi" && (
+          <Field className="mt-4"><FieldTitle>Fallback models</FieldTitle><ToggleGroup aria-label={`${ROLES[role].label} fallback models`} value={config.fallbackModels[role]} onValueChange={onFallbacks} variant="outline" spacing={1} className="flex w-full flex-wrap">
+            {models.filter((option) => option.id !== assignment.model).map((option) => <ToggleGroupItem key={option.id} value={option.id}>{option.label}</ToggleGroupItem>)}
+          </ToggleGroup><FieldDescription>Used only if Pi cannot start the selected provider/model.</FieldDescription></Field>
+        )}
       </CardContent>
     </Card>
   );

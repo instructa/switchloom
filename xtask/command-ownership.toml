@@ -22,7 +22,6 @@ commands = [
   "certify codex",
   "certify cursor",
   "certify opencode",
-  "certify pi",
   "certify planr",
   "verify offline",
   "release prepare",

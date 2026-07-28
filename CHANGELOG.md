@@ -4,6 +4,23 @@ All notable changes to Switchloom are recorded here.
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-07-28
+
+- Made Pi Subagents the single Pi workflow: the active Pi session remains the
+  orchestrator and Switchloom generates only implementer, reviewer, and verifier
+  child roles.
+- Added native provider-qualified model routing for Pi and OpenCode, including
+  OpenRouter as an ordinary provider choice without Switchloom-managed proxy or
+  credential configuration.
+- Replaced Pi model buttons with searchable selectors and refreshed the Pi
+  0.82.1 catalog to current GPT-5.6, Claude 5, Gemini 3.x, Grok 4.5, Kimi K3,
+  MiniMax M3, GLM-5.2, Step 3.7 Flash, and MiMo V2.5 models.
+- Removed isolated Pi workers and the non-functional Codex Gateway disclosure,
+  capability, fixtures, probes, and documentation instead of retaining hidden
+  or experimental product paths.
+- Fixed shared recipe hydration so restored runtime configurations no longer
+  produce a server/client mismatch.
+
 ## [0.3.4] - 2026-07-25
 
 - Restored the GitHub Secret Scan under the repository's selected-actions

@@ -7,6 +7,7 @@ describe("model family metadata", () => {
     expect(modelFamilyInfo("gpt-5.6-luna")?.strength).toBe(1);
     expect(modelFamilyInfo("gpt-5.6-terra")?.strength).toBe(2);
     expect(modelFamilyInfo("gpt-5.6-sol")?.strength).toBe(3);
+    expect(modelFamilyInfo("openai-codex/gpt-5.6-terra")?.strength).toBe(2);
     expect(modelFamilyInfo("gpt-5.6-sol")?.short.length).toBeGreaterThan(20);
   });
 

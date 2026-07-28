@@ -88,7 +88,7 @@ fn planr_integration_is_skill_free_and_preloads_existing_protocols() {
             (artifact.path.contains("terra-high")
                 || artifact.path.contains("luna-xhigh")
                 || artifact.path.contains("preset-worker")
-                || artifact.path.starts_with(".pi/workflows/"))
+                || artifact.path.contains("switchloom-implementer"))
                 && artifact.content.contains("Protocol preload: $planr-work")
         });
         assert!(worker_protocol, "missing Planr worker preload for {host}");

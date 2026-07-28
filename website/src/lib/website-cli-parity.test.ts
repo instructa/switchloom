@@ -40,6 +40,9 @@ const switchloomBin = resolve("target/debug/switchloom");
 const catalog = JSON.parse(await readFile(resolve("website/data/catalog.json"), "utf8"));
 const hostCatalog = hostCatalogFrom(catalog);
 const setupTransport = setupTransportFrom(catalog);
+// These tests deliberately spawn the real CLI for every supported matrix/invalid transport case.
+const EXHAUSTIVE_CLI_PARITY_TIMEOUT_MS = 600_000;
+const MALFORMED_TRANSPORT_TIMEOUT_MS = 60_000;
 
 beforeAll(() => {
   const result = spawnSync("cargo", ["build", "--bins"], { encoding: "utf8" });
@@ -175,7 +178,7 @@ describe("website SetupSpec to CLI parity", () => {
         }
       }
     }
-  }, 180_000);
+  }, EXHAUSTIVE_CLI_PARITY_TIMEOUT_MS);
 
   it("compiles child-only Codex setup without emitting native parent artifacts", async () => {
     const config = setIntegration(
@@ -387,5 +390,5 @@ describe("website SetupSpec to CLI parity", () => {
       await expect(readFile(join(repository, ".switchloom/config.toml"), "utf8")).rejects.toThrow();
       await expect(readFile(join(repository, ".model-routing/manifest.json"), "utf8")).rejects.toThrow();
     }
-  });
+  }, MALFORMED_TRANSPORT_TIMEOUT_MS);
 });

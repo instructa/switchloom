@@ -1,0 +1,105 @@
+schema_version = 1
+id = "pi-subagents"
+version = "1.0.0"
+host = "pi"
+runtime_class = "native-subagent"
+driver_role = "implementer"
+default_role = "implementer"
+capability_evidence = ["builtin-pi-subagents-contract"]
+billing_assumptions = ["Pi remains the provider, billing, authentication, and native child-dispatch authority"]
+known_limitations = ["Effective child model remains advisory until a live Pi Subagents receipt exposes the executed identity", "Provider credentials and model availability are configured in Pi, never in Switchloom artifacts"]
+
+[capabilities]
+model_override = true
+effort_override = true
+fork_none = true
+fork_all = false
+
+[profiles.implementer]
+profile = "pi-implementer"
+client = "pi"
+model = "openai-codex/gpt-5.6-terra"
+effort = "medium"
+cost_tier = "standard"
+
+[profiles.reviewer]
+profile = "pi-reviewer"
+client = "pi"
+model = "anthropic/claude-fable-5"
+effort = "medium"
+cost_tier = "premium"
+fork_turns = { mode = "none" }
+
+[profiles.verifier]
+profile = "pi-verifier"
+client = "pi"
+model = "openrouter/google/gemini-3.6-flash"
+effort = "low"
+cost_tier = "standard"
+fork_turns = { mode = "none" }
+
+[[routes]]
+work_type = "code"
+role = "implementer"
+fallback_roles = ["reviewer"]
+
+[[routes]]
+work_type = "review"
+role = "reviewer"
+fallback_roles = ["verifier"]
+
+[verification]
+id = "builtin-pi-subagents-v1"
+verified_at_unix = 1785283200
+max_age_seconds = 31536000
+
+[[artifacts]]
+path = ".pi/settings.json"
+kind = "pi_settings"
+content = '''{
+  "extensions": ["npm:pi-subagents"],
+  "subagents": {
+    "agentOverrides": {
+      "switchloom-implementer": { "model": "openai-codex/gpt-5.6-terra", "thinking": "medium" },
+      "switchloom-reviewer": { "model": "anthropic/claude-fable-5", "thinking": "medium" },
+      "switchloom-verifier": { "model": "openrouter/google/gemini-3.6-flash", "thinking": "low" }
+    }
+  }
+}
+'''
+
+[[artifacts]]
+path = ".pi/agents/switchloom-implementer.md"
+kind = "pi_agent"
+content = '''---
+name: switchloom-implementer
+model: openai-codex/gpt-5.6-terra
+thinking: medium
+inheritProjectContext: true
+---
+Execute the assigned implementation task and report concrete results to the active Pi parent session.
+'''
+
+[[artifacts]]
+path = ".pi/agents/switchloom-reviewer.md"
+kind = "pi_agent"
+content = '''---
+name: switchloom-reviewer
+model: anthropic/claude-fable-5
+thinking: medium
+inheritProjectContext: true
+---
+Review the assigned change and report concrete findings to the active Pi parent session.
+'''
+
+[[artifacts]]
+path = ".pi/agents/switchloom-verifier.md"
+kind = "pi_agent"
+content = '''---
+name: switchloom-verifier
+model: openrouter/google/gemini-3.6-flash
+thinking: low
+inheritProjectContext: true
+---
+Verify the assigned change and report concrete evidence to the active Pi parent session.
+'''

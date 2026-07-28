@@ -26,7 +26,7 @@ const MODEL_FAMILY_BY_ID: Record<string, ModelFamilyInfo> = {
 };
 
 export function modelFamilyInfo(modelId: string): ModelFamilyInfo | undefined {
-  return MODEL_FAMILY_BY_ID[modelId];
+  return MODEL_FAMILY_BY_ID[modelId.split("/").at(-1) ?? modelId];
 }
 
 const EFFORT_LABELS: Record<string, string> = {

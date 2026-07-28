@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "coding_agent": "pi",
+  "execution_path": "extension",
+  "validation_status": "experimental",
+  "parent_model": "runtime-managed",
+  "topology": "sequential",
+  "roles": {
+    "implementer": { "provider": "openai-codex", "model": "gpt-5.6-terra", "thinking": "high", "fallback_models": ["google/gemini-3.6-flash"] },
+    "reviewer": { "provider": "anthropic", "model": "claude-fable-5", "thinking": "medium" },
+    "verifier": { "provider": "openrouter", "model": "google/gemini-3.6-flash", "thinking": "low" }
+  }
+}

@@ -1,11 +1,12 @@
 ---
 import "@/styles/global.css";
 import Generator from "@/components/Generator";
-import { hostCatalogFrom, setupTransportFrom } from "@/lib/generator";
+import { hostCatalogFrom, setupTransportFrom, workflowCapabilitiesFrom } from "@/lib/generator";
 import catalog from "../../data/catalog.json";
 
 const hostCatalog = hostCatalogFrom(catalog);
 const setupTransport = setupTransportFrom(catalog);
+const workflowCapabilities = workflowCapabilitiesFrom(catalog);
 ---
 
 <!doctype html>
@@ -37,6 +38,6 @@ const setupTransport = setupTransportFrom(catalog);
     <title>Switchloom — Build your coding-agent team</title>
   </head>
   <body>
-    <Generator client:load hostCatalog={hostCatalog} setupTransport={setupTransport} />
+    <Generator client:load hostCatalog={hostCatalog} setupTransport={setupTransport} workflowCapabilities={workflowCapabilities} />
   </body>
 </html>

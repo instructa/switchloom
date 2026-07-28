@@ -3,6 +3,69 @@ use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
 #[test]
+fn opencode_native_workflow_emits_each_role_provider_model_without_access_material() {
+    let mut spec = setup_spec_for_policy("balanced", "opencode", Integration::Standalone).unwrap();
+    spec.workflow = Some(WorkflowRequestV1 {
+        schema_version: 1,
+        coding_agent: CodingAgentRuntime::OpenCode,
+        execution_path: ExecutionPath::Native,
+        validation_status: ValidationStatus::Experimental,
+        parent_model: ParentModelGuidance::RuntimeManaged,
+        topology: WorkflowTopology::RoleDispatch,
+        model_access: None,
+        roles: BTreeMap::from([
+            (
+                "implementer".to_string(),
+                WorkflowRoleRequestV1 {
+                    provider: "openai".to_string(),
+                    model: "gpt-5-nano".to_string(),
+                    selection_mode: ModelSelectionMode::Fixed,
+                    thinking: Some("high".to_string()),
+                    fallback_models: Vec::new(),
+                },
+            ),
+            (
+                "reviewer".to_string(),
+                WorkflowRoleRequestV1 {
+                    provider: "openrouter".to_string(),
+                    model: "google/gemini-3.6-flash".to_string(),
+                    selection_mode: ModelSelectionMode::Fixed,
+                    thinking: Some("medium".to_string()),
+                    fallback_models: vec!["google/gemini-3.6-flash".to_string()],
+                },
+            ),
+        ]),
+    });
+
+    let artifacts = crate::routing::opencode_workflow_artifacts(&spec).unwrap();
+    let implementer = artifacts
+        .iter()
+        .find(|artifact| artifact.path == ".opencode/agents/switchloom-implementer.md")
+        .unwrap();
+    let reviewer = artifacts
+        .iter()
+        .find(|artifact| artifact.path == ".opencode/agents/switchloom-reviewer.md")
+        .unwrap();
+    assert!(implementer.content.contains("model: openai/gpt-5-nano"));
+    assert!(
+        reviewer
+            .content
+            .contains("model: openrouter/google/gemini-3.6-flash")
+    );
+    assert!(
+        reviewer
+            .content
+            .contains("openrouter/google/gemini-3.6-flash")
+    );
+    for artifact in artifacts {
+        assert!(artifact.content.contains("permission:"));
+        assert!(!artifact.content.contains("endpoint"));
+        assert!(!artifact.content.contains("credential"));
+        assert!(!artifact.content.contains("gateway"));
+    }
+}
+
+#[test]
 fn compiled_bundle_carries_typed_adapter_contract() {
     let bundle = compile_policy("balanced", "codex-openai", Integration::Planr).unwrap();
     let contract = bundle.adapter_contract.as_ref().unwrap();
@@ -278,6 +341,7 @@ fn fully_custom_setup_compiles_as_unverified_host_native_bundle() {
             role: "orchestrator".to_string(),
             fallbacks: Vec::new(),
         }),
+        workflow: None,
     };
     let bundle = compile_setup_spec(&spec).unwrap();
     assert_eq!(bundle.source.integration, Integration::Standalone);
@@ -373,6 +437,7 @@ fn child_only_setup_does_not_reintroduce_parent_profiles_routes_or_artifacts() {
             },
         ],
         route_default: None,
+        workflow: None,
     };
 
     let bundle = compile_setup_spec(&spec).unwrap();
@@ -441,6 +506,7 @@ fn successful_custom_setups_validate_final_bundles_for_each_host_family() {
                 fallbacks: Vec::new(),
             }],
             route_default: None,
+            workflow: None,
         };
         let bundle = compile_setup_spec(&spec).unwrap();
         validate_bundle(&bundle).unwrap();

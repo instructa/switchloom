@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import packageMetadata from "../../../package.json";
 
-import { applyPreset, canRenderParentRecommendation, changeHost, CHILD_ROLE_IDS, choosePreset, createConfig, createPresetSelection, HOST_IDS, hostCatalogFrom, isChildRoleId, isPresetDirty, isPrimaryRecommendationId, lifecycleCommands, markPresetCustom, parentRecommendationEffortCopy, PRESETS, primaryRecommendation, PRIMARY_RECOMMENDATION_ID, recipeApplyCommand, removeChildRole, resetRolesToPreset, ROLE_IDS, selectedChildRoleIds, setEffort, setIntegration, setModel, setRoles, setupConfigToml, setupRecipe, setupSpec, setupSummary, setupTransportFrom, SWITCHLOOM_VERSION } from "./generator";
+import { applyPreset, canRenderParentRecommendation, changeHost, CHILD_ROLE_IDS, choosePreset, configFromRecipe, createConfig, createPresetSelection, HOST_IDS, hostCatalogFrom, isChildRoleId, isPresetDirty, isPrimaryRecommendationId, lifecycleCommands, markPresetCustom, parentRecommendationEffortCopy, PRESETS, primaryRecommendation, PRIMARY_RECOMMENDATION_ID, recipeApplyCommand, removeChildRole, resetRolesToPreset, ROLE_IDS, selectedChildRoleIds, setEffort, setFallbackModels, setIntegration, setModel, setOrchestration, setRoles, setupConfigToml, setupRecipe, setupSpec, setupSummary, setupTransportFrom, shareUrl, SWITCHLOOM_VERSION, workflowCapabilitiesFrom, workflowValidationStatus } from "./generator";
 
 const generatedCatalog = {
   setupContract: {
     recipePrefix: "sw1_",
     configPath: ".switchloom/config.toml",
+    workflowCapabilities: { capabilities: [
+      { codingAgent: "codex", executionPath: "native", validationStatus: "certified", parentModel: "current-session" },
+      { codingAgent: "pi", executionPath: "extension", validationStatus: "certified", parentModel: "runtime-managed" },
+      { codingAgent: "cursor", executionPath: "native", validationStatus: "experimental", parentModel: "runtime-managed" },
+      { codingAgent: "claude-code", executionPath: "sidecar", validationStatus: "planned", parentModel: "external-setup-required" },
+    ] },
     hosts: [
       {
         id: "codex",
@@ -51,11 +57,22 @@ const generatedCatalog = {
       },
       {
         id: "pi",
-        binding: "pi-external",
+        binding: "pi-subagents",
         models: [
-          { id: "openai/gpt-4o-mini", efforts: ["low", "medium", "high", "xhigh"], tier: "standard" as const },
-          { id: "google/gemini-2.5-flash", efforts: ["low", "medium", "high", "xhigh"], tier: "standard" as const },
-          { id: "anthropic/claude-sonnet-4-5", efforts: ["low", "medium", "high", "xhigh"], tier: "premium" as const },
+          { id: "openai-codex/gpt-5.6-luna", efforts: ["low", "medium", "high", "xhigh"], tier: "standard" as const },
+          { id: "openai-codex/gpt-5.6-terra", efforts: ["low", "medium", "high", "xhigh"], tier: "standard" as const },
+          { id: "openai-codex/gpt-5.6-sol", efforts: ["low", "medium", "high", "xhigh"], tier: "premium" as const },
+          { id: "anthropic/claude-sonnet-5", efforts: ["low", "medium", "high", "xhigh"], tier: "standard" as const },
+          { id: "anthropic/claude-opus-5", efforts: ["low", "medium", "high", "xhigh"], tier: "premium" as const },
+          { id: "anthropic/claude-fable-5", efforts: ["low", "medium", "high", "xhigh"], tier: "premium" as const },
+          { id: "openrouter/google/gemini-3.5-flash-lite", efforts: ["low", "medium", "high"], tier: "standard" as const },
+          { id: "openrouter/google/gemini-3.6-flash", efforts: ["low", "medium", "high"], tier: "standard" as const },
+          { id: "openrouter/x-ai/grok-4.5", efforts: ["low", "medium", "high"], tier: "standard" as const },
+          { id: "openrouter/moonshotai/kimi-k3", efforts: ["low", "medium", "high"], tier: "premium" as const },
+          { id: "openrouter/minimax/minimax-m3", efforts: ["low", "medium", "high"], tier: "standard" as const },
+          { id: "openrouter/z-ai/glm-5.2", efforts: ["low", "medium", "high"], tier: "standard" as const },
+          { id: "openrouter/stepfun/step-3.7-flash", efforts: ["low", "medium", "high"], tier: "standard" as const },
+          { id: "openrouter/xiaomi/mimo-v2.5", efforts: ["low", "medium", "high"], tier: "standard" as const },
         ],
       },
     ],
@@ -65,6 +82,46 @@ const generatedCatalog = {
 const hostCatalog = hostCatalogFrom(generatedCatalog);
 
 describe("Switchloom generator", () => {
+  it("maps certified, experimental, and planned runtime guidance distinctly", () => {
+    const capabilities = workflowCapabilitiesFrom(generatedCatalog);
+    expect(workflowValidationStatus(createConfig("codex"), capabilities)).toBe("certified");
+    expect(workflowValidationStatus(createConfig("pi"), capabilities)).toBe("certified");
+    expect(workflowValidationStatus(createConfig("cursor"), capabilities)).toBe("experimental");
+    expect(workflowValidationStatus(createConfig("claude-code"), capabilities)).toBe("planned");
+  });
+
+  it("validates imported workflow capability statuses before exposing the strict UI contract", () => {
+    expect(() => workflowCapabilitiesFrom({
+      setupContract: {
+        workflowCapabilities: {
+          capabilities: [{
+            codingAgent: "codex",
+            executionPath: "native",
+            validationStatus: "unsupported",
+            parentModel: "current-session",
+          }],
+        },
+      },
+    })).toThrow("canonical setup contract has invalid workflow capability at index 0");
+  });
+
+  it("serializes the active-session Pi Subagents topology", () => {
+    const pi = createConfig("pi");
+    expect(setupSpec(pi, hostCatalog).workflow).toMatchObject({
+      coding_agent: "pi", execution_path: "extension", validation_status: "experimental", parent_model: "runtime-managed", topology: "sequential",
+    });
+    expect(setupSpec(pi, hostCatalog).selected_roles).not.toHaveProperty("orchestrator");
+    expect(setupSpec(pi, hostCatalog).workflow?.roles).not.toHaveProperty("orchestrator");
+    expect(setupSpec(pi, hostCatalog).workflow?.roles.implementer).toEqual({ provider: "anthropic", model: "claude-sonnet-5", thinking: "medium", fallback_models: [] });
+    expect(setupSpec(pi, hostCatalog).workflow).not.toHaveProperty("model_access");
+    expect(() => setOrchestration(createConfig("codex"), "extension")).toThrow("Pi is the only extension-backed runtime");
+  });
+
+  it("filters and serializes Pi extension fallback models", () => {
+    const configured = setFallbackModels(createConfig("pi"), "implementer", ["openrouter/google/gemini-3.6-flash"], hostCatalog);
+    expect(setupSpec(configured, hostCatalog).workflow?.roles.implementer.fallback_models).toEqual(["google/gemini-3.6-flash"]);
+    expect(() => setFallbackModels(configured, "implementer", ["anthropic/claude-sonnet-5"], hostCatalog)).toThrow("unsupported Pi fallback model");
+  });
   it("derives the pinned CLI version from package metadata", () => {
     expect(SWITCHLOOM_VERSION).toBe(packageMetadata.version);
   });
@@ -164,11 +221,29 @@ describe("Switchloom generator", () => {
       "anthropic/claude-sonnet-4-5",
       "anthropic/claude-opus-4-5",
     ]);
-    expect(hostCatalog.pi.binding).toBe("pi-external");
+    expect(hostCatalog.pi.binding).toBe("pi-subagents");
     expect(hostCatalog.pi.models.map((model) => model.id)).toEqual([
-      "openai/gpt-4o-mini",
-      "google/gemini-2.5-flash",
-      "anthropic/claude-sonnet-4-5",
+      "openai-codex/gpt-5.6-luna",
+      "openai-codex/gpt-5.6-terra",
+      "openai-codex/gpt-5.6-sol",
+      "anthropic/claude-sonnet-5",
+      "anthropic/claude-opus-5",
+      "anthropic/claude-fable-5",
+      "openrouter/google/gemini-3.5-flash-lite",
+      "openrouter/google/gemini-3.6-flash",
+      "openrouter/x-ai/grok-4.5",
+      "openrouter/moonshotai/kimi-k3",
+      "openrouter/minimax/minimax-m3",
+      "openrouter/z-ai/glm-5.2",
+      "openrouter/stepfun/step-3.7-flash",
+      "openrouter/xiaomi/mimo-v2.5",
+    ]);
+    expect(hostCatalog.pi.models.filter((model) => model.provider?.includes("open weights")).map((model) => model.label)).toEqual([
+      "Kimi K3",
+      "MiniMax M3",
+      "GLM-5.2",
+      "Step 3.7 Flash",
+      "MiMo V2.5",
     ]);
     expect(() => hostCatalogFrom({ setupContract: { hosts: [] } })).toThrow(/canonical setup contract/);
   });
@@ -281,10 +356,10 @@ describe("Switchloom generator", () => {
     expect(nativeSummary).toContain("Reviewer:");
     expect(nativeSummary).not.toContain("\nOrchestrator:");
 
-    const externalSummary = setupSummary(setRoles(createConfig("pi"), ["reviewer"]));
-    expect(externalSummary).toContain("2 focused roles");
-    expect(externalSummary).not.toContain("Host-managed parent");
-    expect(externalSummary).toContain("\nOrchestrator: openai/gpt-4o-mini · medium");
+    const piSummary = setupSummary(setRoles(createConfig("pi"), ["reviewer"]));
+    expect(piSummary).toContain("1 generated child role");
+    expect(piSummary).toContain("Host-managed parent: Orchestrator (medium)");
+    expect(piSummary).not.toContain("\nOrchestrator:");
   });
 
   it("summarizes native parent ownership without recommending a parent model", () => {
@@ -294,11 +369,13 @@ describe("Switchloom generator", () => {
     expect(summary).not.toContain("fable-5");
   });
 
-  it("gates the parent-card ownership treatment away from Pi external-runner configs", () => {
+  it("uses the Pi active session as the host-managed parent", () => {
     expect(canRenderParentRecommendation(createConfig("codex"))).toBe(true);
-    expect(canRenderParentRecommendation(createConfig("pi"))).toBe(false);
+    expect(canRenderParentRecommendation(createConfig("pi"))).toBe(true);
+    expect(parentRecommendationEffortCopy(createConfig("pi"), "balanced"))
+      .toBe("Use GPT-5.6 Terra with Pi thinking Medium in the active session.");
     expect(parentRecommendationEffortCopy(applyPreset(createConfig("pi"), "balanced", hostCatalog), "balanced"))
-      .toBe("Set Pi thinking to Medium.");
+      .toBe("Use GPT-5.6 Terra with Pi thinking Medium in the active session.");
   });
 
   it("does not write a selected Cursor parent model into generated agents", () => {
@@ -346,39 +423,23 @@ describe("Switchloom generator", () => {
     });
   });
 
-  it("preserves Pi external-runner orchestrator routing in SetupSpecV1", () => {
+  it("keeps the Pi active-session orchestrator out of generated child roles", () => {
     const spec = setupSpec(setRoles(createConfig("pi"), ["reviewer"]), hostCatalog);
-    expect(spec).toEqual({
-      schema_version: 1,
-      host: "pi-external",
-      integration: "standalone",
-      usage_policy: "balanced",
-      selected_roles: {
-        orchestrator: {
-          model: "openai/gpt-4o-mini",
-          effort: "medium",
-        },
-        reviewer: {
-          model: "anthropic/claude-sonnet-4-5",
-          effort: "high",
-        },
-      },
-      routes: [
-        { work_type: "planning", role: "orchestrator", fallbacks: [] },
-        { work_type: "code", role: "reviewer", fallbacks: [] },
-        { work_type: "review", role: "reviewer", fallbacks: [] },
-        { work_type: "verification", role: "reviewer", fallbacks: [] },
-      ],
-      route_default: { role: "orchestrator", fallbacks: [] },
-    });
+    expect(spec.host).toBe("pi-subagents");
+    expect(spec.selected_roles).toEqual({ reviewer: { model: "anthropic/claude-fable-5", effort: "high" } });
+    expect(spec.routes).toEqual([
+      { work_type: "code", role: "reviewer", fallbacks: [] },
+      { work_type: "review", role: "reviewer", fallbacks: [] },
+      { work_type: "verification", role: "reviewer", fallbacks: [] },
+    ]);
+    expect(spec.workflow?.roles).toEqual({ reviewer: { provider: "anthropic", model: "claude-fable-5", thinking: "high", fallback_models: [] } });
   });
 
-  it("writes Pi external-runner orchestrator routing to setup TOML", () => {
+  it("writes only Pi child-role routing to setup TOML", () => {
     const toml = setupConfigToml(setRoles(createConfig("pi"), ["reviewer"]), hostCatalog);
-    expect(toml).toContain("[route_default]");
-    expect(toml).toContain('role = "orchestrator"');
-    expect(toml).toContain("[selected_roles.orchestrator]");
-    expect(toml).toContain('model = "openai/gpt-4o-mini"');
+    expect(toml).not.toContain("[route_default]");
+    expect(toml).not.toContain('role = "orchestrator"');
+    expect(toml).not.toContain("[selected_roles.orchestrator]");
     expect(toml).toContain("[selected_roles.reviewer]");
   });
 
@@ -429,6 +490,25 @@ describe("Switchloom generator", () => {
     expect(toml).not.toContain("switchloom_orchestrator");
     expect(toml).not.toContain(".codex/agents");
     expect(toml).not.toContain("switchloom.config.json");
+  });
+
+  it("round-trips a Pi Extension share URL without coercing its selected models or fallbacks", () => {
+    const transport = setupTransportFrom(generatedCatalog);
+    let config = createConfig("pi");
+    config = setModel(config, "reviewer", "anthropic/claude-opus-5", hostCatalog);
+    config = setFallbackModels(config, "implementer", ["openrouter/google/gemini-3.6-flash"], hostCatalog);
+    const recipe = setupRecipe(config, hostCatalog, transport.recipePrefix);
+
+    expect(shareUrl(config, hostCatalog, "https://switchloom.ai/#builder", transport.recipePrefix))
+      .toBe(`https://switchloom.ai/?recipe=${recipe}#builder`);
+    expect(configFromRecipe(recipe, hostCatalog, transport.recipePrefix)).toEqual(config);
+  });
+
+  it("fails closed for stale or edited share recipes", () => {
+    const transport = setupTransportFrom(generatedCatalog);
+    const recipe = setupRecipe(createConfig(), hostCatalog, transport.recipePrefix);
+    expect(configFromRecipe(`${recipe}edited`, hostCatalog, transport.recipePrefix)).toBeNull();
+    expect(configFromRecipe("not-a-switchloom-recipe", hostCatalog, transport.recipePrefix)).toBeNull();
   });
 
   it("shows the full CLI lifecycle without claiming custom setup verification", () => {
