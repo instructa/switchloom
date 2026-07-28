@@ -539,7 +539,7 @@ function RoleTuningFieldSet({ config, hasHostManagedParent, host, hostCatalog, p
                 role={role}
                 config={config}
                 hostCatalog={hostCatalog}
-                canRemove={config.roles.length > 1}
+                canRemove={config.host !== "pi" && config.roles.length > 1}
                 onRemove={() => onRemoveRole(role)}
                 onModel={(model) => onModel(role, model)}
                 onEffort={(effort) => onEffort(role, effort)}
@@ -830,7 +830,9 @@ function RoleCard({ role, config, hostCatalog, canRemove, onRemove, onModel, onE
   const isChildRole = role !== "orchestrator";
   const removeLabel = canRemove
     ? `Remove ${ROLES[role].label}`
-    : `Cannot remove ${ROLES[role].label}; at least one child role is required`;
+    : config.host === "pi"
+      ? `Cannot remove ${ROLES[role].label}; Pi Subagents requires all three child roles`
+      : `Cannot remove ${ROLES[role].label}; at least one child role is required`;
   return (
     <Card size="sm">
       <CardHeader>
@@ -856,7 +858,9 @@ function RoleCard({ role, config, hostCatalog, canRemove, onRemove, onModel, onE
       </CardHeader>
       {isChildRole && !canRemove && (
         <CardContent className="pt-0">
-          <p className="text-xs leading-5 text-muted-foreground">At least one child role is required.</p>
+          <p className="text-xs leading-5 text-muted-foreground">
+            {config.host === "pi" ? "Pi Subagents requires all three child roles." : "At least one child role is required."}
+          </p>
         </CardContent>
       )}
       <CardContent>

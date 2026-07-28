@@ -259,6 +259,9 @@ describe("Generator parent recommendation card", () => {
     expect(text).not.toContain("Not included");
     expect(text).not.toContain("Set Codex reasoning");
     expect(findByAriaLabelOrNull(tree, "Orchestrator model")).toBeNull();
+    expect(findByAriaLabel(tree, "Cannot remove Implementer; Pi Subagents requires all three child roles").props.disabled).toBe(true);
+    expect(findByAriaLabel(tree, "Cannot remove Reviewer; Pi Subagents requires all three child roles").props.disabled).toBe(true);
+    expect(findByAriaLabel(tree, "Cannot remove Verifier; Pi Subagents requires all three child roles").props.disabled).toBe(true);
   });
 });
 

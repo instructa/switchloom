@@ -357,7 +357,7 @@ describe("Switchloom generator", () => {
     expect(nativeSummary).not.toContain("\nOrchestrator:");
 
     const piSummary = setupSummary(setRoles(createConfig("pi"), ["reviewer"]));
-    expect(piSummary).toContain("1 generated child role");
+    expect(piSummary).toContain("3 generated child roles");
     expect(piSummary).toContain("Host-managed parent: Orchestrator (medium)");
     expect(piSummary).not.toContain("\nOrchestrator:");
   });
@@ -423,24 +423,29 @@ describe("Switchloom generator", () => {
     });
   });
 
-  it("keeps the Pi active-session orchestrator out of generated child roles", () => {
+  it("keeps the Pi active-session orchestrator out while retaining every required child role", () => {
     const spec = setupSpec(setRoles(createConfig("pi"), ["reviewer"]), hostCatalog);
     expect(spec.host).toBe("pi-subagents");
-    expect(spec.selected_roles).toEqual({ reviewer: { model: "anthropic/claude-fable-5", effort: "high" } });
+    expect(Object.keys(spec.selected_roles)).toEqual(["implementer", "reviewer", "verifier"]);
+    expect(spec.selected_roles).not.toHaveProperty("orchestrator");
     expect(spec.routes).toEqual([
-      { work_type: "code", role: "reviewer", fallbacks: [] },
+      { work_type: "code", role: "implementer", fallbacks: [] },
       { work_type: "review", role: "reviewer", fallbacks: [] },
-      { work_type: "verification", role: "reviewer", fallbacks: [] },
+      { work_type: "verification", role: "verifier", fallbacks: [] },
     ]);
-    expect(spec.workflow?.roles).toEqual({ reviewer: { provider: "anthropic", model: "claude-fable-5", thinking: "high", fallback_models: [] } });
+    expect(Object.keys(spec.workflow?.roles ?? {})).toEqual(["implementer", "reviewer", "verifier"]);
   });
 
-  it("writes only Pi child-role routing to setup TOML", () => {
+  it("writes the required Pi child-role workflow to setup TOML", () => {
     const toml = setupConfigToml(setRoles(createConfig("pi"), ["reviewer"]), hostCatalog);
     expect(toml).not.toContain("[route_default]");
     expect(toml).not.toContain('role = "orchestrator"');
     expect(toml).not.toContain("[selected_roles.orchestrator]");
+    expect(toml).toContain("[workflow]");
+    expect(toml).toContain('coding_agent = "pi"');
+    expect(toml).toContain("[workflow.roles.implementer]");
     expect(toml).toContain("[selected_roles.reviewer]");
+    expect(toml).toContain("[workflow.roles.verifier]");
   });
 
   it("keeps deterministic review fallback on verifier when reviewer is removed", () => {

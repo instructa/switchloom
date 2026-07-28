@@ -17,6 +17,7 @@ import {
   setEffort,
   setIntegration,
   setModel,
+  setRoles,
   setupConfigToml,
   setupRecipe,
   setupTransportFrom,
@@ -40,6 +41,7 @@ const switchloomBin = resolve("target/debug/switchloom");
 const catalog = JSON.parse(await readFile(resolve("website/data/catalog.json"), "utf8"));
 const hostCatalog = hostCatalogFrom(catalog);
 const setupTransport = setupTransportFrom(catalog);
+const APPLYABLE_HOST_IDS = HOST_IDS.filter((host) => host !== "pi");
 // These tests deliberately spawn the real CLI for every supported matrix/invalid transport case.
 const EXHAUSTIVE_CLI_PARITY_TIMEOUT_MS = 600_000;
 const MALFORMED_TRANSPORT_TIMEOUT_MS = 60_000;
@@ -134,7 +136,7 @@ function roleSubsets(): ChildRoleId[][] {
 }
 
 function withRoles(config: GeneratorConfig, roles: readonly ChildRoleId[]): GeneratorConfig {
-  return { ...config, roles: [...roles] };
+  return setRoles(config, roles);
 }
 
 function caseToken(value: string) {
@@ -142,8 +144,8 @@ function caseToken(value: string) {
 }
 
 describe("website SetupSpec to CLI parity", () => {
-  it("validates every website host/preset/integration/role-subset config and recipe through the Rust lifecycle", async () => {
-    for (const host of HOST_IDS) {
+  it("validates every applyable website host/preset/integration/role-subset config and recipe through the Rust lifecycle", async () => {
+    for (const host of APPLYABLE_HOST_IDS) {
       for (const preset of PRESET_IDS) {
         for (const roles of roleSubsets()) {
           for (const integration of ["standalone", "planr"] as const) {
@@ -159,7 +161,7 @@ describe("website SetupSpec to CLI parity", () => {
   }, 120_000);
 
   it("validates every website-selectable per-role model and effort through Rust config and recipe compilation", async () => {
-    for (const host of HOST_IDS) {
+    for (const host of APPLYABLE_HOST_IDS) {
       for (const role of ROLE_IDS) {
         const roleSet = role === "orchestrator" ? CHILD_ROLE_IDS : [role] as ChildRoleId[];
         for (const model of hostCatalog[host].models) {
@@ -211,7 +213,7 @@ describe("website SetupSpec to CLI parity", () => {
   }, 60_000);
 
   it("keeps preset coverage over all roles as a compact smoke for copied website defaults", async () => {
-    for (const host of HOST_IDS) {
+    for (const host of APPLYABLE_HOST_IDS) {
       for (const preset of PRESET_IDS) {
         for (const integration of ["standalone", "planr"] as const) {
           const config = setIntegration(applyPreset(createConfig(host), preset, hostCatalog), integration);
@@ -220,6 +222,26 @@ describe("website SetupSpec to CLI parity", () => {
       }
     }
   }, 60_000);
+
+  it("rejects generated experimental Pi config and recipe transports before repository mutation", async () => {
+    const config = createConfig("pi");
+    const configToml = setupConfigToml(config, hostCatalog);
+    const recipe = setupRecipe(config, hostCatalog, setupTransport.recipePrefix);
+
+    for (const transport of ["config", "recipe"] as const) {
+      const { root, repository } = await tempRepo(`switchloom-website-pi-experimental-${transport}-`);
+      const args = transport === "config"
+        ? ["preview", "--config", join(root, "config.toml"), "--repository", repository]
+        : ["preview", "--recipe", recipe, "--repository", repository];
+      if (transport === "config") await writeFile(args[2], configToml);
+
+      const result = runRejected(args);
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("workflow is experimental and cannot be applied as certified support");
+      await expect(readFile(join(repository, ".switchloom/config.toml"), "utf8")).rejects.toThrow();
+      await expect(readFile(join(repository, ".model-routing/manifest.json"), "utf8")).rejects.toThrow();
+    }
+  });
 
   it("executes the copied standalone website command through preview/apply/update/status/rollback/uninstall", async () => {
     const config = applyPreset(createConfig("codex"), "balanced", hostCatalog);

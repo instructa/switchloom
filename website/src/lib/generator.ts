@@ -494,6 +494,11 @@ export function applyPreset(config: GeneratorConfig, preset: PresetId, catalog: 
 }
 
 export function setRoles(config: GeneratorConfig, roles: readonly string[]): GeneratorConfig {
+  if (config.host === "pi") {
+    const alreadyComplete = config.roles.length === CHILD_ROLE_IDS.length
+      && CHILD_ROLE_IDS.every((role, index) => config.roles[index] === role);
+    return alreadyComplete ? config : { ...config, roles: [...CHILD_ROLE_IDS] };
+  }
   const selected = new Set(roles);
   const valid = CHILD_ROLE_IDS.filter((role) => selected.has(role));
   return { ...config, roles: valid.length > 0 ? valid : config.roles };
@@ -720,6 +725,7 @@ export function configFromRecipe(recipe: string, catalog: HostCatalog, recipePre
     const roleEntries = Object.entries(spec.selected_roles);
     const selectedRoles = roleEntries.map(([role]) => role);
     const childRoles = CHILD_ROLE_IDS.filter((role) => selectedRoles.includes(role));
+    if (host === "pi" && (childRoles.length !== CHILD_ROLE_IDS.length || CHILD_ROLE_IDS.some((role) => !childRoles.includes(role)))) return null;
     const restoredBase = { ...createConfig(host), orchestration };
     const expectedRoles = canRenderParentRecommendation(restoredBase) ? childRoles : [PRIMARY_RECOMMENDATION_ID, ...childRoles];
     if (childRoles.length === 0 || selectedRoles.length !== expectedRoles.length || expectedRoles.some((role) => !selectedRoles.includes(role))) return null;
@@ -791,6 +797,27 @@ export function setupConfigToml(config: GeneratorConfig, catalog: HostCatalog) {
   }
   if (spec.route_default) {
     lines.push("[route_default]", `role = ${tomlString(spec.route_default.role)}`, `fallbacks = ${tomlArray(spec.route_default.fallbacks)}`, "");
+  }
+  if (spec.workflow) {
+    lines.push(
+      "[workflow]",
+      `schema_version = ${spec.workflow.schema_version}`,
+      `coding_agent = ${tomlString(spec.workflow.coding_agent)}`,
+      `execution_path = ${tomlString(spec.workflow.execution_path)}`,
+      `validation_status = ${tomlString(spec.workflow.validation_status)}`,
+      `parent_model = ${tomlString(spec.workflow.parent_model)}`,
+      `topology = ${tomlString(spec.workflow.topology)}`,
+      "",
+    );
+    for (const [role, selection] of Object.entries(spec.workflow.roles)) {
+      lines.push(
+        `[workflow.roles.${role}]`,
+        `provider = ${tomlString(selection.provider)}`,
+        `model = ${tomlString(selection.model)}`,
+      );
+      if (selection.thinking) lines.push(`thinking = ${tomlString(selection.thinking)}`);
+      lines.push(`fallback_models = ${tomlArray(selection.fallback_models)}`, "");
+    }
   }
   for (const role of setupSpecRoleIds(config)) {
     const selection = spec.selected_roles[role];
