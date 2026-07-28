@@ -5,6 +5,7 @@ import test from "node:test";
 const read = (file) => readFile(file, "utf8");
 const ci = await read(".github/workflows/ci.yml");
 const candidate = await read(".github/workflows/release-candidate.yml");
+const packageJson = JSON.parse(await read("package.json"));
 
 test("CI classifies paths and conditionally runs every broad job", () => {
   assert.match(ci, /classify:\n    name: Classify changes/);
@@ -12,6 +13,14 @@ test("CI classifies paths and conditionally runs every broad job", () => {
   for (const job of ["rust", "website", "distribution"]) {
     assert.match(ci, new RegExp(`${job}:\\n[\\s\\S]*?needs: classify[\\s\\S]*?needs\\.classify\\.outputs\\.${job} == 'true'`));
   }
+  assert.match(ci, /parity: \$\{\{ steps\.router\.outputs\.parity \}\}/);
+});
+
+test("website fast checks exclude CLI parity and routing-sensitive changes add it explicitly", () => {
+  assert.match(packageJson.scripts["site:test"], /--exclude website\/src\/lib\/website-cli-parity\.test\.ts/);
+  assert.match(packageJson.scripts["site:test:parity"], /^vitest run website\/src\/lib\/website-cli-parity\.test\.ts --hookTimeout=120000$/);
+  assert.match(ci, /Install Rust for CLI parity\n        if: \$\{\{ needs\.classify\.outputs\.parity == 'true' \}\}/);
+  assert.match(ci, /Verify website and CLI parity\n        if: \$\{\{ needs\.classify\.outputs\.parity == 'true' \}\}\n        run: pnpm site:test:parity/);
 });
 
 test("CI keeps a stable fail-closed summary and cancels superseded feature runs", () => {

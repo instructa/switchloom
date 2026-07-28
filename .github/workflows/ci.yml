@@ -20,6 +20,7 @@ jobs:
       rust: ${{ steps.router.outputs.rust }}
       website: ${{ steps.router.outputs.website }}
       distribution: ${{ steps.router.outputs.distribution }}
+      parity: ${{ steps.router.outputs.parity }}
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -87,6 +88,12 @@ jobs:
         run: corepack enable && pnpm install --frozen-lockfile
       - name: Check website
         run: pnpm site:check
+      - name: Install Rust for CLI parity
+        if: ${{ needs.classify.outputs.parity == 'true' }}
+        run: rustup toolchain install 1.85.0 --profile minimal
+      - name: Verify website and CLI parity
+        if: ${{ needs.classify.outputs.parity == 'true' }}
+        run: pnpm site:test:parity
 
   distribution:
     name: npm distribution

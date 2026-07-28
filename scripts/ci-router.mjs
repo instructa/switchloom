@@ -1,13 +1,31 @@
 #!/usr/bin/env node
 import { appendFileSync } from "node:fs";
 
-const ALL = Object.freeze({ rust: true, website: true, distribution: true });
-const NONE = Object.freeze({ rust: false, website: false, distribution: false });
+const ALL = Object.freeze({ rust: true, website: true, distribution: true, parity: true });
+const NONE = Object.freeze({ rust: false, website: false, distribution: false, parity: false });
 
 const isDocumentation = (file) => !file.startsWith("website/") && (file === "README.md" || file === "LICENSE" || file.startsWith("docs/") || file.endsWith(".md"));
 const isWebsite = (file) => file.startsWith("website/") || file === "astro.config.mjs" || file === "tailwind.config.mjs";
 const isRust = (file) => file === "Cargo.toml" || file === "Cargo.lock" || file === "rust-toolchain.toml" || file === "rustfmt.toml" || file === "clippy.toml" || file.startsWith("src/") || file.startsWith("crates/") || file.startsWith("xtask/");
 const isDistribution = (file) => file === "package.json" || file === "package-lock.json" || file === "npm-shrinkwrap.json" || file.startsWith("npm/");
+const WEBSITE_PARITY_RUST_PATHS = new Set([
+  "src/bin/switchloom.rs",
+  "src/cli.rs",
+  "src/config.rs",
+  "src/contracts.rs",
+  "src/hosts.rs",
+  "src/integrations.rs",
+  "src/lifecycle.rs",
+  "src/registry.rs",
+  "src/routing.rs",
+]);
+const isWebsiteParity = (file) =>
+  file.startsWith("website/data/") ||
+  file === "website/src/components/Generator.tsx" ||
+  file === "website/src/lib/generator.ts" ||
+  file === "website/src/lib/website-cli-parity.test.ts" ||
+  file.startsWith("website/src/lib/onboarding/") ||
+  WEBSITE_PARITY_RUST_PATHS.has(file);
 
 /**
  * Convert changed repository-relative paths into the CI jobs they require.
@@ -22,11 +40,16 @@ export function classifyPaths(paths) {
     if (isDocumentation(file)) continue;
     if (isWebsite(file)) {
       jobs.website = true;
+      jobs.parity ||= isWebsiteParity(file);
       continue;
     }
     if (isRust(file)) {
       jobs.rust = true;
       jobs.distribution = true;
+      if (isWebsiteParity(file)) {
+        jobs.website = true;
+        jobs.parity = true;
+      }
       continue;
     }
     if (isDistribution(file)) {
