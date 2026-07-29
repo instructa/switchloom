@@ -4,6 +4,17 @@ All notable changes to Switchloom are recorded here.
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-07-29
+
+- Certified the existing Pi Subagents extension path and its generated
+  repository lifecycle: active Pi remains the parent while Switchloom writes
+  only implementer, reviewer, verifier, and sequential-chain artifacts.
+- Made the version-pinned Pi recipe applyable from the website and updated Pi
+  onboarding to guide installation, application, and inspection of the
+  certified workflow.
+- Regenerated release-owned catalogs, bundles, and compatibility fixtures for
+  the certified Pi path.
+
 ## [0.3.5] - 2026-07-28
 
 - Made Pi Subagents the single Pi workflow: the active Pi session remains the

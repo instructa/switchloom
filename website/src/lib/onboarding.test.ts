@@ -14,7 +14,7 @@ describe("provider onboarding templates", () => {
       expect(template.icon).toMatch(/^\/brand\/[a-z-]+\.svg$/);
       expect(template.steps.map((step) => step.id)).toEqual(["requirements", "project", "install", "activate"]);
       expect(template.steps.every((step) => step.title.length > 0 && step.description.length > 0)).toBe(true);
-      expect(template.steps.filter((step) => step.command?.kind === "apply")).toHaveLength(template.host === "pi" ? 0 : 1);
+      expect(template.steps.filter((step) => step.command?.kind === "apply")).toHaveLength(1);
     }
   });
 
@@ -42,7 +42,9 @@ describe("provider onboarding templates", () => {
     const onboarding = providerOnboarding("pi", "switchloom apply");
 
     expect(onboarding.description).toContain("active main Pi session is the Orchestrator");
+    expect(onboarding.status).toBe("certified");
+    expect(onboarding.steps.find((step) => step.id === "install")?.command).toBe("switchloom apply");
     expect(onboarding.steps.some((step) => step.command === "pi install npm:pi-subagents")).toBe(true);
-    expect(onboarding.description).not.toMatch(/isolated|proxy|gateway/i);
+    expect(`${onboarding.description} ${onboarding.steps.map((step) => `${step.title} ${step.description}`).join(" ")}`).not.toMatch(/experimental|wait|isolated|proxy|gateway/i);
   });
 });

@@ -223,23 +223,65 @@ describe("website SetupSpec to CLI parity", () => {
     }
   }, 60_000);
 
-  it("rejects generated experimental Pi config and recipe transports before repository mutation", async () => {
-    const config = createConfig("pi");
+  it("accepts generated certified Pi config and recipe transports", async () => {
+    let config = setModel(createConfig("pi"), "orchestrator", "openrouter/x-ai/grok-4.5", hostCatalog);
+    config = setModel(config, "implementer", "openrouter/x-ai/grok-4.5", hostCatalog);
+    config = setEffort(config, "implementer", "medium", hostCatalog);
+    config = setModel(config, "reviewer", "openai-codex/gpt-5.6-sol", hostCatalog);
+    config = setEffort(config, "reviewer", "high", hostCatalog);
+    config = setModel(config, "verifier", "openrouter/x-ai/grok-4.5", hostCatalog);
+    config = setEffort(config, "verifier", "low", hostCatalog);
+    expect(config.assignments.orchestrator.model).toBe("openrouter/x-ai/grok-4.5");
     const configToml = setupConfigToml(config, hostCatalog);
     const recipe = setupRecipe(config, hostCatalog, setupTransport.recipePrefix);
+    expect(recipeApplyCommand(config, hostCatalog, setupTransport.recipePrefix)).toBe(
+      `npx switchloom@${SWITCHLOOM_VERSION} apply --recipe ${shellQuote(recipe)} --repository .`,
+    );
 
     for (const transport of ["config", "recipe"] as const) {
-      const { root, repository } = await tempRepo(`switchloom-website-pi-experimental-${transport}-`);
-      const args = transport === "config"
-        ? ["preview", "--config", join(root, "config.toml"), "--repository", repository]
-        : ["preview", "--recipe", recipe, "--repository", repository];
-      if (transport === "config") await writeFile(args[2], configToml);
+      const { root, repository } = await tempRepo(`switchloom-website-pi-certified-${transport}-`);
+      const source = transport === "config" ? ["--config", join(root, "config.toml")] : ["--recipe", recipe];
+      if (transport === "config") await writeFile(source[1], configToml);
 
-      const result = runRejected(args);
-      expect(result.status).not.toBe(0);
-      expect(result.stderr).toContain("workflow is experimental and cannot be applied as certified support");
-      await expect(readFile(join(repository, ".switchloom/config.toml"), "utf8")).rejects.toThrow();
-      await expect(readFile(join(repository, ".model-routing/manifest.json"), "utf8")).rejects.toThrow();
+      const preview = report(run(["preview", ...source, "--repository", repository]));
+      const previewPaths = preview.artifacts.map((artifact) => artifact.path);
+      expect(previewPaths).toContain(".pi/settings.json");
+      expect(previewPaths).toContain(".pi/agents/switchloom-implementer.md");
+      expect(previewPaths).toContain(".pi/agents/switchloom-reviewer.md");
+      expect(previewPaths).toContain(".pi/agents/switchloom-verifier.md");
+      expect(previewPaths).toContain(".pi/chains/switchloom-workflow.chain.md");
+      expect(previewPaths).not.toContain(".pi/agents/switchloom-orchestrator.md");
+
+      const applied = report(run(["apply", ...source, "--repository", repository, "--yes"]));
+      expect(applied.artifacts.map((artifact) => artifact.path)).toEqual(previewPaths);
+      const settings = await readFile(join(repository, ".pi/settings.json"), "utf8");
+      expect(JSON.parse(settings)).toEqual({
+        extensions: ["npm:pi-subagents"],
+        subagents: {
+          agentOverrides: {
+            "switchloom-implementer": { model: "openrouter/x-ai/grok-4.5", thinking: "medium", fallbackModels: [] },
+            "switchloom-reviewer": { model: "openai-codex/gpt-5.6-sol", thinking: "high", fallbackModels: [] },
+            "switchloom-verifier": { model: "openrouter/x-ai/grok-4.5", thinking: "low", fallbackModels: [] },
+          },
+        },
+      });
+      expect(settings).not.toMatch(/credential|endpoint/i);
+
+      for (const [role, model, effort] of [
+        ["implementer", "openrouter/x-ai/grok-4.5", "medium"],
+        ["reviewer", "openai-codex/gpt-5.6-sol", "high"],
+        ["verifier", "openrouter/x-ai/grok-4.5", "low"],
+      ]) {
+        const agent = await readFile(join(repository, `.pi/agents/switchloom-${role}.md`), "utf8");
+        expect(agent).toContain(`model: ${model}`);
+        expect(agent).toContain(`thinking: ${effort}`);
+        expect(agent).not.toMatch(/credential|endpoint/i);
+      }
+      const chain = await readFile(join(repository, ".pi/chains/switchloom-workflow.chain.md"), "utf8");
+      expect(chain).toContain("switchloom-implementer");
+      expect(chain).toContain("switchloom-reviewer");
+      expect(chain).toContain("switchloom-verifier");
+      expect(chain).not.toContain("switchloom-orchestrator");
     }
   });
 

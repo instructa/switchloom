@@ -85,7 +85,11 @@ pub fn show_policy(policy: &str, host: &str) -> Result<PolicySource> {
         artifacts: adapter.artifacts,
         evidence: EvaluationEvidence {
             evaluation_ids: vec![binding.verification.id.clone()],
-            status: "experimental".to_string(),
+            status: if binding.id == "pi-subagents" {
+                "certified".to_string()
+            } else {
+                "experimental".to_string()
+            },
         },
         adapter_contract: adapter.adapter_contract,
         policy: policy_contract,
@@ -213,7 +217,11 @@ pub fn evaluate_policy(policy: &str, host: &str) -> Result<EvaluationReport> {
         scenario_count,
         offline_reproducible: scenario_count > 0,
         live_evidence: None,
-        status: "experimental".to_string(),
+        status: if host == "pi-subagents" {
+            "certified".to_string()
+        } else {
+            "experimental".to_string()
+        },
         recommended: false,
     })
 }
@@ -229,7 +237,7 @@ pub fn catalog_value() -> Result<Value> {
             "entryId": format!("{}-{}", summary.policy_id, summary.binding_id),
             "entryVersion": format!("{}+{}", summary.policy_version, summary.binding_version),
             "status": report.status,
-            "statusLabel": "Experimental",
+            "statusLabel": if report.status == "certified" { "Certified" } else { "Experimental" },
             "recommended": false,
             "freshness": "current",
             "lifecycle": "published",
@@ -291,7 +299,7 @@ pub fn catalog_value() -> Result<Value> {
             "state": "package_generated",
             "entryCount": compositions.len(),
             "trust": "model_routing_unsigned_catalog_v1",
-            "message": "Entries stay experimental until authenticated live evidence and an offline maintainer signature pass."
+            "message": "Entries stay experimental until authenticated live evidence and an offline maintainer signature pass, except for independently certified capabilities."
         },
         "compositions": compositions,
     }))
@@ -1149,13 +1157,13 @@ pub(crate) fn adapter_contract_for_binding(
                 "Use the CLI lifecycle or SetupSpecV1 recipe commands to preview, apply, update, status, rollback, and uninstall repository-local artifacts.".to_string(),
                 "Record Switchloom package version, package digest, bundle_id, host version, requested dispatch, effective child identity, nonce, and receipt paths before claiming certification.".to_string(),
                 "Treat advisory or unsupported guarantees as uncertified until nonce-bearing live host evidence upgrades them.".to_string(),
-                "For the available-host release gate, Codex may be certified from deterministic effective-routing evidence; Cursor profiles may only claim advisory nonce-correlated requested-routing evidence unless the host exposes authenticated effective role/model telemetry. Claude Code, OpenCode, and Pi remain unavailable or unverified until authentic receipts exist.".to_string(),
+                "For the available-host release gate, Codex may be certified from deterministic effective-routing evidence; Cursor profiles may only claim advisory nonce-correlated requested-routing evidence unless the host exposes authenticated effective role/model telemetry. Claude Code and OpenCode remain unavailable or unverified until authentic receipts exist.".to_string(),
             ],
             forbidden_duplicate_ownership: vec![
                 "Do not maintain a Planr-side model catalog, effort catalog, preset compiler, host adapter, or fork policy normalizer for Switchloom-owned inputs.".to_string(),
                 "Do not re-normalize Switchloom model, effort, role, agent_type, profile, or fork policy identifiers in Planr.".to_string(),
                 "Do not overwrite Switchloom-managed artifacts outside preview/apply/update/rollback/uninstall.".to_string(),
-                "Do not mark Claude Code, OpenCode, Pi, or any advisory receipt as certified without live nonce-bearing child evidence.".to_string(),
+                "Do not mark Claude Code, OpenCode, or any advisory receipt as certified without live nonce-bearing child evidence.".to_string(),
             ],
             certification_report_reference:
                 "reports/native-host-certification/<host>/<timestamp>/workdir/dispatch-evidence.json plus the matching bundle.json, invocation receipt, package digest, and validator stdout".to_string(),

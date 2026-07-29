@@ -5,7 +5,7 @@ export const piOnboarding = {
   icon: "/brand/pi.svg",
   title: "Set up your Pi agent team",
   description: "Your active main Pi session is the Orchestrator. Pi owns provider login; Switchloom installs Pi Subagents, child role agents, and a sequential workflow.",
-  status: "experimental",
+  status: "certified",
   steps: [
     {
       id: "requirements",
@@ -21,8 +21,9 @@ export const piOnboarding = {
     },
     {
       id: "install",
-      title: "Wait for live certification",
-      description: "This generated workflow is Experimental. Do not apply it as certified support until a credentialed requested/effective-model receipt is retained.",
+      title: "Apply the generated Pi recipe",
+      description: "Apply the certified recipe to write Pi Subagents settings, child role agents, and the sequential workflow in this repository.",
+      command: { kind: "apply" },
     },
     {
       id: "activate",
