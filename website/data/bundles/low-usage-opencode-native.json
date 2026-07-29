@@ -6,7 +6,7 @@
   "generated_at": "2026-07-16T00:00:00Z",
   "source": {
     "package": "model-routing",
-    "package_version": "0.3.5",
+    "package_version": "0.3.6",
     "integration": "standalone"
   },
   "policy": {
@@ -307,20 +307,20 @@
     },
     "planr_handoff": {
       "schema_version": 1,
-      "switchloom_package": "switchloom@0.3.5",
+      "switchloom_package": "switchloom@0.3.6",
       "semantic_role_contract": "Planr supplies usage policy `low-usage`, work_type routes, and semantic roles; Switchloom owns the selected host binding, model, effort, fork/context policy, and generated dispatch artifacts.",
       "required_consumer_behavior": [
         "Consume RoutingIntentV1 as the only source for semantic_role, work_type, selected profile, model, effort, agent_type, and fork_turns inputs.",
         "Use the CLI lifecycle or SetupSpecV1 recipe commands to preview, apply, update, status, rollback, and uninstall repository-local artifacts.",
         "Record Switchloom package version, package digest, bundle_id, host version, requested dispatch, effective child identity, nonce, and receipt paths before claiming certification.",
         "Treat advisory or unsupported guarantees as uncertified until nonce-bearing live host evidence upgrades them.",
-        "For the available-host release gate, Codex may be certified from deterministic effective-routing evidence; Cursor profiles may only claim advisory nonce-correlated requested-routing evidence unless the host exposes authenticated effective role/model telemetry. Claude Code, OpenCode, and Pi remain unavailable or unverified until authentic receipts exist."
+        "For the available-host release gate, Codex may be certified from deterministic effective-routing evidence; Cursor profiles may only claim advisory nonce-correlated requested-routing evidence unless the host exposes authenticated effective role/model telemetry. Claude Code and OpenCode remain unavailable or unverified until authentic receipts exist."
       ],
       "forbidden_duplicate_ownership": [
         "Do not maintain a Planr-side model catalog, effort catalog, preset compiler, host adapter, or fork policy normalizer for Switchloom-owned inputs.",
         "Do not re-normalize Switchloom model, effort, role, agent_type, profile, or fork policy identifiers in Planr.",
         "Do not overwrite Switchloom-managed artifacts outside preview/apply/update/rollback/uninstall.",
-        "Do not mark Claude Code, OpenCode, Pi, or any advisory receipt as certified without live nonce-bearing child evidence."
+        "Do not mark Claude Code, OpenCode, or any advisory receipt as certified without live nonce-bearing child evidence."
       ],
       "certification_report_reference": "reports/native-host-certification/<host>/<timestamp>/workdir/dispatch-evidence.json plus the matching bundle.json, invocation receipt, package digest, and validator stdout"
     }

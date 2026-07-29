@@ -108,7 +108,7 @@ describe("Switchloom generator", () => {
   it("serializes the active-session Pi Subagents topology", () => {
     const pi = createConfig("pi");
     expect(setupSpec(pi, hostCatalog).workflow).toMatchObject({
-      coding_agent: "pi", execution_path: "extension", validation_status: "experimental", parent_model: "runtime-managed", topology: "sequential",
+      coding_agent: "pi", execution_path: "extension", validation_status: "certified", parent_model: "runtime-managed", topology: "sequential",
     });
     expect(setupSpec(pi, hostCatalog).selected_roles).not.toHaveProperty("orchestrator");
     expect(setupSpec(pi, hostCatalog).workflow?.roles).not.toHaveProperty("orchestrator");

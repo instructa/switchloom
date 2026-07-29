@@ -268,7 +268,7 @@ fn codex_doctor_uses_applied_semantic_roles_and_distinguishes_drift() {
         diagnostic.code == "codex_exact_version_ready"
             && diagnostic
                 .repair
-                .contains("Switchloom v0.3.5 certification")
+                .contains("Switchloom v0.3.6 certification")
     }));
 
     fs::write(

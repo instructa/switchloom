@@ -577,7 +577,7 @@ export type SetupSpecV1 = {
     schema_version: 1;
     coding_agent: "pi";
     execution_path: "extension";
-    validation_status: "experimental";
+    validation_status: "certified";
     parent_model: "runtime-managed";
     topology: "sequential";
     roles: Record<string, { provider: string; model: string; thinking?: string; fallback_models: string[] }>;
@@ -642,7 +642,7 @@ export function setupSpec(config: GeneratorConfig, catalog: HostCatalog): SetupS
         schema_version: 1,
         coding_agent: "pi",
         execution_path: "extension",
-        validation_status: "experimental",
+        validation_status: "certified",
         parent_model: "runtime-managed",
         topology: "sequential",
         roles: Object.fromEntries((Object.entries(selected_roles) as [ChildRoleId, SetupSpecV1["selected_roles"][ChildRoleId]][]).map(([role, selection]) => {
@@ -844,9 +844,6 @@ export function shellQuote(value: string) {
 }
 
 export function recipeApplyCommand(config: GeneratorConfig, catalog: HostCatalog, recipePrefix = "sw1_") {
-  if (config.host === "pi") {
-    return "# Pi Subagents is Experimental until credentialed live runtime receipts are available; no applyable recipe is emitted.";
-  }
   return `npx switchloom@${SWITCHLOOM_VERSION} apply --recipe ${shellQuote(setupRecipe(config, catalog, recipePrefix))} --repository .`;
 }
 

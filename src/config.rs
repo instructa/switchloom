@@ -233,7 +233,7 @@ pub fn validate_workflow_request(request: &WorkflowRequestV1) -> Result<()> {
             &[WorkflowTopology::RoleDispatch][..],
         ),
         (CodingAgentRuntime::Pi, ExecutionPath::Extension) => (
-            ValidationStatus::Experimental,
+            ValidationStatus::Certified,
             ParentModelGuidance::RuntimeManaged,
             &[WorkflowTopology::Sequential][..],
         ),
@@ -480,7 +480,7 @@ pub fn workflow_capability_catalog_value() -> Value {
         "schemaVersion": 1,
         "capabilities": [
             {"codingAgent": "codex", "executionPath": "native", "validationStatus": "certified", "parentModel": "current-session", "topologies": ["role-dispatch"], "providers": workflow_provider_capabilities(CodingAgentRuntime::Codex)},
-            {"codingAgent": "pi", "executionPath": "extension", "validationStatus": "experimental", "parentModel": "runtime-managed", "topologies": ["sequential"], "providers": workflow_provider_capabilities(CodingAgentRuntime::Pi)},
+            {"codingAgent": "pi", "executionPath": "extension", "validationStatus": "certified", "parentModel": "runtime-managed", "topologies": ["sequential"], "providers": workflow_provider_capabilities(CodingAgentRuntime::Pi)},
             {"codingAgent": "opencode", "executionPath": "native", "validationStatus": "experimental", "parentModel": "runtime-managed", "topologies": ["role-dispatch"], "providers": workflow_provider_capabilities(CodingAgentRuntime::OpenCode)},
             {"codingAgent": "claude-code", "executionPath": "sidecar", "validationStatus": "planned", "parentModel": "external-setup-required", "topologies": ["role-dispatch"]},
             {"codingAgent": "claude-code", "executionPath": "native", "validationStatus": "planned", "parentModel": "runtime-managed", "topologies": ["role-dispatch"], "providers": workflow_provider_capabilities(CodingAgentRuntime::ClaudeCode)},

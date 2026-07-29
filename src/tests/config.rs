@@ -442,8 +442,8 @@ fn workflow_contract_fixtures_reject_unproven_and_invalid_tuples() {
             None,
         ),
         (
-            include_str!("../../fixtures/workflow-contract-v1/experimental-pi-extension.json"),
-            Some("workflow is experimental and cannot be applied as certified support"),
+            include_str!("../../fixtures/workflow-contract-v1/certified-pi-extension.json"),
+            None,
         ),
         (
             include_str!("../../fixtures/workflow-contract-v1/experimental-opencode-native.json"),
@@ -513,7 +513,7 @@ fn workflow_contract_fixtures_reject_unproven_and_invalid_tuples() {
     let claude_sidecar = workflow_capability(&catalog, "claude-code", "sidecar");
     let cursor_native = workflow_capability(&catalog, "cursor", "native");
     assert_eq!(codex_native["validationStatus"], "certified");
-    assert_eq!(pi_extension["validationStatus"], "experimental");
+    assert_eq!(pi_extension["validationStatus"], "certified");
     assert_eq!(opencode_native["validationStatus"], "experimental");
     assert_eq!(claude_sidecar["validationStatus"], "planned");
     assert_eq!(cursor_native["validationStatus"], "experimental");

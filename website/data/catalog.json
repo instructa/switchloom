@@ -265,11 +265,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "77f0af4bc5246a6a6f82a1ad8fdcd29395bdd8bc91e10480a47f5fd3b9ef716b",
+        "manifestSha256": "11b9fe355d5c515a3eb87ea890caa8f5aecb51222277f7ba413d1a6b1c512237",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -429,11 +429,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "1cc8ada26f29c77ce9d805f2ee70cf17a950de57f515f38d53e46e26608a7f68",
+        "manifestSha256": "decd6fb38f7a0e2412e013d06a3d8d01b32b2d7c555a9c35fb8d75bd97725f20",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -593,11 +593,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "36c1e517e8b39226d20ca0499dd0d8bea4cb4d3a95683e25279bf37c30f44708",
+        "manifestSha256": "439b82576d89b8888f9fbbebae95828ffeb6b138945437c251d887e8e815e4c8",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -759,11 +759,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "7b66c98d20719a86163eceaae138365864a689d8d7537df48656cd99e91cd831",
+        "manifestSha256": "221d3ea419ee0238c8cc2e6f0385d0a4df8f0f60dbc378b16ae1a7ce9e3db758",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -929,11 +929,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "bfdf3b6afd288a84db06dc2ca9eef6936b2bb576a0e313b63728096874fa1519",
+        "manifestSha256": "dbbdbd544cc3b234fc6c5b7a9a2c2b8a2c4def7dc35b82381a22277c0169ab8d",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -1029,7 +1029,7 @@
         },
         "resultHashes": [],
         "reviewAtUnix": null,
-        "status": "experimental",
+        "status": "certified",
         "suiteId": "model-routing-preset-suite",
         "suiteVersion": "1.8.0",
         "thresholds": {}
@@ -1125,15 +1125,15 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "a356e120099cf79da7ec1face6a949c22143f895204414d41913e8454412800f",
+        "manifestSha256": "2e045f132cbef0d43cfa40720ee39ea1378c06f3f0eb007516949ee3f6b7fed8",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
-      "status": "experimental",
-      "statusLabel": "Experimental"
+      "status": "certified",
+      "statusLabel": "Certified"
     },
     {
       "binding": {
@@ -1353,11 +1353,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "e5f08a7480ae981159ae109a0b1f553923a9306464e29bfd768034288cd5429b",
+        "manifestSha256": "400eaf16cd80127b636cd7364551f25d448949bca5a791385dd2a410b4861b98",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -1628,11 +1628,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "841aff544ec08d58a174c35c16efbc982dfe102ae9bfcac1da788e54f7852509",
+        "manifestSha256": "c107fe8745ddd319a9d963389f6b0b79a38cd3b0f8d502f27cc5d63f8f14ee2e",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -1792,11 +1792,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "52ee62f030bf89e7fd01ef842bd993e6eae7d4a6702e285daced31f64273db07",
+        "manifestSha256": "32379e214318d2c671b1a76d4fef32184d180e26060ab97361362812a28a9927",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -1956,11 +1956,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "19f303da4d61de1775278e2a7c86c3561fcbbcef94d6276deb110e4e5c081b72",
+        "manifestSha256": "726ffe1f2f4310cdea1da662933dc22356048c5f74436b7b06ba1d3e6191c522",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -2122,11 +2122,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "c5bf0f34b717980db264910d471fd89c6ab88e46e5f9fb5a5274abf1ef303bea",
+        "manifestSha256": "5cf8fd2ca2dc8f2b4b37d6dca09ec6780d0f6f7a94a27aca993636c72c5946ea",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -2292,11 +2292,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "c1bfc725e5ca265f25b12a1b0c81c5b527a4bb62a4aa9a9ec29f1c4a5d7d0cf5",
+        "manifestSha256": "2e80303ad293b68a29a7ed75d940ee86d54eed5b01f8649d2c04b6a8637b4a7f",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -2392,7 +2392,7 @@
         },
         "resultHashes": [],
         "reviewAtUnix": null,
-        "status": "experimental",
+        "status": "certified",
         "suiteId": "model-routing-preset-suite",
         "suiteVersion": "1.8.0",
         "thresholds": {}
@@ -2488,15 +2488,15 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "ff7de2d570ca0e16884f6a1aff23dbf4aa6f108c790268c8c5c60c6dfd3feead",
+        "manifestSha256": "b8a678e3e157cc4836c81b8611af1fb7c217f495a24172e56f2f5880ab5a6f2c",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
-      "status": "experimental",
-      "statusLabel": "Experimental"
+      "status": "certified",
+      "statusLabel": "Certified"
     },
     {
       "binding": {
@@ -2716,11 +2716,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "0c4aef10c5254e9a447ab6a2288ad727f83040f1593fe4e90294783972056575",
+        "manifestSha256": "2b7cbad4ea9fa369d573f775779f5234a5901f48187a5c306246c92e0e499a5e",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -2991,11 +2991,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "48a89227d48f01cc11461da1ea37e52b42b2b1c780785f16e683cdc943937de7",
+        "manifestSha256": "f0db7fea1737ecec627a8e5985f5f07f4a2055b3553907c5dfd0d1c61c74a995",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -3155,11 +3155,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "e409947869905fedcadc297efa409222b293a34bd50d40e37e38efebdd3b7534",
+        "manifestSha256": "2f6851e9440decd3b59de0205e7a94b2a81ccbb1b0c6e33b674d01639812804f",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -3319,11 +3319,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "f7af617be542b74ca778d7286e7c9f1910df2a896fa40e27f0bbac147324468b",
+        "manifestSha256": "f0fe8cf703bf67781f09c6d62b8bd6e75000a721250d34f882db465b0b2f2c7b",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -3485,11 +3485,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "e8f7138ee4c5bee987e505487ec4286066ee7068a9c099a0b9e0803e6f0acc45",
+        "manifestSha256": "0bc3fb26a92d730aa875b9e8315440acc49545b8afa9fd31b8c5390b51f7ba95",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -3655,11 +3655,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "08d105ccd7234d2f829076119cddd7f975cc1babf39eb58c68f9a01c56d2be02",
+        "manifestSha256": "28feb96cce99e0382fd2a14eed8188f73105eeb79292e5491801c6b32f870830",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -3755,7 +3755,7 @@
         },
         "resultHashes": [],
         "reviewAtUnix": null,
-        "status": "experimental",
+        "status": "certified",
         "suiteId": "model-routing-preset-suite",
         "suiteVersion": "1.8.0",
         "thresholds": {}
@@ -3851,15 +3851,15 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "5bc5b25bce8a86d8646d804445aa39b61e8dfb207d4f44f35242b4627f0b50e3",
+        "manifestSha256": "5bbc3d527f4be88319b7af99d1afe642c0b790e6d7fe645fb2df6ef1b7e642aa",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
-      "status": "experimental",
-      "statusLabel": "Experimental"
+      "status": "certified",
+      "statusLabel": "Certified"
     },
     {
       "binding": {
@@ -4079,11 +4079,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "9c90db3665668bf15ed76b0d3fad196e51b0c775cd74e3a989afdf8eb447f002",
+        "manifestSha256": "124a5fde32b5eb68142d79b1ff4feed773cbcc7a5a11cc2c33a719a0d413d82f",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -4349,11 +4349,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "659787db7330d8bd178cc010c10e259ffe5c0afb3fe7754ac62f7ede1b0a1d61",
+        "manifestSha256": "0ab2d8c006c051793e863540783c0d7b5724d36f4cd6042b3a01ecb7a06c0a48",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -4508,11 +4508,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "955457405c642ef657c802226b200c0a6e9594f9464742dc1cd20778d0955a03",
+        "manifestSha256": "d93d00dc018a75097536efbe318fa80b6bf8562bdebe1363484b2404651c3eee",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -4667,11 +4667,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "1198fd25c426d94d436d7fa4ffbe775a1922a247693ee4281c6383064d602f90",
+        "manifestSha256": "97dd3e4ed3b0afb016daeb6dc835f7ebbc1d0e3fb6aa39620de1668d68259807",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -4828,11 +4828,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "d98514f453c8b74354317dd20f973a5b2dfe55f9cb70e378d984d50bd1bb3dc4",
+        "manifestSha256": "cf1d48a065b96acf53f4863e8e6a15b7f0b09e648956f66074ea1aa050274740",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -4993,11 +4993,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "f550aa072d30603116016501f888febe9cb116988ac67ace00b5cf4c7c15eb04",
+        "manifestSha256": "87531eb62285a4a6f81d634ddccf1b108932c04f678ece7cb27bf01630750fc2",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -5093,7 +5093,7 @@
         },
         "resultHashes": [],
         "reviewAtUnix": null,
-        "status": "experimental",
+        "status": "certified",
         "suiteId": "model-routing-preset-suite",
         "suiteVersion": "1.8.0",
         "thresholds": {}
@@ -5184,15 +5184,15 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "e70952788be0c2d65284d82d2c523ecdbc8b0fa57f9948f093b18afa0431dbb9",
+        "manifestSha256": "14f3c95d4d316a97817afe36d568ec5a4d463abfea2ce4b77546bcc802a954b4",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
-      "status": "experimental",
-      "statusLabel": "Experimental"
+      "status": "certified",
+      "statusLabel": "Certified"
     },
     {
       "binding": {
@@ -5407,11 +5407,11 @@
           }
         ],
         "id": "model-routing-official",
-        "manifestSha256": "deae4d9928d55a7905a3c7d646743ee7aadceefb4942467f9107a7c46321bc8d",
+        "manifestSha256": "4ab425d7948249342c53465a876f4bf6e376d1221aff7a36dcd7160b6465ed43",
         "signatureVerified": false,
         "signer": null,
         "trustedMaintainer": false,
-        "version": "0.3.5"
+        "version": "0.3.6"
       },
       "replacement": null,
       "status": "experimental",
@@ -6181,7 +6181,7 @@
           "topologies": [
             "sequential"
           ],
-          "validationStatus": "experimental"
+          "validationStatus": "certified"
         },
         {
           "codingAgent": "opencode",
@@ -6288,7 +6288,7 @@
   },
   "source": {
     "entryCount": 28,
-    "message": "Entries stay experimental until authenticated live evidence and an offline maintainer signature pass.",
+    "message": "Entries stay experimental until authenticated live evidence and an offline maintainer signature pass, except for independently certified capabilities.",
     "state": "package_generated",
     "trust": "model_routing_unsigned_catalog_v1"
   }

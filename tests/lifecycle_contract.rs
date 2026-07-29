@@ -45,40 +45,6 @@ fn write_bundle_file(repository: &Path, name: &str, bundle: &RoutingBundleV1) ->
     bundle_file
 }
 
-fn assert_non_actionable_workflow_lifecycle(
-    repository: &Path,
-    spec: &SetupSpecV1,
-    runtime_artifacts: &[&str],
-) {
-    let config_file = repository.join("non-actionable-workflow.setup.toml");
-    fs::write(
-        &config_file,
-        toml::to_string_pretty(spec).expect("workflow setup config serializes"),
-    )
-    .unwrap();
-
-    let expected = "workflow is experimental and cannot be applied as certified support";
-    assert_eq!(
-        preview_setup_config_file(repository, &config_file)
-            .unwrap_err()
-            .to_string(),
-        expected
-    );
-    assert_eq!(
-        apply_setup_config_file(repository, &config_file)
-            .unwrap_err()
-            .to_string(),
-        expected
-    );
-    assert!(!repository.join(".switchloom/manifest.json").exists());
-    for artifact in runtime_artifacts {
-        assert!(
-            !repository.join(artifact).exists(),
-            "rejected workflow must not create {artifact}"
-        );
-    }
-}
-
 fn assert_codex_config_entry(content: &str, agent_type: &str, config_file: &str) {
     let parsed: toml::Value = toml::from_str(content).unwrap();
     assert_eq!(
@@ -253,7 +219,7 @@ fn pi_subagents_workflow_lifecycle_manages_extension_agents_and_chain() {
         schema_version: 1,
         coding_agent: CodingAgentRuntime::Pi,
         execution_path: ExecutionPath::Extension,
-        validation_status: ValidationStatus::Experimental,
+        validation_status: ValidationStatus::Certified,
         parent_model: ParentModelGuidance::RuntimeManaged,
         topology: WorkflowTopology::Sequential,
         model_access: None,
@@ -290,14 +256,44 @@ fn pi_subagents_workflow_lifecycle_manages_extension_agents_and_chain() {
             ),
         ]),
     });
-    assert_non_actionable_workflow_lifecycle(
-        &repository,
-        &spec,
-        &[
-            ".pi/settings.json",
-            ".pi/agents/switchloom-implementer.md",
-            ".pi/chains/switchloom-workflow.chain.md",
-        ],
+    let config_file = repository.join("certified-pi.setup.toml");
+    fs::write(&config_file, toml::to_string_pretty(&spec).unwrap()).unwrap();
+    let preview = preview_setup_config_file(&repository, &config_file).unwrap();
+    for artifact in [
+        ".pi/settings.json",
+        ".pi/agents/switchloom-implementer.md",
+        ".pi/agents/switchloom-reviewer.md",
+        ".pi/agents/switchloom-verifier.md",
+        ".pi/chains/switchloom-workflow.chain.md",
+    ] {
+        assert!(preview.artifacts.iter().any(|entry| entry.path == artifact));
+    }
+    apply_setup_config_file(&repository, &config_file).unwrap();
+    assert!(repository.join(".pi/settings.json").exists());
+    assert!(
+        repository
+            .join(".pi/agents/switchloom-implementer.md")
+            .exists()
+    );
+    assert!(
+        repository
+            .join(".pi/agents/switchloom-reviewer.md")
+            .exists()
+    );
+    assert!(
+        repository
+            .join(".pi/agents/switchloom-verifier.md")
+            .exists()
+    );
+    assert!(
+        repository
+            .join(".pi/chains/switchloom-workflow.chain.md")
+            .exists()
+    );
+    assert!(
+        !repository
+            .join(".pi/agents/switchloom-orchestrator.md")
+            .exists()
     );
 }
 
@@ -381,7 +377,7 @@ fn pi_access_bearing_workflow_is_rejected_before_lifecycle_writes() {
         schema_version: 1,
         coding_agent: CodingAgentRuntime::Pi,
         execution_path: ExecutionPath::Extension,
-        validation_status: ValidationStatus::Experimental,
+        validation_status: ValidationStatus::Certified,
         parent_model: ParentModelGuidance::RuntimeManaged,
         topology: WorkflowTopology::Sequential,
         model_access: Some(ModelAccessProfileV1 {

@@ -732,6 +732,27 @@ fn no_in_memory_claim_can_promote_offline_evaluation() {
 }
 
 #[test]
+fn pi_subagents_catalog_entries_are_certified_without_promoting_other_hosts() {
+    let report = evaluate_policy("balanced", "pi-subagents").unwrap();
+    assert_eq!(report.status, "certified");
+    assert!(!report.recommended);
+
+    let bundle = compile_policy("balanced", "pi-subagents", Integration::Standalone).unwrap();
+    assert_eq!(bundle.evidence.status, "certified");
+
+    let catalog = catalog_value().unwrap();
+    let pi = catalog["compositions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|entry| entry["binding"]["selector"] == "pi-subagents")
+        .unwrap();
+    assert_eq!(pi["status"], "certified");
+    assert_eq!(pi["statusLabel"], "Certified");
+    assert_eq!(pi["evaluation"]["status"], "certified");
+}
+
+#[test]
 fn built_in_presets_compile_through_setup_spec_without_output_drift() {
     let spec = setup_spec_for_policy("balanced", "codex-openai", Integration::Planr).unwrap();
     assert_eq!(
