@@ -270,21 +270,31 @@ fn pi_subagents_workflow_lifecycle_manages_extension_agents_and_chain() {
     }
     apply_setup_config_file(&repository, &config_file).unwrap();
     assert!(repository.join(".pi/settings.json").exists());
-    assert!(repository
-        .join(".pi/agents/switchloom-implementer.md")
-        .exists());
-    assert!(repository
-        .join(".pi/agents/switchloom-reviewer.md")
-        .exists());
-    assert!(repository
-        .join(".pi/agents/switchloom-verifier.md")
-        .exists());
-    assert!(repository
-        .join(".pi/chains/switchloom-workflow.chain.md")
-        .exists());
-    assert!(!repository
-        .join(".pi/agents/switchloom-orchestrator.md")
-        .exists());
+    assert!(
+        repository
+            .join(".pi/agents/switchloom-implementer.md")
+            .exists()
+    );
+    assert!(
+        repository
+            .join(".pi/agents/switchloom-reviewer.md")
+            .exists()
+    );
+    assert!(
+        repository
+            .join(".pi/agents/switchloom-verifier.md")
+            .exists()
+    );
+    assert!(
+        repository
+            .join(".pi/chains/switchloom-workflow.chain.md")
+            .exists()
+    );
+    assert!(
+        !repository
+            .join(".pi/agents/switchloom-orchestrator.md")
+            .exists()
+    );
 }
 
 #[test]
