@@ -57,6 +57,22 @@ For this run, all-Sol was about 10m 28s faster and about $0.4184 lower in
 both outputs need a shared evaluator before their quality can be compared
 independently.
 
+#### What the runs produced
+
+These are the two applications from the manual comparison reported above.
+
+| Mixed Grok/Sol | All Sol 5.6 Medium |
+| --- | --- |
+| ![Dark blue Pokédex produced by the manual mixed Grok and Sol workflow](../../website/public/benchmarks/dogfoods/pokedex-manual-mixed.webp) | ![Red and cream Kanto Field Guide produced by the manual all-Sol workflow](../../website/public/benchmarks/dogfoods/pokedex-manual-all-sol.webp) |
+
+An earlier exploratory Pi pair produced the applications below. They are shown
+for qualitative context only and are not inputs to the performance table above;
+that pair had workflow differences that prevented an apples-to-apples claim.
+
+| Exploratory mixed Grok/Sol | Exploratory all Sol 5.6 Medium |
+| --- | --- |
+| ![Dark Generation I Pokédex produced by the exploratory Pi mixed workflow](../../website/public/benchmarks/dogfoods/pokedex-pi-mixed.webp) | ![Red editorial Kanto Index produced by the exploratory Pi all-Sol workflow](../../website/public/benchmarks/dogfoods/pokedex-pi-all-sol.webp) |
+
 ### TypeScript task queue
 
 This comparison held the Sol 5.6 Medium parent, reviewer, and verifier fixed;
@@ -104,6 +120,9 @@ For this run, all-Sol reached the accepted result 3m 17s sooner, with fewer
 child calls and lower **estimated** total cost. The Grok implementer's first
 call was cheaper, but that did not translate into an accepted end-to-end
 delivery within the allowed remediation budget.
+
+The task-queue output was a TypeScript library without a visual interface, so
+there is no application screenshot for either arm.
 
 ## Interpretation and limits
 
