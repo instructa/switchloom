@@ -103,6 +103,12 @@ coding agent, make model calls itself, control provider billing, or guarantee
 that a custom model combination will be cheaper or better. Custom setups should
 be reviewed and tested in the target repository.
 
+## Benchmark findings
+
+Small controlled evaluations validate routing execution but did not demonstrate
+a general mixed-model advantage. See the [sanitized routing benchmark
+comparison](docs/benchmarks/routing-comparison.md) for results and limitations.
+
 ## Documentation
 
 - [Routing policy](docs/model-routing-policy.md)
