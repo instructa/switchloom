@@ -1,25 +1,13 @@
-//! Standalone Switchloom policy compiler and repository lifecycle library.
+//! Codex capability decisions with TypeSafe/Jev and cleanup of existing installations.
 
+pub mod catalog;
+pub mod cleanup;
 pub mod cli;
-pub mod config;
-pub mod contracts;
+pub mod decision;
+mod digest;
 pub mod error;
-pub mod evidence;
-pub mod hosts;
-pub mod integrations;
-pub mod lifecycle;
-pub mod registry;
-pub mod routing;
+pub mod handoff;
+pub mod typesafe;
 
-pub use config::*;
-pub use contracts::*;
+pub use cleanup::{LifecycleReport, status_repository, uninstall_repository};
 pub use error::{Error, Result};
-pub use evidence::*;
-pub use hosts::*;
-pub use lifecycle::*;
-pub use registry::*;
-pub use routing::*;
-
-#[cfg(test)]
-#[path = "tests/architecture.rs"]
-mod architecture_tests;

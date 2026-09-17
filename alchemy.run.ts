@@ -1,15 +1,9 @@
-import { assertAlchemyRuntime } from "./scripts/check-alchemy-runtime.mjs";
-
-assertAlchemyRuntime();
-
-const [{ default: alchemy }, { Website }] = await Promise.all([
-  import("alchemy"),
-  import("alchemy/cloudflare"),
-]);
+import alchemy from "alchemy";
+import { Website } from "alchemy/cloudflare";
 
 const app = await alchemy("model-routing");
 
-export const presetCatalog = await Website("preset-catalog", {
+export const site = await Website("preset-catalog", {
   name: `model-routing-${app.stage}-catalog`,
   domains: app.stage === "prod" ? ["switchloom.ai"] : [],
   assets: "./dist/website",
@@ -21,6 +15,6 @@ export const presetCatalog = await Website("preset-catalog", {
   spa: false,
 });
 
-console.log({ url: presetCatalog.url });
+console.log({ url: site.url });
 
 await app.finalize();

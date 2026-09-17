@@ -5,36 +5,12 @@ set -eu
 
 cd "$(dirname "$0")/.."
 
-external_gate=""
-external_store=""
-external_run=""
-while [ "$#" -gt 0 ]; do
-  case "$1" in
-    --external-gate) external_gate="${2:-}"; shift 2 ;;
-    --external-store) external_store="${2:-}"; shift 2 ;;
-    --external-run) external_run="${2:-}"; shift 2 ;;
-    --) shift; break ;;
-    -*) echo "unknown release option: $1" >&2; exit 1 ;;
-    *) break ;;
-  esac
-done
 version="${1:-}"
 summary="${2:-}"
-if [ -z "$external_gate" ] || [ -z "$external_store" ] || [ -z "$external_run" ] || [ -z "$version" ] || [ -z "$summary" ] || [ "$#" -ne 2 ]; then
-  echo "usage: scripts/release.sh --external-gate <tool> --external-store <store> --external-run <selected-run> <version> \"release summary\"" >&2
+if [ -z "$version" ] || [ -z "$summary" ] || [ "$#" -ne 2 ]; then
+  echo 'usage: scripts/release.sh <version> "release summary"' >&2
   exit 1
 fi
-
-if [ ! -x "$external_gate" ]; then
-  echo "external release gate is not executable: $external_gate" >&2
-  exit 1
-fi
-
-# This handoff must happen before any fetch, version rewrite, package build,
-# commit, tag, push, or model execution.  The external owner validates the
-# selected immutable run against the exact candidate and requested version.
-subject="$(git rev-parse HEAD)"
-"$external_gate" --root "$PWD" --store "$external_store" --run "$external_run" --subject "$subject" --version "$version"
 
 branch="$(git rev-parse --abbrev-ref HEAD)"
 if [ "$branch" != "main" ]; then
@@ -80,7 +56,6 @@ fi
 
 git add -- Cargo.toml Cargo.lock xtask/Cargo.toml package.json \
   fixtures/routing-bundle-v1/valid-balanced-codex.json \
-  fixtures/routing-bundle-v1/valid-balanced-mixed.json \
   website/data/catalog.json website/data/bundles
 if ! git diff --cached --quiet; then
   git commit -m "release $version: $summary"

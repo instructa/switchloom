@@ -4,6 +4,33 @@ All notable changes to Switchloom are recorded here.
 
 ## [Unreleased]
 
+## [1.0.0] - Unreleased
+
+- Replace fixed roles and Advanced with a capability board: Luna max first,
+  Sol medium and Astra high by default. Model suggestions and custom GPT IDs
+  are editable; browser use is separate from computer use.
+- Restore a card's model, effort and default capabilities on reactivation;
+  provide a global reset icon. Disabled capabilities add no prompt instructions.
+- Share model defaults and capability instructions through `catalog.toml`.
+  Jev selects only assigned capabilities; configured ownership determines the
+  model and task. Explicit capability selections skip classification.
+- Enable Jev by default with an optional vanilla mode needing no CLI or key.
+  Route once per meaningful step, not per tool call; never silently substitute
+  a model after uncertainty or service errors.
+- Generate one prompt for persistent Codex tasks in the existing local checkout.
+  The skill dispatches assignments, ends the turn and resumes on substantive
+  replies. No polling, acknowledgments, extra manager or replacement subagents.
+- Remove active Cursor, Claude Code, OpenCode, Pi, Planr and Terra support,
+  generated subagent installations, bundles, preset policies, certification
+  infrastructure and overlapping checks.
+- Keep `status` and `uninstall` for safe removal of earlier managed files while
+  preserving user edits and unrelated Codex settings.
+- Separate website build/development caches and update the optional cookie
+  dependency's `time` lockfile entry to the security-fixed version.
+
+Release status: local preview. Full desktop handoff verification, representative
+quality comparisons and final release artifacts remain required.
+
 ## [0.3.6] - 2026-07-29
 
 - Certified the existing Pi Subagents extension path and its generated

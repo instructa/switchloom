@@ -1,19 +1,28 @@
 # Contributing
 
-Switchloom is owned as an independent product. Changes should keep standalone operation as the default and treat Planr as an optional integration target.
+Switchloom targets ordinary Codex tasks with Sol, Astra and optional Luna.
+TypeSafe/Jev selects the next capability from bounded task context. Keep one owner
+for model assignments and routing policy; avoid alternate host integrations.
 
 ## Development
 
-Run the baseline checks before review:
+Run the smallest check covering the change. For Rust use the owning test or
+crate, plus formatting and Clippy when Rust code changes. For website work use
+`pnpm site:test`; regenerate the catalog and run `pnpm site:check` when task
+capabilities change. Release preparation and packaging
+belong to `xtask release`.
 
-```sh
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-targets --all-features
-```
-
-Do not commit local Planr state, credentials, generated receipts, or global host configuration. Repository lifecycle commands must stay repository-scoped and must not write to user-level client configuration.
+Do not commit local execution state, credentials, generated receipts or global
+host configuration. Cleanup commands must remain repository-scoped
+and preserve unrelated configuration and user edits.
 
 ## Ownership
 
-New routing behavior belongs in this repository when it concerns model policy composition, bundle schemas, host artifacts, catalog metadata, signatures, or repository-safe apply/update/uninstall behavior. Planr-specific graph, pick, review, and evidence workflows stay in Planr and interact with this package only through explicit integration artifacts.
+`catalog.toml` owns model suggestions, reasoning choices, model defaults, capabilities
+and their instructions. Add new model suggestions there, then run `pnpm catalog:regenerate`.
+Custom GPT IDs can be selected without a catalog release. `src/decision.rs`
+owns routing decisions; `src/typesafe.rs` owns TypeSafe HTTP. Codex owns the
+execution loop and tool discovery. `src/handoff.rs` binds decisions to tasks;
+`skills/switchloom/SKILL.md` owns the desktop send/end-turn/return sequence.
+See [ownership](docs/ownership.md) before
+adding another policy path or configuration layer.

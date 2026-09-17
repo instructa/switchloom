@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail, ensure};
-use model_routing::{Integration, catalog_json, compile_json};
+use model_routing::catalog::catalog_json;
 use serde::Deserialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -22,27 +22,6 @@ const FORBIDDEN_PUBLIC_PATHS: &[&str] = &[
     "tmp/",
 ];
 const FORBIDDEN_PUBLIC_WORDS: &[&str] = &["credential", "secret", "receipt"];
-const REQUIRED_CARGO_EVIDENCE_FILES: &[&str] = &[
-    "evidence/codex/0.145.0/exact-version-capture.txt",
-    "evidence/codex/0.145.0/runtime-evidence.json",
-];
-const CURRENT_MAINTAINER_DOCS: &[&str] = &[
-    "model-routing-policy.md",
-    "ownership.md",
-    "package-policy.md",
-    "preset-composition.md",
-    "preset-evaluation.md",
-    "preset-registry.md",
-    "workflow-capabilities.md",
-];
-const REMOVED_BROWSER_ARTIFACT_WORDING: &[&str] = &[
-    "download .switchloom/config.toml",
-    "download setup (.zip)",
-    "download host-native project files",
-    "downloadable `.switchloom/config.toml`",
-    "secondary action downloads",
-    "secondary result is a readable setup config",
-];
 const REQUIRED_NPM_PUBLIC_FILES: &[&str] = &[
     "LICENSE",
     "README.md",
@@ -107,21 +86,6 @@ pub(crate) fn prepare(options: PrepareOptions) -> Result<()> {
         return Ok(());
     }
     regenerate_catalog(&options.root)?;
-    for (host, output) in [
-        (
-            "codex-openai",
-            "fixtures/routing-bundle-v1/valid-balanced-codex.json",
-        ),
-        (
-            "mixed-host",
-            "fixtures/routing-bundle-v1/valid-balanced-mixed.json",
-        ),
-    ] {
-        fs::write(
-            options.root.join(output),
-            compile_json("balanced", host, Integration::Planr)?,
-        )?;
-    }
     verify_version_contract(&options.root)?;
     println!("release preparation passed");
     Ok(())
@@ -139,7 +103,6 @@ pub(crate) fn verify(options: VerifyOptions) -> Result<()> {
         println!("release contract passed for v{version}");
         return Ok(());
     }
-    verify_documentation_boundary(&options.root)?;
     verify_catalog(&options.root)?;
     verify_public_inventories(&options.root)?;
     if options.require_provenance {
@@ -170,12 +133,6 @@ pub(crate) fn verify(options: VerifyOptions) -> Result<()> {
             &["test", "--workspace", "--all-targets", "--all-features"],
         )?;
         verify_packaged_source_tests(&options.root, &version)?;
-        run(
-            &options.root,
-            "node",
-            &["scripts/check-public-eval-absence.mjs"],
-        )?;
-        run(&options.root, "node", &["scripts/build-site.mjs"])?;
         run(&options.root, "betterleaks", &["dir", "."])?;
         run(
             &options.root,
@@ -422,29 +379,7 @@ fn regenerate_catalog(root: &Path) -> Result<()> {
     let catalog = root.join("website/data/catalog.json");
     let generated = catalog_json()?;
     fs::write(&catalog, &generated)?;
-    let data: Value = serde_json::from_str(&generated)?;
-    let compositions = data["compositions"]
-        .as_array()
-        .context("catalog compositions must be an array")?;
-    let bundles = root.join("website/data/bundles");
-    remove_owned_path(root, &bundles)?;
-    fs::create_dir_all(&bundles)?;
-    for entry in compositions {
-        let id = entry["entryId"]
-            .as_str()
-            .context("catalog entryId missing")?;
-        let policy = entry["policy"]["id"]
-            .as_str()
-            .context("catalog policy missing")?;
-        let host = entry["binding"]["id"]
-            .as_str()
-            .context("catalog binding missing")?;
-        fs::write(
-            bundles.join(format!("{id}.json")),
-            compile_json(policy, host, Integration::Standalone)?,
-        )?;
-    }
-    println!("regenerated {} catalog compositions", compositions.len());
+    println!("regenerated capability catalog");
     Ok(())
 }
 
@@ -455,45 +390,6 @@ fn verify_catalog(root: &Path) -> Result<()> {
         "catalog does not match package-owned generated sources"
     );
     println!("catalog verified");
-    Ok(())
-}
-
-fn verify_documentation_boundary(root: &Path) -> Result<()> {
-    let mut actual_docs = Vec::new();
-    for entry in fs::read_dir(root.join("docs"))? {
-        let entry = entry?;
-        ensure!(
-            entry.file_type()?.is_file(),
-            "docs may contain current maintainer files only: {}",
-            entry.path().display()
-        );
-        actual_docs.push(entry.file_name().to_string_lossy().into_owned());
-    }
-    actual_docs.sort();
-    ensure!(
-        actual_docs == CURRENT_MAINTAINER_DOCS,
-        "docs ownership mismatch: expected {CURRENT_MAINTAINER_DOCS:?}, found {actual_docs:?}"
-    );
-    verify_current_document_wording("README.md", &fs::read_to_string(root.join("README.md"))?)?;
-    for document in CURRENT_MAINTAINER_DOCS {
-        let path = format!("docs/{document}");
-        verify_current_document_wording(&path, &fs::read_to_string(root.join(&path))?)?;
-    }
-    println!(
-        "documentation boundary passed: {} current docs",
-        actual_docs.len()
-    );
-    Ok(())
-}
-
-fn verify_current_document_wording(path: &str, content: &str) -> Result<()> {
-    let normalized = content.to_ascii_lowercase();
-    for removed in REMOVED_BROWSER_ARTIFACT_WORDING {
-        ensure!(
-            !normalized.contains(removed),
-            "current documentation {path} contains removed browser artifact wording: {removed}"
-        );
-    }
     Ok(())
 }
 
@@ -581,12 +477,12 @@ fn verify_packaged_source_tests(root: &Path, version: &str) -> Result<()> {
         &[
             "test",
             "--offline",
-            "codex_runtime_evidence_rejects_retained_source_without_claimed_raw_output",
-            "--",
-            "--nocapture",
+            "--locked",
+            "--test",
+            "handoff_contract",
         ],
     )?;
-    println!("packaged source provenance test passed");
+    println!("packaged handoff tests passed");
     Ok(())
 }
 
@@ -633,13 +529,6 @@ fn verify_inventory(kind: &str, files: &[String]) -> Result<()> {
 
 fn verify_cargo_inventory(files: &[String]) -> Result<()> {
     verify_inventory("Cargo", files)?;
-    let actual = files.iter().map(String::as_str).collect::<BTreeSet<_>>();
-    for required in REQUIRED_CARGO_EVIDENCE_FILES {
-        ensure!(
-            actual.contains(required),
-            "Cargo package omitted required runtime evidence path {required}"
-        );
-    }
     Ok(())
 }
 
@@ -1127,7 +1016,7 @@ mod tests {
         for unexpected in [
             "CHANGELOG.md",
             "docs/package-policy.md",
-            "evidence/codex/0.145.0/runtime.json",
+            "debug/runtime.json",
             "npm/native/darwin-arm64/debug.log",
             "npm/native/unsupported/model-routing",
         ] {
@@ -1136,43 +1025,6 @@ mod tests {
             assert!(
                 verify_npm_inventory(&inventory).is_err(),
                 "accepted {unexpected}"
-            );
-        }
-    }
-
-    #[test]
-    fn cargo_inventory_requires_versioned_runtime_evidence() {
-        let complete = REQUIRED_CARGO_EVIDENCE_FILES
-            .iter()
-            .map(|path| (*path).to_owned())
-            .collect::<Vec<_>>();
-        verify_cargo_inventory(&complete).unwrap();
-
-        for omitted in REQUIRED_CARGO_EVIDENCE_FILES {
-            let inventory = REQUIRED_CARGO_EVIDENCE_FILES
-                .iter()
-                .filter(|path| *path != omitted)
-                .map(|path| (*path).to_owned())
-                .collect::<Vec<_>>();
-            assert!(
-                verify_cargo_inventory(&inventory).is_err(),
-                "accepted Cargo inventory without {omitted}"
-            );
-        }
-    }
-
-    #[test]
-    fn current_documentation_rejects_removed_browser_artifact_wording() {
-        verify_current_document_wording(
-            "README.md",
-            "Use the provider onboarding flow, apply from the CLI, then run doctor.",
-        )
-        .unwrap();
-
-        for removed in REMOVED_BROWSER_ARTIFACT_WORDING {
-            assert!(
-                verify_current_document_wording("README.md", removed).is_err(),
-                "accepted removed wording: {removed}"
             );
         }
     }

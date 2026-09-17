@@ -1,2 +1,0 @@
-npx -y @openai/codex@0.145.0 --version
-codex-cli 0.145.0

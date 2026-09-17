@@ -1,0 +1,88 @@
+reasoning_efforts = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]
+
+[[models]]
+id = "gpt-5.6-sol"
+label = "GPT-5.6 Sol"
+efforts = ["low", "medium", "high", "xhigh", "max", "ultra"]
+
+[[models]]
+id = "gpt-6-astra"
+label = "GPT-6 Astra"
+efforts = ["low", "medium", "high", "xhigh", "max", "ultra"]
+
+[[models]]
+id = "gpt-5.6-luna"
+label = "GPT-5.6 Luna"
+efforts = ["low", "medium", "high", "xhigh", "max"]
+
+[[slots]]
+id = "luna"
+model = "gpt-5.6-luna"
+effort = "max"
+
+[[slots]]
+id = "sol"
+model = "gpt-5.6-sol"
+effort = "medium"
+
+[[slots]]
+id = "astra"
+model = "gpt-6-astra"
+effort = "high"
+
+[[capabilities]]
+id = "coordination"
+label = "Coordination"
+default_owner = "luna"
+instructions = "Coordinate an agreed plan. Pass bounded steps and substantive results to their owners; ask the planning owner about unresolved technical decisions. Do not prescribe detailed implementation."
+
+[[capabilities]]
+id = "implementation"
+label = "Implementation"
+default_owner = "sol"
+instructions = "Implement the assigned change within exclusive file ownership. Work autonomously within the agreed scope and report the diff and remaining issues."
+
+[[capabilities]]
+id = "debugging"
+label = "Debugging"
+default_owner = "sol"
+instructions = "Investigate failures, identify their cause and implement scoped fixes. Escalate unresolved architectural decisions to the planning owner."
+
+[[capabilities]]
+id = "validation"
+label = "Tests & validation"
+default_owner = "sol"
+instructions = "Run targeted tests and validation. Report commands and results; reuse existing evidence unless code changed, a check failed or a new risk appeared."
+
+[[capabilities]]
+id = "planning"
+label = "Planning & architecture"
+default_owner = "astra"
+instructions = "Define scope, architecture boundaries and acceptance criteria. Resolve concrete technical questions before implementation."
+
+[[capabilities]]
+id = "review"
+label = "Code review"
+default_owner = "astra"
+instructions = "Review the final diff and evidence; return actionable findings with file references. Re-review only changed findings or new risks. Never call review of your own changes independent; request a distinct enabled owner when independence is needed."
+
+[[capabilities]]
+id = "browser"
+label = "Browser use"
+instructions = "Operate the browser for the assigned task. Reserve shared browser tools and return relevant evidence."
+
+[[capabilities]]
+id = "computer"
+label = "Computer use"
+instructions = "Operate desktop applications for the assigned task. Reserve shared desktop tools and return relevant evidence."
+
+[[capabilities]]
+id = "visual"
+label = "Visual verification"
+instructions = "Inspect rendered results against acceptance criteria and report visual evidence and concrete findings."
+
+[[capabilities]]
+id = "spatial"
+label = "Spatial & 3D modeling"
+instructions = "Own explicitly scoped scene assets and spatial or 3D modeling work. Load relevant modeling skills only for this step."
+

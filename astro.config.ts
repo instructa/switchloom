@@ -8,6 +8,15 @@ export default defineConfig({
   outDir: "./dist/website",
   publicDir: "./website/public",
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [
+      tailwindcss(),
+      {
+        name: "separate-mode-cache",
+        // Prerendering must not replace the running dev server's React cache.
+        config: (_config, { mode }) => ({
+          cacheDir: `./node_modules/.vite/astro-${mode}`,
+        }),
+      },
+    ],
   },
 });

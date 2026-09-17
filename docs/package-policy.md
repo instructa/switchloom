@@ -1,44 +1,40 @@
-# Package And Ignore Policy
+# Package and release policy
 
-The repository must be safe to publish from a dirty local coordination environment.
+The npm package contains metadata, README, LICENSE, the launcher and supported
+native binaries with provenance. The Cargo source package contains the Rust
+implementation, embedded `catalog.toml` and the repository's Switchloom skill.
+The skill is installed from the checkout; it is not another native installer.
+Research clones, local host state,
+credentials, databases, receipts and build output remain excluded.
 
-## Excluded From Git And Packages
+The CLI provides `route` for task decisions, `handoff` for prepared desktop
+dispatch arguments, plus `status` and `uninstall` for existing installations.
+Version 1.0.0 is prepared locally and not yet published. Live verification
+remains a release requirement. The website makes no TypeSafe calls and accepts
+no API key. The desktop skill uses the installed CLI and native Codex tools.
 
-- `.planr/planr.sqlite`, SQLite sidecars, transient Planr logs, and local receipts.
-- `.claude/`, `.codex/`, and `.cursor/` host-local state.
-- Credentials, private keys, `.env` files except `.env.example`, generated reports, and build output.
-- Regenerated website/package output such as `dist/`, `coverage/`, `tmp/`, and `.crate` files.
-- Historical migration, handoff, release, live-host, and maintainer-evaluation
-  records. They are archived only in the external `switchloom-evals` owner.
+## Generated task data
 
-The policy is enforced by `.gitignore`, `Cargo.toml` `exclude`, and the CI package-content audit.
+`cargo run -p xtask -- release prepare --allow-dirty` regenerates
+`website/data/catalog.json` from `catalog.toml`, including model suggestions,
+supported reasoning and model defaults and capabilities. Astro imports that catalog at
+build time. There are no public bundle downloads or install recipes. Catalog
+verification checks that the generated file matches its owner.
 
-## Publishable Inputs
+## Release ownership
 
-The npm tarball contains only package metadata, README, LICENSE, the launcher,
-and supported native binaries. The Cargo source package additionally retains
-the versioned Codex runtime evidence embedded by `src/evidence.rs`, plus source,
-fixtures, current maintainer docs, CI metadata, and deterministic generator
-inputs. Live verification receipts and authenticated-host evidence belong in
-reviewed retained records after secret scrubbing, not in either payload.
+`scripts/release.sh <version> "summary"` guards branch/remote state, invokes
+preparation and verification, then performs the requested commit/tag/push.
+A dry run performs preparation and verification but skips publishing actions.
+`xtask release` owns version consistency, clean-source requirements, package
+inventories and native provenance. `generate-formula.sh` is used by the
+conditional Homebrew tap job.
 
-## Documentation Owners
+Only the product crate is publishable. The existing `model-routing` native
+binary identity and version output are shared by the npm launcher and native
+provenance. Both `switchloom` and `model-routing` remain published entry points.
 
-README and switchloom.ai own end-user setup and usage. Current maintainer
-contracts remain in `docs/`; immutable runtime inputs live under `evidence/`;
-historical and maintainer records live only in the external owner.
-
-## Maintainer Release Handoff
-
-The unpublished release wrapper takes only an explicit executable preflight,
-external evidence-store path, and selected run. It passes the candidate root,
-store, run, commit, and requested version to that external owner before any
-repository mutation. The public repository neither creates nor interprets
-release-evaluation evidence.
-
-## v0.3.1 Public Boundary
-
-The published CLI owns `policy`, `compile`, `inspect`, `preview`, `apply`,
-`update`, `status`, `rollback`, `uninstall`, and `doctor`. Maintainer verification,
-catalog generation, and release packaging remain in the unpublished `xtask`
-crate. Offline evaluation and registry signing remain library APIs.
+Use Node 24 for repository development and deployment, matching CI. The npm
+launcher has its separate Node 18 minimum. `deploy:test` and `destroy:test`
+invoke Alchemy directly. Native artifacts, security checks and website/package
+publishing belong to release verification, not ordinary local test runs.

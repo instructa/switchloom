@@ -1,122 +1,99 @@
 # Switchloom
 
-**Model routing for coding agents, without hand-writing provider config.**
+**One workflow prompt for persistent Codex tasks, with optional TypeSafe/Jev routing.**
 
-Switchloom turns a small routing policy into repository-local agent roles. You
-choose which models handle implementation, review, and verification; Switchloom
-generates the native configuration for your coding agent.
+Assign capabilities to models, then copy the prompt into Codex Desktop with
+your task. Each model uses a persistent task with its own context. Assignments
+end the caller's turn; substantive replies resume it. Codex owns execution.
 
-[**Build a routing setup →**](https://switchloom.ai)
+| Default model | Effort | Capabilities |
+| --- | --- | --- |
+| GPT-5.6 Luna | max | Coordination |
+| GPT-5.6 Sol | medium | Implementation, debugging, tests & validation |
+| GPT-6 Astra | high | Planning & architecture, code review |
 
-```text
-your coding agent (orchestrator)
-├── implementer  → fast or cost-efficient model
-├── reviewer     → stronger reasoning model
-└── verifier     → lightweight verification model
-```
+Browser use, computer use, visual verification and spatial/3D modeling start
+disabled. Move capabilities between cards or into Disabled, using drag-and-drop
+or the arrow menu. Only assigned capabilities contribute instructions. Model
+cards can be disabled. Re-enabling a card restores its default model, effort
+and capabilities, reclaiming those capabilities from any other card. The reset
+icon restores the whole board, including Jev on. Settings are session-local.
 
-For native agent teams, the model selected in your coding agent remains the
-orchestrator. Pi uses that active session to delegate through Pi Subagents.
+Choose another suggested model or enter a custom GPT ID. Codex validates
+availability; no Switchloom update is needed for a new ID. Card IDs such as
+`luna` identify slots, not fixed roles or model restrictions.
 
-## Why Switchloom
+**1.0 is an unpublished local preview.** Unit/CLI/browser checks are distinct
+from a complete multi-task desktop run. Desktop verification and representative
+Jev-versus-vanilla measurements remain open in [TASKS.md](TASKS.md).
 
-- **Use the right model for each job.** Keep routine implementation and checks
-  on efficient models while reserving stronger reasoning for review.
-- **Start from a useful preset.** Light, Balanced, and High provide practical
-  defaults; every child role remains editable.
-- **Keep setup local to the repository.** Switchloom writes project-native
-  configuration without changing global agent settings.
-- **Review every change.** Preview shows the exact files before apply, and the
-  lifecycle supports status, update, rollback, and uninstall.
-- **Use one workflow across hosts.** Codex, Claude Code, Cursor, OpenCode, and Pi
-  share the same routing policy while receiving their own native artifacts.
+## Setup
 
-## Quick start
-
-The easiest path is the generator at [switchloom.ai](https://switchloom.ai).
-Choose a host and preset, copy the generated command, and run it inside the
-repository you want to configure:
+Vanilla mode uses Codex task tools directly and needs no Switchloom CLI or
+TypeSafe key. For Jev mode (enabled by default), install the CLI and skill:
 
 ```sh
-npx switchloom apply --recipe 'sw1_...' --repository .
-npx switchloom doctor codex
+cargo install --path . --locked
+mkdir -p ~/.agents/skills/switchloom
+cp skills/switchloom/SKILL.md ~/.agents/skills/switchloom/SKILL.md
 ```
 
-`apply` previews the change and asks before writing. `doctor` checks the local
-host installation and explains any configuration or reload issue.
+Export `TYPESAFE_API_KEY` locally. Never paste keys into prompts; the website
+does not accept them. If exported in `.zshrc`, use an interactive shell:
+`zsh -ic 'exec switchloom handoff' < INPUT_FILE`. No OpenAI API key is required
+by Switchloom; Codex uses its existing account.
 
-To work directly from the CLI:
+The generated prompt authorizes creating missing tasks in the existing local
+project checkout. It reuses suitable tasks, never requests worktrees, and
+preserves exclusive file/tool ownership. If Luna is disabled, the planning
+owner starts coordination; otherwise the first assigned card does. This does
+not add another task or silently enable disabled specialist duties.
+
+## CLI boundaries
+
+Standalone `route` uses default catalog ownership:
 
 ```sh
-npm install --global switchloom
-
-switchloom compile balanced --host codex-openai --output routing-bundle.json
-switchloom preview routing-bundle.json --repository .
-switchloom apply routing-bundle.json --repository .
-switchloom doctor codex
+switchloom route <<'JSON'
+{"task":"Implement the agreed retry fix","capability":"implementation","jev":false}
+JSON
 ```
 
-Homebrew is also supported:
+`handoff` uses the workflow's configured ownership and returns Codex tool arguments:
 
 ```sh
-brew install instructa/tap/switchloom
+switchloom handoff <<'JSON'
+{
+  "request": {"task":"Review the retry fix","capability":"review","jev":true},
+  "caller": {"thread_id":"CALLER_ID","host_id":"local"},
+  "threads": {
+    "sol": {"thread_id":"SOL_ID","host_id":"local","model":"gpt-5.6-sol","effort":"medium","capabilities":["implementation","debugging","validation"]},
+    "astra": {"thread_id":"ASTRA_ID","host_id":"local","model":"gpt-6-astra","effort":"high","capabilities":["planning","review"]}
+  }
+}
+JSON
 ```
 
-## Presets and roles
+An explicit `capability` skips Jev. Otherwise `jev:true` requests one judgment
+among assigned capabilities and clarification. `jev:false` never calls the
+API; without an explicit capability it returns `explicit_capability_required`.
+The output is `dispatch`, `continue_here` or `clarify`. Only the skill sends a
+prepared dispatch. Errors never silently substitute a model. Models stay fixed
+through their tool loop. See [routing](docs/routing.md).
 
-| Preset | Best for |
-| --- | --- |
-| Light | Small changes and low-cost routine work |
-| Balanced | Everyday implementation with independent review and verification |
-| High | Important changes where stronger review matters more than cost |
+## Existing installations
 
-Presets are starting points, not locked bundles. You can change a role's model
-or reasoning effort, or remove roles you do not need.
+`switchloom status --repository .` and `switchloom uninstall --repository .`
+inspect/remove earlier managed installations while preserving user edits.
+See the retained persisted-data boundary in [ownership](docs/ownership.md).
 
-## Repository lifecycle
+## Development
 
-```sh
-switchloom status --repository .
-switchloom update routing-bundle.json --repository .
-switchloom rollback --repository .
-switchloom uninstall --repository .
-```
+`catalog.toml` owns model suggestions, reasoning choices, ordered model defaults
+and capability instructions/default owners. Run `pnpm catalog:regenerate` after
+changes. The Rust CLI and generated website catalog consume the same source.
+`generator.ts` owns board state transitions and prompt composition; there is no
+separate preview implementation or settings store.
 
-Switchloom tracks only the files it manages. It refuses unsafe paths and
-preserves unrelated repository configuration.
-
-## Supported hosts
-
-- Codex
-- Claude Code
-- Cursor
-- OpenCode
-- Pi
-
-Standalone use is the default. Planr integration is optional and does not add a
-runtime dependency on Planr.
-
-## What Switchloom does not do
-
-Switchloom compiles and applies routing configuration. It does not replace your
-coding agent, make model calls itself, control provider billing, or guarantee
-that a custom model combination will be cheaper or better. Custom setups should
-be reviewed and tested in the target repository.
-
-## Benchmark findings
-
-Small controlled evaluations validate routing execution but did not demonstrate
-a general mixed-model advantage. See the [sanitized routing benchmark
-comparison](docs/benchmarks/routing-comparison.md) for results and limitations.
-
-## Documentation
-
-- [Routing policy](docs/model-routing-policy.md)
-- [Presets and repository lifecycle](docs/preset-composition.md)
-- [Model and preset evaluation](docs/preset-evaluation.md)
-- [Package and repository boundaries](docs/package-policy.md)
-- [Changelog](CHANGELOG.md)
-
-## License
-
-MIT. See [LICENSE](LICENSE).
+See [CONTRIBUTING.md](CONTRIBUTING.md), [release policy](docs/package-policy.md)
+and [CHANGELOG.md](CHANGELOG.md). MIT. See [LICENSE](LICENSE).

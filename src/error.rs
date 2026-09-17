@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 /// Concrete failures exposed by the Switchloom product library.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -24,15 +22,6 @@ pub enum Error {
 
     #[error(transparent)]
     TomlEncode(#[from] toml::ser::Error),
-
-    #[error(transparent)]
-    Utf8(#[from] std::string::FromUtf8Error),
-
-    #[error(transparent)]
-    Signature(#[from] ed25519_dalek::SignatureError),
-
-    #[error(transparent)]
-    StripPrefix(#[from] std::path::StripPrefixError),
 }
 
 impl Error {
@@ -53,30 +42,15 @@ impl Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub(crate) trait ResultContext<T> {
-    fn context(self, context: impl Display) -> Result<T>;
     fn with_context<C>(self, context: C) -> Result<T>
     where
         C: FnOnce() -> String;
-}
-
-pub(crate) trait OptionContext<T> {
-    fn context(self, context: impl Display) -> Result<T>;
-}
-
-impl<T> OptionContext<T> for Option<T> {
-    fn context(self, context: impl Display) -> Result<T> {
-        self.ok_or_else(|| Error::message(context.to_string()))
-    }
 }
 
 impl<T, E> ResultContext<T> for std::result::Result<T, E>
 where
     E: Into<Error>,
 {
-    fn context(self, context: impl Display) -> Result<T> {
-        self.map_err(|source| source.into().context(context.to_string()))
-    }
-
     fn with_context<C>(self, context: C) -> Result<T>
     where
         C: FnOnce() -> String,
