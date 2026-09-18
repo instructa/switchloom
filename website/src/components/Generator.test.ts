@@ -10,10 +10,8 @@ it("renders the board with accessible reset, model toggles and move controls", (
   expect(markup).toContain('aria-label="Enable GPT-5.6 Luna"');
   expect(markup).toContain('aria-label="Move Browser use"');
   expect(markup).toContain('aria-label="Workflow prompt"');
-  expect(markup).toContain('href="https://docs.typesafe.ai/introduction"');
-  expect(markup).toContain('src="/brand/jev.svg"');
-  expect(markup.indexOf('aria-label="Routing mode"')).toBeGreaterThan(markup.indexOf("Disabled"));
-  expect(markup.indexOf('aria-label="Routing mode"')).toBeLessThan(markup.indexOf("Copy workflow prompt"));
+  expect(markup).not.toContain('aria-label="Routing mode"');
+  expect(markup).not.toContain('aria-label="Jev routing"');
   expect(markup.indexOf('aria-label="luna model"')).toBeLessThan(markup.indexOf('aria-label="sol model"'));
   expect(markup).not.toMatch(/Advanced|Drag to assign|Add coordinator/);
 });

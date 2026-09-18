@@ -85,14 +85,14 @@ export default function Generator({ workflow, options: supplied, onChange, compa
         <CapabilityZone workflow={workflow} options={options} owner={null} move={move} />
       </section>
       {error && <p role="alert" className="board-error">{error}</p>}
-      <section className="routing-foot" aria-label="Routing mode">
+      {compact && <section className="routing-foot" aria-label="Routing mode">
         <a className="jev-link" href="https://docs.typesafe.ai/introduction" target="_blank" rel="noreferrer">
           <img src="/brand/jev.svg" alt="" width="21" height="32" />
           Jev
         </a>
         <p>{options.jev ? "Jev picks the next capability, not the model. The task text goes to TypeSafe. The CLI needs TYPESAFE_API_KEY. A suggestion is not a send." : "Vanilla uses the same handoff. You set the capability. No TypeSafe call and no API key."}</p>
         <label className="toggle-label"><input type="checkbox" role="switch" checked={options.jev} aria-label="Jev routing" onChange={event => setOptions(current => ({ ...current, jev: event.target.checked }))} /><span className="switch" aria-hidden="true" /></label>
-      </section>
+      </section>}
       {!compact && <CopyButton text={prompt} disabled={Boolean(error)} />}
       {!compact && !error && <details className="prompt-section"><summary>Prompt</summary><textarea aria-label="Workflow prompt" readOnly value={prompt} /></details>}
   </div>;
