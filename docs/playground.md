@@ -11,7 +11,8 @@ Use Node 24+, pnpm, Rust and the Codex CLI. Install the web-core tools once:
 
 ```sh
 rustup target add wasm32-unknown-unknown
-cargo install wasm-bindgen-cli --version 0.2.127 --locked
+rustup toolchain install stable --profile minimal
+cargo +stable install wasm-bindgen-cli --version 0.2.127 --locked
 pnpm install
 pnpm exec playwright install chromium
 pnpm site:local
