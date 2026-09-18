@@ -62,10 +62,23 @@ the reservation. A quota failure blocks the request. Explicit assignments are
 free. The HttpOnly session cookie is not an account or a unique-person check;
 IP and global limits bound cookie resets. IPs are hashed using a server secret.
 
-The TypeSafe key stays in a Cloudflare secret binding. Use Alchemy's existing
-`deploy:test` flow with that environment variable present. Deployment has not
-been executed as part of this implementation. No prompt or result database is
-created by the public application.
+The TypeSafe key stays in a Cloudflare secret binding. No prompt or result
+database is created by the public application.
+
+For production, authenticate Alchemy with Cloudflare and export
+`TYPESAFE_API_KEY`. Set `ALCHEMY_PASSWORD` in the ignored
+`.env.production.local` file (permissions `0600`) to encrypt secrets in local
+Alchemy state. Keep that password and `.alchemy/` for subsequent deployments;
+neither belongs in Git. Alchemy does not write secrets into its generated
+Wrangler configuration.
+
+```sh
+pnpm site:check
+pnpm exec alchemy deploy --stage prod --env-file .env.production.local
+```
+
+This updates the existing production Worker and `switchloom.ai`. It does not
+publish the npm package or enable the local benchmark harness.
 
 ## Run a benchmark
 
