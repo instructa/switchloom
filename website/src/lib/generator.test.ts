@@ -4,14 +4,23 @@ import { buildWorkflowPrompt, defaultOptions, moveCapability, toggleModel, workf
 const workflow = workflowFromCatalog(catalog);
 
 describe("Capability board", () => {
-  it("starts with Luna max first, Jev on, and specialists disabled", () => {
+  it("starts with Luna max first, Jev on, and only 3D disabled", () => {
     const options = defaultOptions(workflow);
     expect(workflow.slots.map(slot => slot.id)).toEqual(["luna", "sol", "astra"]);
     expect(options.models.luna).toEqual({ model: "gpt-5.6-luna", effort: "max", enabled: true });
+    expect(options.owners.mechanical).toBe("luna");
+    expect(options.owners.browser).toBe("astra");
+    expect(options.owners.computer).toBe("astra");
+    expect(options.owners.visual).toBe("astra");
+    expect(options.owners.spatial).toBeNull();
     expect(options.jev).toBe(true);
     const prompt = buildWorkflowPrompt(workflow, options);
     expect(prompt).toContain("3 persistent Codex threads");
-    expect(prompt).not.toMatch(/Browser use|Computer use|Visual verification|3D modeling/);
+    expect(prompt).toContain("Mechanical tasks:");
+    expect(prompt).toContain("Browser use:");
+    expect(prompt).toContain("Computer use:");
+    expect(prompt).toContain("Visual design & review:");
+    expect(prompt).not.toContain("3D modeling");
     expect(prompt).toContain("environment type local");
     expect(prompt).toContain("After handing off, end your turn");
   });
@@ -22,12 +31,16 @@ describe("Capability board", () => {
     for (let i = 0; i < 3; i++) {
       options = toggleModel(workflow, options, "luna", false);
       expect(options.owners.coordination).toBeNull();
+      expect(options.owners.mechanical).toBeNull();
+      expect(buildWorkflowPrompt(workflow, options)).not.toContain("Mechanical tasks:");
       expect(options.owners.browser).toBeNull();
       expect(buildWorkflowPrompt(workflow, options)).not.toContain('"luna":');
       options = moveCapability(workflow, options, "coordination", "sol");
+      options = moveCapability(workflow, options, "mechanical", "sol");
       options = toggleModel(workflow, options, "luna", true);
       expect(options.models.luna).toEqual(defaultOptions(workflow).models.luna);
       expect(options.owners.coordination).toBe("luna");
+      expect(options.owners.mechanical).toBe("luna");
       expect(options.owners.browser).toBeNull();
     }
   });
@@ -36,7 +49,7 @@ describe("Capability board", () => {
       let options = defaultOptions(workflow);
       options.jev = false;
       options.models[slot.id].effort = "low";
-      options = moveCapability(workflow, options, "computer", slot.id);
+      options = moveCapability(workflow, options, "spatial", slot.id);
       options = toggleModel(workflow, options, slot.id, false);
       expect(moveCapability(workflow, options, "browser", slot.id)).toBe(options);
       options = toggleModel(workflow, options, slot.id, true);
@@ -58,9 +71,9 @@ describe("Capability board", () => {
     expect(prompt).toContain('"sol":{"model":"gpt-6-sol","effort":"max","capabilities":["implementation","debugging","validation","browser"]}');
     expect(prompt).toContain("Browser use:");
     expect(prompt).not.toContain("Code review:");
-    expect(prompt).toContain("Vanilla mode");
-    expect(prompt).not.toContain("$switchloom");
-    expect(prompt).not.toContain("request.jev=true");
+    expect(prompt).toContain("Without Jev");
+    expect(prompt).toContain("$switchloom");
+    expect(prompt).toContain("request.routing={mode:assigned,capability:...}");
   });
   it("keeps invalid settings visible and blocks export without a usable assignment", () => {
     let options = defaultOptions(workflow);
@@ -74,6 +87,19 @@ describe("Capability board", () => {
     expect(workflowError(workflow, options)).toBe("Enable at least one model.");
     options = defaultOptions(workflow);
     for (const cap of workflow.capabilities) options = moveCapability(workflow, options, cap.id, null);
-    expect(workflowError(workflow, options)).toBe("Assign at least one capability.");
+    expect(workflowError(workflow, options)).toBe("Assign at least one work capability.");
+  });
+  it("evaluates a changed catalog pattern and rejects partial model-id matches", () => {
+    const options = defaultOptions(workflow);
+    for (const id of ["", "gpt bad", "claude-test", "gpt-", "gpt-next\n"]) {
+      options.models.sol.model = id;
+      expect(workflowError(workflow, options)).not.toBeNull();
+    }
+    const updated = { ...workflow, model_id_pattern: "^gpt-[A-Z]+$" };
+    for (const model of Object.values(options.models)) model.model = "gpt-NEXT";
+    expect(workflowError(updated, options)).toBeNull();
+    expect(workflowError(workflow, options)).not.toBeNull();
+    options.models.sol.model = "gpt-next";
+    expect(workflowError(updated, options)).not.toBeNull();
   });
 });

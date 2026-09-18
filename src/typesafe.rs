@@ -1,12 +1,18 @@
 //! TypeSafe HTTP boundary. Product routing policy lives in `decision`.
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::error::Result;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::{bail, product_error};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::{collections::BTreeMap, io::Read, time::Duration};
+use std::collections::BTreeMap;
+#[cfg(not(target_arch = "wasm32"))]
+use std::{io::Read, time::Duration};
 
+#[cfg(not(target_arch = "wasm32"))]
 const ENDPOINT: &str = "https://api.typesafe.ai/v1/systemone";
+#[cfg(not(target_arch = "wasm32"))]
 const RESPONSE_LIMIT: u64 = 65_536;
 
 #[derive(Debug, Deserialize)]
@@ -19,6 +25,7 @@ pub(crate) struct Judgment {
 #[derive(Debug, Deserialize)]
 pub(crate) struct Answers {
     pub route: ChoiceAnswer,
+    pub context_missing: NoulAnswer,
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,17 +37,21 @@ pub(crate) struct ChoiceAnswer {
     pub probabilities: BTreeMap<String, f64>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
+pub(crate) struct NoulAnswer {
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub noul: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Usage {
     pub input_tokens: u64,
     pub output_tokens: u64,
 }
 
-pub(crate) fn evaluate(
-    state: Value,
-    instructions: &str,
-    criteria: BTreeMap<&str, &str>,
-) -> Result<Judgment> {
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn evaluate(state: Value, questions: Value) -> Result<Judgment> {
     let key = std::env::var("TYPESAFE_API_KEY")
         .ok()
         .filter(|key| !key.trim().is_empty())
@@ -48,21 +59,20 @@ pub(crate) fn evaluate(
     send(
         ENDPOINT,
         &key,
-        request_body(state, instructions, criteria),
+        request_body(state, questions),
         Duration::from_secs(5),
     )
 }
 
-fn request_body(state: Value, instructions: &str, criteria: BTreeMap<&str, &str>) -> Value {
+pub(crate) fn request_body(state: Value, questions: Value) -> Value {
     json!({
-        "model": "jev-latest",
+        "model": crate::catalog::JUDGE_MODEL,
         "state": state,
-        "questions": { "route": {
-            "type": "choice", "instructions": instructions, "criteria": criteria,
-        }},
+        "questions": questions,
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn send(endpoint: &str, key: &str, body: Value, timeout: Duration) -> Result<Judgment> {
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .timeout_global(Some(timeout))

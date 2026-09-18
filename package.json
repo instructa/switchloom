@@ -37,27 +37,34 @@
     "hooks:check-sensitive": "node scripts/hooks/block-sensitive-diff-content.mjs --worktree",
     "pack:check": "cargo run --quiet -p xtask -- release verify --inventory-only --require-provenance",
     "security:check": "bash scripts/secleak-check.sh",
-    "site:build": "astro build",
-    "site:check": "pnpm site:test && astro check && pnpm site:build",
-    "site:dev": "astro dev",
-    "site:test": "vitest run",
-    "site:serve": "astro dev --host 127.0.0.1 --port 4173"
+    "site:build": "pnpm site:core && vite build",
+    "site:check": "pnpm site:core && vitest run && vite build && tsc --noEmit",
+    "site:dev": "pnpm site:core && vite --host 127.0.0.1",
+    "site:test": "pnpm site:core && vitest run",
+    "site:serve": "pnpm site:core && vite --host 127.0.0.1 --port 4173",
+    "site:core": "node scripts/build-web-core.mjs",
+    "site:local": "pnpm site:core && DEVELOPER_MODE=true vite --mode developer --host 127.0.0.1 --port 4173"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.6",
-    "@astrojs/react": "^6.0.1",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@tailwindcss/vite": "^4.1.18",
     "@types/node": "^25.0.10",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "alchemy": "0.93.7",
-    "astro": "^7.1.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "vitest": "4.1.11",
+    "@tanstack/react-start": "1.168.56",
+    "@tanstack/react-router": "1.170.38",
+    "@cloudflare/vite-plugin": "1.55.0",
+    "@cloudflare/workers-types": "5.20260917.1",
+    "@vitejs/plugin-react": "6.1.1",
+    "vite": "8.3.0",
+    "wrangler": "4.134.0",
+    "playwright": "1.63.0"
   },
   "engines": {
     "node": ">=18"

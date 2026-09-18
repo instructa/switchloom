@@ -10,15 +10,17 @@ credentials, databases, receipts and build output remain excluded.
 The CLI provides `route` for task decisions, `handoff` for prepared desktop
 dispatch arguments, plus `status` and `uninstall` for existing installations.
 Version 1.0.0 is prepared locally and not yet published. Live verification
-remains a release requirement. The website makes no TypeSafe calls and accepts
-no API key. The desktop skill uses the installed CLI and native Codex tools.
+remains a release requirement. The public Playground calls TypeSafe from its
+server with a server-only key and quotas. It accepts no user credentials and
+cannot execute Codex runs. The desktop skill uses the installed CLI and native
+Codex tools; the optional local benchmark harness uses the Codex app server.
 
 ## Generated task data
 
 `cargo run -p xtask -- release prepare --allow-dirty` regenerates
 `website/data/catalog.json` from `catalog.toml`, including model suggestions,
-supported reasoning and model defaults and capabilities. Astro imports that catalog at
-build time. There are no public bundle downloads or install recipes. Catalog
+supported reasoning and model defaults and capabilities. TanStack Start imports
+that catalog at build time. There are no public bundle downloads or install recipes. Catalog
 verification checks that the generated file matches its owner.
 
 ## Release ownership
@@ -29,6 +31,11 @@ A dry run performs preparation and verification but skips publishing actions.
 `xtask release` owns version consistency, clean-source requirements, package
 inventories and native provenance. `generate-formula.sh` is used by the
 conditional Homebrew tap job.
+
+Cargo uses an explicit source-file allowlist. Website assets, benchmark images,
+local harness code and development tooling belong in the repository, not the CLI
+source package. Public benchmark pages contain selected historical measurements
+and screenshots; raw run logs, credentials and local paths remain external.
 
 Only the product crate is publishable. The existing `model-routing` native
 binary identity and version output are shared by the npm launcher and native

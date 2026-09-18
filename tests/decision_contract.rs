@@ -23,7 +23,7 @@ fn route(input: &str) -> Output {
 #[test]
 fn structured_capability_selection_is_offline_and_does_not_echo_context() {
     let result = route(&json!({
-        "task": "Implement the agreed fix", "context": "private-context-marker", "capability": "implementation", "jev": true
+        "task": "Implement the agreed fix", "context": "private-context-marker", "routing": {"mode": "assigned", "capability": "implementation"}
     }).to_string());
     assert!(result.status.success(), "{:?}", result);
     let decision: Value = serde_json::from_slice(&result.stdout).unwrap();
@@ -40,8 +40,8 @@ fn structured_capability_selection_is_offline_and_does_not_echo_context() {
 #[test]
 fn missing_key_and_invalid_input_fail_without_an_assignment() {
     for input in [
-        r#"{"task":"Implement the fix","jev":true}"#,
-        r#"{"task":"x","capability":"unknown","jev":false}"#,
+        r#"{"task":"Implement the fix","routing":{"mode":"jev"}}"#,
+        r#"{"task":"x","routing":{"mode":"assigned","capability":"unknown"}}"#,
         "{}",
         "not-json",
     ] {
@@ -50,19 +50,10 @@ fn missing_key_and_invalid_input_fail_without_an_assignment() {
         assert!(result.stdout.is_empty());
         assert!(!result.stderr.is_empty());
     }
-    let result = route(r#"{"task":"Implement the fix","jev":true}"#);
+    let result = route(r#"{"task":"Implement the fix","routing":{"mode":"jev"}}"#);
     assert!(
         String::from_utf8(result.stderr)
             .unwrap()
             .contains("TYPESAFE_API_KEY")
     );
-}
-
-#[test]
-fn vanilla_needs_no_key_even_without_an_explicit_assignment() {
-    let result = route(r#"{"task":"Next step","jev":false}"#);
-    assert!(result.status.success());
-    let output: Value = serde_json::from_slice(&result.stdout).unwrap();
-    assert_eq!(output["reason"], "explicit_capability_required");
-    assert!(output["assignment"].is_null());
 }

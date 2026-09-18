@@ -1,0 +1,814 @@
+[
+  {
+    "slug": "pokedex-round-2",
+    "round": 2,
+    "date": "2026-09-18",
+    "label": "Pokédex · Round 2",
+    "headline": "More routing. Almost the same bill.",
+    "description": "The handoff fix worked. The team still cost almost as much as Astra solo and hit the time limit before final acceptance.",
+    "intro": [
+      "I reran the same Pokédex after fixing the blocked review handoff. Same brief, same reference image, four ways to build it.",
+      "Team + Jev came in at $6.72. Astra solo was $6.98. Both persistent teams hit the 30-minute limit before final acceptance. Astra finished with the most complete result I checked.",
+      "Jev itself cost less than a tenth of a cent. The expensive part was the work around it. Getting the routing to work did not make this app cheaper at the same quality."
+    ],
+    "takeaway": [
+      "For this task, I would take Astra solo. Luna with subagents was cheaper, but I would still have to deal with the missing behavior. The persistent teams did not give me a good reason to accept the extra steps.",
+      "I am not treating a one-shot app as the final word on model routing. A longer project with different kinds of work might tell a different story. I am waiting for a real application where it makes sense to spend money testing that.",
+      "For now, this is where the experiment stands. Interesting routing. No demonstrated win for this workload."
+    ],
+    "limits": [
+      "One selected run per strategy. This is a pilot, not a model leaderboard. Visual assessment was not blinded, and functional checks are not a visual quality score.",
+      "All four submitted apps passed their own tests, typecheck and production build. Independent checks still found issues. A completed model run does not mean every requirement passed.",
+      "Elapsed time includes approval waits. Browser issues and operator delays prevent a clean speed comparison. The same product brief and reference image were used across all strategies.",
+      "Both persistent teams stopped at the fixed 30-minute limit. They were not resumed afterward. No provider-capacity or model-API errors occurred in this round.",
+      "The Chrome connection became unavailable during the last run. The agent also had to resolve a preview-port collision. Agents chose their own tools and received no extra browser-method instructions mid-run.",
+      "Independent checks of the first three apps partly overlapped the last run on the same computer. Their repeated npm checks took about nine seconds in total.",
+      "Fixture injection failed in the evaluation browser. Checks used live PokéAPI with network-blocking and delay attempts. Three loading-state checks remain unscored. Unscored is neither passed nor failed.",
+      "All 45 frozen harness, contract and dependency files, plus the prompt and image hashes, stayed unchanged. The screenshot comparison uses the same Chromium engine at 1440 × 900 and 390 × 844, DPR 1 and reduced motion."
+    ],
+    "runs": [
+      {
+        "id": "vanilla-single-model",
+        "label": "Astra solo",
+        "status": "Completed",
+        "repeated": false,
+        "openaiUsd": 6.9811035,
+        "jevUsd": 0,
+        "jevCalls": 0,
+        "elapsedSeconds": 1277.719,
+        "approvalSeconds": 367.808,
+        "models": [
+          "gpt-6-astra · high"
+        ],
+        "usage": {
+          "inputTokens": 3114082,
+          "cachedInputTokens": 2995251,
+          "cacheWriteInputTokens": 118717,
+          "outputTokens": 50015
+        },
+        "checks": [
+          {
+            "name": "default Bulbasaur and live API fields",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "next navigation",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "previous navigation and lower bound",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "keyboard right",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search Pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 25",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 025",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "invalid search preserves app",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "six base stats",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "151-entry index and upper boundary (mobile)",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "persistent cache after reload with API blocked",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API failure preserves device and Retry recovers",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "delayed loading preserves device",
+            "pass": true,
+            "note": ""
+          }
+        ],
+        "note": "Astra built, tested and checked the app on its own. All 14 independent checks passed. The device controls work and the required data is there. This was the most complete result I checked."
+      },
+      {
+        "id": "team-without-jev",
+        "label": "Team without Jev",
+        "status": "Time limit",
+        "repeated": false,
+        "openaiUsd": 4.85192586,
+        "jevUsd": 0,
+        "jevCalls": 0,
+        "elapsedSeconds": 1799.949,
+        "approvalSeconds": 322.397,
+        "models": [
+          "gpt-5.6-luna · max",
+          "gpt-5.6-sol · medium",
+          "gpt-6-astra · high"
+        ],
+        "usage": {
+          "inputTokens": 5117384,
+          "cachedInputTokens": 4928537,
+          "cacheWriteInputTokens": 188598,
+          "outputTokens": 42717
+        },
+        "checks": [
+          {
+            "name": "default Bulbasaur and live API fields",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "six base stats",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "next navigation",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "previous navigation and lower bound",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "keyboard arrows",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search Pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 25",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 025",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "invalid search preserves app",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "151-entry index and upper boundary (mobile)",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "cache reuse with API blocked",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API failure preserves device and search retries",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "loading keeps device visible",
+            "pass": null,
+            "note": "Emulated network latency did not expose a loading frame; not independently scored."
+          }
+        ],
+        "note": "Sol built it, Astra found issues, and Sol made fixes. The run hit 30 minutes before the final re-review. Thirteen checks passed. I could not independently score one loading state."
+      },
+      {
+        "id": "luna-subagents",
+        "label": "Luna + subagents",
+        "status": "Completed",
+        "repeated": false,
+        "openaiUsd": 3.4126038999999997,
+        "jevUsd": 0,
+        "jevCalls": 0,
+        "elapsedSeconds": 1108.074,
+        "approvalSeconds": 238.82799999999997,
+        "models": [
+          "gpt-5.6-luna · max",
+          "gpt-5.6-sol · medium",
+          "gpt-6-astra · high"
+        ],
+        "usage": {
+          "inputTokens": 16588772,
+          "cachedInputTokens": 16287421,
+          "cacheWriteInputTokens": 290720,
+          "outputTokens": 88072
+        },
+        "checks": [
+          {
+            "name": "default Bulbasaur and live API fields",
+            "pass": false,
+            "note": "Bulbasaur and measures load, but required abilities are absent."
+          },
+          {
+            "name": "six base stats",
+            "pass": false,
+            "note": "Only five stats; special attack/defense collapsed."
+          },
+          {
+            "name": "previous navigation and lower bound",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "next navigation",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "keyboard arrows",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search Pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 25",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 025",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "invalid search preserves app",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "151-entry index and upper boundary (mobile)",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "cache reuse with API blocked",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API failure preserves device and search retries",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "navigation loading keeps device visible",
+            "pass": null,
+            "note": "Initial loading visibly keeps casing. Navigation loading frame not independently captured."
+          }
+        ],
+        "note": "Luna chose Sol for data, Luna for UI and Astra for visual review. It finished for about half the price of Astra solo. But abilities are missing, two stats are merged, and several buttons do nothing."
+      },
+      {
+        "id": "team-with-jev",
+        "label": "Team + Jev",
+        "status": "Time limit",
+        "repeated": false,
+        "openaiUsd": 6.715327610000001,
+        "jevUsd": 0.0003675,
+        "jevCalls": 4,
+        "elapsedSeconds": 1799.946,
+        "approvalSeconds": 361.133,
+        "models": [
+          "gpt-5.6-luna · max",
+          "gpt-5.6-sol · medium",
+          "gpt-6-astra · high"
+        ],
+        "usage": {
+          "inputTokens": 6977843,
+          "cachedInputTokens": 6646643,
+          "cacheWriteInputTokens": 330882,
+          "outputTokens": 51039
+        },
+        "checks": [
+          {
+            "name": "default Bulbasaur and live API fields",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "six base stats",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "next navigation",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "previous navigation and lower bound",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "keyboard arrows",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search Pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 25",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 025",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "invalid search preserves app",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "151-entry index and upper boundary (mobile)",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "cache reuse with API blocked",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API failure preserves device and search retries",
+            "pass": false,
+            "note": "Device remains visible, but retrying the same failed #150 after restoring API access leaves LINK ERROR and the old Pokémon. RETRY LINK is hidden when a previous Pokémon exists. Navigating #25 then #150 recovers."
+          },
+          {
+            "name": "loading keeps device visible",
+            "pass": null,
+            "note": "A navigation loading frame was not independently observed; not scored."
+          }
+        ],
+        "note": "The handoffs worked this time, including the return to the same Sol task. The run still hit 30 minutes during Astra’s re-review. Retrying a failed API lookup also failed an independent check."
+      }
+    ]
+  },
+  {
+    "slug": "pokedex-round-1",
+    "round": 1,
+    "date": "2026-09-18",
+    "label": "Pokédex · Round 1",
+    "headline": "The cheaper runs had a catch.",
+    "description": "Four versions of the same app. Lower costs looked promising, until I checked which work had actually been completed.",
+    "intro": [
+      "I wanted to see whether mixing Luna, Sol and Astra would beat just letting Astra build the app. So I gave four setups the same Pokédex brief and reference image.",
+      "The team runs were cheaper. But the Jev run stopped before Astra could review anything, and the team without Jev skipped Astra entirely. Those prices were not buying the same completed work.",
+      "I kept the results. A workflow that stops early should not turn into a savings claim just because the bill is smaller."
+    ],
+    "takeaway": [
+      "The first thing to fix was our own handoff rule. Review and Visual both pointed at Astra, but the split between those labels stopped the assignment. We also needed to stop treating an implementer’s final message as a completed advisor review.",
+      "Round 2 tests those fixes. This first round stays here because the incomplete runs and awkward results are part of the experiment too."
+    ],
+    "limits": [
+      "One selected run per strategy. This is a pilot, not a model leaderboard. Visual assessment was not blinded, and functional checks are not a visual quality score.",
+      "All four submitted apps passed their own tests, typecheck and production build. Independent checks still found issues. A completed model run does not mean every requirement passed.",
+      "Elapsed time includes approval waits. Browser issues and operator delays prevent a clean speed comparison. The same product brief and reference image were used across all strategies.",
+      "The displayed Luna result is a documented replacement for a run interrupted after a delayed operator approval. The first run is preserved and cost about $0.9365. An earlier paid preflight cost about $1.8768. Including those, recorded costs were about $15.99, not just the $13.18 selected-run total.",
+      "Astra resumed in the same task after a capacity error and an operator-client error. Its active duration was 18.9 minutes; elapsed time was 36.8 minutes. All recorded tokens remain in its cost.",
+      "The team without Jev completed without an Astra turn. The Jev team stopped before review. Neither price represents full advisor/worker acceptance.",
+      "Independent screenshots used shared API fixtures at 1440 × 900 and 390 × 844 with reduced motion. A few evaluation checks overlapped the start of the replacement Luna run."
+    ],
+    "runs": [
+      {
+        "id": "vanilla-single-model",
+        "label": "Astra solo",
+        "status": "Completed",
+        "repeated": false,
+        "openaiUsd": 6.570697,
+        "jevUsd": 0,
+        "jevCalls": 0,
+        "elapsedSeconds": 2205.717,
+        "approvalSeconds": 121.618,
+        "models": [
+          "gpt-6-astra · high"
+        ],
+        "usage": {
+          "inputTokens": 2172419,
+          "cachedInputTokens": 2001692,
+          "cacheWriteInputTokens": 170634,
+          "outputTokens": 48703
+        },
+        "checks": [
+          {
+            "name": "default Bulbasaur",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API fields and all six base stats",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "lower boundary",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "D-pad next and previous",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "keyboard arrows",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search Pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 25",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 025",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "cache reuse",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "invalid search",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "direct index and upper boundary",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "loading keeps device visible",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API error remains usable and recovers",
+            "pass": true,
+            "note": ""
+          }
+        ],
+        "note": "Astra built and checked the app itself. All 14 functional checks passed. To me, this was the cleanest visual result of the first round. It was also the most expensive."
+      },
+      {
+        "id": "team-without-jev",
+        "label": "Team without Jev",
+        "status": "Completed",
+        "repeated": false,
+        "openaiUsd": 2.52790668,
+        "jevUsd": 0,
+        "jevCalls": 0,
+        "elapsedSeconds": 735.155,
+        "approvalSeconds": 104.13499999999999,
+        "models": [
+          "gpt-5.6-luna · max",
+          "gpt-5.6-sol · medium"
+        ],
+        "usage": {
+          "inputTokens": 3818983,
+          "cachedInputTokens": 3699041,
+          "cacheWriteInputTokens": 119783,
+          "outputTokens": 28360
+        },
+        "checks": [
+          {
+            "name": "default Bulbasaur",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API fields and all six base stats",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "lower boundary",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "D-pad next and previous",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "keyboard arrows",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search Pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 25",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 025",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "cache reuse",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "invalid search",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "direct index and upper boundary",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "loading keeps device visible",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API error remains usable and recovers",
+            "pass": true,
+            "note": ""
+          }
+        ],
+        "note": "The app passed all 14 checks, but Astra never ran. Luna accepted Sol’s result without the advisor review. The lower bill does not include that missing work."
+      },
+      {
+        "id": "luna-subagents",
+        "label": "Luna + subagents",
+        "status": "Completed",
+        "repeated": true,
+        "openaiUsd": 2.1309286500000004,
+        "jevUsd": 0,
+        "jevCalls": 0,
+        "elapsedSeconds": 1244.214,
+        "approvalSeconds": 163.612,
+        "models": [
+          "gpt-5.6-luna · max",
+          "gpt-6-astra · high",
+          "gpt-5.6-sol · medium"
+        ],
+        "usage": {
+          "inputTokens": 19672713,
+          "cachedInputTokens": 19340745,
+          "cacheWriteInputTokens": 319717,
+          "outputTokens": 93940
+        },
+        "checks": [
+          {
+            "name": "default Bulbasaur",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API fields and all six base stats",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "lower boundary",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "D-pad next and previous",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "keyboard arrows",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search Pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 25",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 025",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "cache reuse",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "invalid search",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "direct index and upper boundary",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "loading keeps device visible",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API error remains usable and recovers",
+            "pass": false,
+            "note": "The initial API error was overwritten by the successful index request. The display stayed empty without a retry action."
+          }
+        ],
+        "note": "This is the replacement run. Luna chose another Luna for data, Astra for UI and two Sol reviewers. An API failure could leave an empty display marked online, with no retry button."
+      },
+      {
+        "id": "team-with-jev",
+        "label": "Team + Jev",
+        "status": "Review blocked",
+        "repeated": false,
+        "openaiUsd": 1.9507405500000004,
+        "jevUsd": 0.00018702600000000002,
+        "jevCalls": 2,
+        "elapsedSeconds": 812.369,
+        "approvalSeconds": 243.14999999999998,
+        "models": [
+          "gpt-5.6-luna · max",
+          "gpt-5.6-sol · medium"
+        ],
+        "usage": {
+          "inputTokens": 2611401,
+          "cachedInputTokens": 2510953,
+          "cacheWriteInputTokens": 100313,
+          "outputTokens": 27765
+        },
+        "checks": [
+          {
+            "name": "default Bulbasaur",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API fields and all six base stats",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "lower boundary",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "D-pad next and previous",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "keyboard arrows",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search Pikachu",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 25",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "search 025",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "cache reuse",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "invalid search",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "direct index and upper boundary",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "loading keeps device visible",
+            "pass": true,
+            "note": ""
+          },
+          {
+            "name": "API error remains usable and recovers",
+            "pass": true,
+            "note": ""
+          }
+        ],
+        "note": "Sol built the app. Then Jev split the review request between Review and Visual, even though both belonged to Astra. Our dispatch rule blocked the handoff. The app passed its checks, but the team never reached the review."
+      }
+    ]
+  }
+]

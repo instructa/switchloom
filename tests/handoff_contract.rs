@@ -22,7 +22,7 @@ fn handoff(input: &Value) -> Output {
 
 fn input() -> Value {
     json!({
-        "request": {"task": "Review the race in src/store.rs", "context": "Do not edit files", "capability": "review", "jev": true},
+        "request": {"task": "Review the race in src/store.rs", "context": "Do not edit files", "routing": {"mode": "assigned", "capability": "review"}},
         "caller": {"thread_id": "existing-worker", "host_id": "local"},
         "threads": {"astra": {"thread_id": "existing-advisor", "host_id": "local", "model": "gpt-6-astra", "effort": "high", "capabilities": ["review"]}}
     })
@@ -67,12 +67,10 @@ fn cli_prepares_a_complete_codex_desktop_dispatch_without_calling_a_model() {
 #[test]
 fn failures_leave_no_dispatch_on_stdout() {
     let mut missing_key = input();
-    missing_key["request"]
-        .as_object_mut()
-        .unwrap()
-        .remove("capability");
+    missing_key["request"]["routing"] = json!({"mode":"jev"});
+    missing_key["threads"]["astra"]["capabilities"] = json!(["review", "planning"]);
     let mut missing_owner = input();
-    missing_owner["request"]["capability"] = json!("implementation");
+    missing_owner["request"]["routing"]["capability"] = json!("implementation");
     for input in [missing_key, missing_owner] {
         let result = handoff(&input);
         assert!(!result.status.success());
@@ -118,10 +116,7 @@ fn invalid_model_settings_fail_before_routing_or_dispatch() {
         ("gpt-next-test", "bogus"),
     ] {
         let mut input = input();
-        input["request"]
-            .as_object_mut()
-            .unwrap()
-            .remove("capability");
+        input["request"]["routing"] = json!({"mode":"jev"});
         input["threads"]["astra"]["model"] = json!(model);
         input["threads"]["astra"]["effort"] = json!(effort);
         let result = handoff(&input);
@@ -129,4 +124,18 @@ fn invalid_model_settings_fail_before_routing_or_dispatch() {
         assert!(result.stdout.is_empty());
         assert!(!String::from_utf8_lossy(&result.stderr).contains("TYPESAFE_API_KEY"));
     }
+}
+
+#[test]
+fn sole_browser_capability_does_not_dispatch_an_unspecified_task() {
+    let mut input = input();
+    input["request"] = json!({"task":"Continue", "routing":{"mode":"jev"}});
+    input["threads"]["astra"]["capabilities"] = json!(["browser"]);
+    let result = handoff(&input);
+    assert!(result.status.success());
+    let output: Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(output["action"], "clarify");
+    assert_eq!(output["decision"]["reason"], "explicit_capability_required");
+    assert!(output["dispatch"].is_null());
+    assert!(output["decision"]["assignment"].is_null());
 }

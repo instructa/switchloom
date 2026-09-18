@@ -2,9 +2,26 @@
 
 All notable changes to Switchloom are recorded here.
 
-## [Unreleased]
-
 ## [1.0.0] - Unreleased
+
+- TanStack Start Playground with shared Rust/WASM routing, public quotas and
+  server-only TypeSafe credentials.
+- Local Codex app-server benchmarks with four modes, persistent tasks, live
+  events, approvals, artifacts, previews and screenshot capture.
+- English benchmark archive with both Pokedex pilots, original screenshots,
+  measured costs, independent checks and explicit evaluation limitations.
+- Pin Jev to `jev-1.13.0`. Ask a missing-context Noul beside the capability
+  Choice, use separate classifier criteria, and skip the call when only one
+  capability is enabled. Suggest high-stakes work without dispatching it.
+- Give browser use, computer use and visual design & review to Astra by default.
+  Spatial and 3D modeling stays disabled until it is assigned.
+- Move Jev routing below the board, with the TypeSafe logo and a docs link.
+  Both modes now use the same handoff.
+- Resolve capability ambiguity when the combined probability identifies the
+  same configured owner, while retaining the original Jev confidence.
+- Share completion instructions between the Desktop prompt and local harness:
+  requested visual checks need rendered evidence, and limitations stay explicit.
+  Remove the duplicate original objective from the first worker handoff.
 
 - Replace fixed roles and Advanced with a capability board: Luna max first,
   Sol medium and Astra high by default. Model suggestions and custom GPT IDs
@@ -27,6 +44,8 @@ All notable changes to Switchloom are recorded here.
   preserving user edits and unrelated Codex settings.
 - Separate website build/development caches and update the optional cookie
   dependency's `time` lockfile entry to the security-fixed version.
+- Restrict the Cargo source package to runtime sources, tests and required
+  resources. Remove deleted preset paths from the release handoff.
 
 Release status: local preview. Full desktop handoff verification, representative
 quality comparisons and final release artifacts remain required.

@@ -1,0 +1,129 @@
+# Expected labels for a later live comparison against pinned jev-1.13.0.
+# These labels stay here. They are not sent to TypeSafe and are not a calibration result.
+
+[[cases]]
+id = "agreed-fix"
+task = "Implement the agreed retry fix"
+context = "The planning owner already chose the boundary."
+expected = "implementation"
+
+[[cases]]
+id = "unknown-cause"
+task = "The cache test fails and the cause is unknown"
+context = "No plan exists yet."
+expected = "debugging"
+
+[[cases]]
+id = "known-edit"
+task = "Rename retryDelay to retryDelayMs and update all references without changing behavior"
+context = "The exact rename is approved. No new logic is needed."
+expected = "mechanical"
+
+[[cases]]
+id = "formatter"
+task = "Run the configured formatter on the changed files and inspect the diff"
+context = "Preserve behavior."
+expected = "mechanical"
+
+[[cases]]
+id = "small-logic-change"
+task = "Add exponential backoff to the existing retry loop"
+context = "The approach is agreed but the behavior needs to be implemented."
+expected = "implementation"
+
+[[cases]]
+id = "run-tests"
+task = "Run the retry tests and report the results"
+context = "Do not edit files."
+expected = "validation"
+
+[[cases]]
+id = "open-architecture"
+task = "Decide where retry ownership should live before any code is written"
+context = ""
+expected = "planning"
+
+[[cases]]
+id = "review-diff"
+task = "Review the retry diff in src/store.rs"
+context = "The change is already written. Do not edit files."
+expected = "review"
+
+
+[[cases]]
+id = "browser-repro"
+task = "Reproduce the form bug in the running site"
+context = "The next step is in the browser."
+expected = "browser"
+
+[[cases]]
+id = "desktop-app"
+task = "Use the native export window to confirm the setting"
+context = "This is desktop application work."
+expected = "computer"
+
+[[cases]]
+id = "visual-check"
+task = "Compare the attached screenshot with the layout criteria"
+context = "Do not operate the browser. Judge the render."
+expected = "visual"
+
+[[cases]]
+id = "visual-direction"
+task = "Define the layout, typography and visual hierarchy for a finance SaaS dashboard"
+context = "Return a visual design brief for the implementer. Do not write product code."
+expected = "visual"
+
+[[cases]]
+id = "visual-live-review"
+task = "Open the running dashboard and compare its spacing, typography and layout against the supplied reference"
+context = "Report visual corrections. Do not change code."
+expected = "visual"
+
+[[cases]]
+id = "implement-with-browser-check"
+task = "Implement the approved dashboard layout in React and CSS, then check it in the browser"
+context = "The visual design is already supplied. Build the requested UI."
+expected = "implementation"
+
+[[cases]]
+id = "ui-code-review"
+task = "Review the dashboard diff for stale state and incorrect calculations"
+context = "Assess code correctness. The visual appearance is out of scope."
+expected = "review"
+
+[[cases]]
+id = "scene-edit"
+task = "Adjust the scoped scene asset for the doorway"
+context = "Only this scene is in scope."
+expected = "spatial"
+
+[[cases]]
+id = "missing-goal"
+task = "Continue"
+context = ""
+expected = "clarify"
+
+[[cases]]
+id = "cli-filename-search"
+task = "file search for pok* in cli terminal"
+context = ""
+expected = "mechanical"
+
+[[cases]]
+id = "mcp-file-lookup"
+task = "Use the filesystem MCP to list filenames beginning with pok"
+context = ""
+expected = "mechanical"
+
+[[cases]]
+id = "ordinary-app"
+task = "Implement a searchable Pokedex with type filters and a detail view"
+context = ""
+expected = "implementation"
+
+[[cases]]
+id = "small-feature"
+task = "Add a clear-search button to the existing search field"
+context = ""
+expected = "implementation"

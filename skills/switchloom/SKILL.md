@@ -25,10 +25,18 @@ model/reasoning. Reuse this thread when suitable. New tasks end their setup
 turn until assigned work; give them the complete map and selected rules in
 the first actionable assignment. Record pending creation IDs and resolve
 setup before dispatch; a client ID is not a thread ID. Do not fork, create
-worktrees, replace pending tasks or add subagents. The generated prompt owns
+worktrees or replace pending tasks with subagents. The generated prompt owns
 the bootstrap responsibilities and selected models. The catalog supplies
 defaults and suggestions; Codex validates actual model availability. New GPT
 IDs can be used without waiting for a Switchloom catalog update.
+
+Workers may use subagents for independent parts of the assigned step with the
+same selected model and effort. Verify the effective settings; if they cannot
+be verified, keep the work in its owning thread. Agent roles must not change
+the model or bypass capability ownership. The owner coordinates exclusive
+file/tool access and returns the result. Coordination does not spawn subagents.
+These are workflow instructions, not a technical model lock. Never edit the
+user's Codex settings or TOML files to enforce them.
 
 Require `switchloom` and `send_message_to_thread`; discover deferred tools.
 If a required capability is unavailable, report it without claiming dispatch.
@@ -44,7 +52,7 @@ ownership, acceptance criteria and the capability map when the recipient lacks t
 
 ```json
 {
-  "request": {"task": "Review the cache fix", "context": "Relevant paths, evidence, ownership and acceptance criteria", "capability": "review", "jev": true},
+  "request": {"task": "Review the cache fix", "context": "Relevant paths, evidence, ownership and acceptance criteria", "routing": {"mode": "jev"}},
   "caller": {"thread_id": "CALLER_ID", "host_id": "HOST_ID"},
   "threads": {
     "sol": {"thread_id": "SOL_ID", "host_id": "HOST_ID", "model": "gpt-5.6-sol", "effort": "medium", "capabilities": ["implementation", "debugging", "validation"]},
@@ -56,17 +64,27 @@ ownership, acceptance criteria and the capability map when the recipient lacks t
 Use the workflow's actual model settings and capability lists, not the example's
 defaults. Slot IDs remain stable when their models change. Each capability has
 one owner; disabled capabilities are absent. Run `switchloom handoff < INPUT_FILE`,
-then remove the file. Explicit assignments use `request.capability` and skip Jev.
-Otherwise omit it with `jev:true` to judge among assigned capabilities. Report
-failed judgments; never hide missing keys or service errors. Route once per
-meaningful step; keep the model fixed throughout its tool loop.
+then remove the file.
 
-Vanilla workflows use the configured map directly with Codex tools and need no
-CLI or key. If calling the CLI in vanilla mode, set `jev:false` and an explicit
-capability; without one it abstains with `explicit_capability_required`.
+For every new unassigned objective in a Jev-enabled workflow, set
+`request.routing` to `{"mode":"jev"}`. Pass the actual requested work;
+do not insert hypothetical planning or preselect a capability. Ordinary
+implementation can start without an advisor plan. Coordination sequences
+work and is not a routing candidate.
+
+For a direct user assignment or an already bound continuation, use
+`{"mode":"assigned","capability":"implementation"}` with the actual saved
+capability. This skips Jev. Do not treat knowing the board's owners as a user
+assignment. When Jev is disabled, the coordinator explicitly selects the
+capability with this same assigned mode; no key is needed.
+
+A sole eligible capability requires an explicit assignment; it never auto-dispatches.
+Report failed judgments; never hide missing keys or service errors. Route once
+per new work objective; keep the selected owner/model through the whole tool loop.
 
 On a nonzero exit, send nothing; report the error without an automatic retry.
 `clarify` requires missing context or resolution of uncertainty.
+`suggest` shows a possible capability and is not a send or a local execution.
 `continue_here` executes the selected step in this turn without a self-message
 or model switch. Only `dispatch` carries a send payload.
 
@@ -89,8 +107,10 @@ polling or waiting loops.
 
 Match an incoming result to the pending objective and sender. Consume it as
 a continuation, not an assignment to echo back or send through Jev again.
-Advice resumes the original work; a coordinator passes the next bounded
-step to its assigned owner. Follow the configured validation and review
+Return plans and answers to the coordinator. Preserve the blocked assignment's
+objective, owner and return IDs while obtaining advice. The coordinator sends
+the answer and relevant plan back to that saved owner using assigned mode,
+without another judgment. For genuinely new unassigned work, use Jev again. Follow the configured validation and review
 responsibilities, reuse evidence and request repairs only for concrete
 failures. Stop when acceptance criteria are met. Report blockers that require
 user input or scope changes; do not create recurring repair or review loops.

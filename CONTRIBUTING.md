@@ -6,6 +6,11 @@ for model assignments and routing policy; avoid alternate host integrations.
 
 ## Development
 
+Use Node 24+ for website development. See [Playground setup](docs/playground.md)
+for the Rust WASM target, matching wasm-bindgen CLI and local Codex harness.
+`pnpm site:dev` starts the public Worker locally; `pnpm site:local` enables the
+loopback-only developer entrypoint. Never add client-prefixed secret variables.
+
 Run the smallest check covering the change. For Rust use the owning test or
 crate, plus formatting and Clippy when Rust code changes. For website work use
 `pnpm site:test`; regenerate the catalog and run `pnpm site:check` when task
@@ -18,8 +23,8 @@ and preserve unrelated configuration and user edits.
 
 ## Ownership
 
-`catalog.toml` owns model suggestions, reasoning choices, model defaults, capabilities
-and their instructions. Add new model suggestions there, then run `pnpm catalog:regenerate`.
+`catalog.toml` owns model suggestions, reasoning choices, model defaults, assignment
+instructions and classifier criteria. Add new model suggestions there, then run `pnpm catalog:regenerate`.
 Custom GPT IDs can be selected without a catalog release. `src/decision.rs`
 owns routing decisions; `src/typesafe.rs` owns TypeSafe HTTP. Codex owns the
 execution loop and tool discovery. `src/handoff.rs` binds decisions to tasks;

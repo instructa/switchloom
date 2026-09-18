@@ -55,8 +55,7 @@ if [ "${RELEASE_DRY_RUN:-0}" = "1" ]; then
 fi
 
 git add -- Cargo.toml Cargo.lock xtask/Cargo.toml package.json \
-  fixtures/routing-bundle-v1/valid-balanced-codex.json \
-  website/data/catalog.json website/data/bundles
+  website/data/catalog.json
 if ! git diff --cached --quiet; then
   git commit -m "release $version: $summary"
 fi

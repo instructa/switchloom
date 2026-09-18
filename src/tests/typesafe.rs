@@ -4,11 +4,15 @@ use std::{io::Write, net::TcpListener, thread};
 fn response_body() -> String {
     json!({
         "model": "jev-test",
-        "answers": { "route": { "type": "choice", "choice": "worker", "confidence": 0.9,
-            "probabilities": { "worker": 0.85, "advisor": 0.05, "orchestrator": 0.05, "clarify": 0.05 }
-        }},
+        "answers": {
+            "route": { "type": "choice", "choice": "implementation", "confidence": 0.9,
+                "probabilities": { "implementation": 0.9, "planning": 0.1 }
+            },
+            "context_missing": { "type": "noul", "noul": 0.05 }
+        },
         "usage": { "input_tokens": 12, "output_tokens": 8 }
-    }).to_string()
+    })
+    .to_string()
 }
 
 fn server(status: &str, body: String, delay: Duration) -> (String, thread::JoinHandle<String>) {
@@ -54,15 +58,11 @@ fn server(status: &str, body: String, delay: Duration) -> (String, thread::JoinH
 fn http_boundary_sends_json_and_decodes_usage() {
     let (url, worker) = server("200 OK", response_body(), Duration::ZERO);
     let body = request_body(
-        json!({ "task": "fix typo" }),
-        "Choose a role",
-        BTreeMap::from([
-            ("worker", "Implement the change"),
-            ("advisor", "Resolve uncertainty"),
-        ]),
+        json!({ "task": "fix typo", "context": "", "enabled_capabilities": ["implementation"] }),
+        json!({ "route": { "type": "choice", "instructions": "Choose a capability", "criteria": { "implementation": { "what": "Write the change" } } } }),
     );
     let answer = send(&url, "test-key", body.clone(), Duration::from_secs(2)).unwrap();
-    assert_eq!(answer.answers.route.choice, "worker");
+    assert_eq!(answer.answers.route.choice, "implementation");
     assert_eq!(answer.usage.input_tokens, 12);
     let request = worker.join().unwrap();
     assert!(request.starts_with("POST /v1/systemone HTTP/1.1"));
@@ -75,10 +75,11 @@ fn http_boundary_sends_json_and_decodes_usage() {
     assert_eq!(
         serde_json::from_str::<Value>(payload).unwrap(),
         json!({
-            "model": "jev-latest", "state": {"task": "fix typo"},
+            "model": "jev-1.13.0",
+            "state": {"task": "fix typo", "context": "", "enabled_capabilities": ["implementation"]},
             "questions": {"route": {
-                "type": "choice", "instructions": "Choose a role",
-                "criteria": {"worker": "Implement the change", "advisor": "Resolve uncertainty"}
+                "type": "choice", "instructions": "Choose a capability",
+                "criteria": {"implementation": {"what": "Write the change"}}
             }}
         })
     );

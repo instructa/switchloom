@@ -31,6 +31,7 @@ impl Error {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn context(self, context: impl Into<String>) -> Self {
         Self::Context {
             context: context.into(),
@@ -41,12 +42,14 @@ impl Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) trait ResultContext<T> {
     fn with_context<C>(self, context: C) -> Result<T>
     where
         C: FnOnce() -> String;
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl<T, E> ResultContext<T> for std::result::Result<T, E>
 where
     E: Into<Error>,

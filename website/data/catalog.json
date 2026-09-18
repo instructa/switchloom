@@ -1,4 +1,5 @@
 {
+  "model_id_pattern": "^gpt-[a-z0-9][a-z0-9._-]*$",
   "reasoning_efforts": [
     "none",
     "minimal",
@@ -9,6 +10,7 @@
     "max",
     "ultra"
   ],
+  "completion_instructions": "Finish against the original task's acceptance criteria, using actual results and evidence. For a UI implementation with a supplied visual reference or requested visual quality checks, compare the rendered result before completion. In a team workflow, the coordinator must request that comparison from the configured visual owner and receive its result before completing. Implementation's own browser checks do not replace a different visual owner's review. If both duties have the same owner, reuse its evidence; a standalone executor performs the check itself. A build or test report does not establish visual fidelity. Pass concrete findings to the implementation owner, then re-check only those findings or new risks. Do not invent mandatory planning or reviews for unrelated tasks. If a required check cannot run or its capability is disabled, report that limitation instead of claiming it passed. The final report names completed checks, their evidence and unresolved limitations.",
   "models": [
     {
       "id": "gpt-5.6-sol",
@@ -68,61 +70,184 @@
       "id": "coordination",
       "label": "Coordination",
       "default_owner": "luna",
-      "instructions": "Coordinate an agreed plan. Pass bounded steps and substantive results to their owners; ask the planning owner about unresolved technical decisions. Do not prescribe detailed implementation."
+      "routable": false,
+      "stakes": "routine",
+      "instructions": "Sequence work and preserve assignments. Pass objectives, plans and substantive results to their owners. Let Jev select new unassigned work when enabled. Do not invent mandatory planning or dictate implementation details.",
+      "criteria": {
+        "what": "The next action is to pass an already agreed step or result to its owner.",
+        "not_for": "Unresolved architecture, unknown-cause debugging, writing code, or review of a diff.",
+        "examples": [
+          "Hand the agreed retry fix to its implementer",
+          "Pass the completed diff back to the coordinator"
+        ]
+      }
+    },
+    {
+      "id": "mechanical",
+      "label": "Mechanical tasks",
+      "default_owner": "luna",
+      "routable": true,
+      "stakes": "routine",
+      "instructions": "Perform simple factual lookups, obvious commands and fully specified behavior-preserving edits. Prefer filesystem, CLI or suitable API tools for data operations. Report the result or check the diff after edits. If diagnosis, new behavior or a technical decision is required, report that need instead of expanding scope.",
+      "criteria": {
+        "what": "Simple factual retrieval, an obvious command, or a fully specified behavior-preserving transformation. No diagnosis, new behavior or architectural judgment is required.",
+        "not_for": "Investigating an unknown failure, implementing behavior, choosing a design, assessing test results, or interacting with a graphical interface. A task is not mechanical merely because it uses the CLI or MCP.",
+        "examples": [
+          "List files matching a supplied filename pattern using the shell",
+          "Read a known configuration value through the filesystem tool",
+          "Rename a specified symbol and update its references without changing behavior",
+          "Run the configured formatter"
+        ]
+      }
     },
     {
       "id": "implementation",
       "label": "Implementation",
       "default_owner": "sol",
-      "instructions": "Implement the assigned change within exclusive file ownership. Work autonomously within the agreed scope and report the diff and remaining issues."
+      "routable": true,
+      "stakes": "routine",
+      "instructions": "Implement the assigned change within exclusive file ownership. Inspect the project and make routine implementation choices within scope. Ask the planning owner only about concrete blocking technical decisions. Report the diff and remaining issues.",
+      "criteria": {
+        "what": "Build or change software behavior, including ordinary features and small applications. The implementer can inspect the repository and make routine implementation choices within the requested scope; a separate approved plan is not required.",
+        "not_for": "Pure factual lookup or specified behavior-preserving edits; diagnosis of an unknown failure; explicit architecture decisions that block implementation; a standalone visual design brief or review; checks without implementation. Using a browser to check the change does not turn an implementation objective into browser work.",
+        "examples": [
+          "Build a search interface with filtering and a detail page",
+          "Implement the approved dashboard layout and check it in the browser",
+          "Add a reset control to an existing form",
+          "Implement the agreed parser change"
+        ]
+      }
     },
     {
       "id": "debugging",
       "label": "Debugging",
       "default_owner": "sol",
-      "instructions": "Investigate failures, identify their cause and implement scoped fixes. Escalate unresolved architectural decisions to the planning owner."
+      "routable": true,
+      "stakes": "routine",
+      "instructions": "Investigate failures, identify their cause and implement scoped fixes. Escalate unresolved architectural decisions to the planning owner.",
+      "criteria": {
+        "what": "A failure whose cause is not yet known, including the investigation and a scoped fix.",
+        "not_for": "A mechanical edit once the cause and approach are already known, or a tests-only pass.",
+        "examples": [
+          "The cache test fails and the cause is unknown",
+          "Trace the race before changing the store"
+        ]
+      }
     },
     {
       "id": "validation",
       "label": "Tests & validation",
       "default_owner": "sol",
-      "instructions": "Run targeted tests and validation. Report commands and results; reuse existing evidence unless code changed, a check failed or a new risk appeared."
+      "routable": true,
+      "stakes": "routine",
+      "instructions": "Run targeted tests and validation. Report commands and results; reuse existing evidence unless code changed, a check failed or a new risk appeared.",
+      "criteria": {
+        "what": "Running or interpreting checks, without being the step that writes the product change.",
+        "not_for": "Implementing the fix, designing the approach, or reviewing findings as an independent reader.",
+        "examples": [
+          "Run the retry tests and report the results",
+          "Re-check the failing command after the fix"
+        ]
+      }
     },
     {
       "id": "planning",
       "label": "Planning & architecture",
       "default_owner": "astra",
-      "instructions": "Define scope, architecture boundaries and acceptance criteria. Resolve concrete technical questions before implementation."
+      "routable": true,
+      "stakes": "routine",
+      "instructions": "Define scope, architecture boundaries and acceptance criteria. Resolve concrete technical questions before implementation.",
+      "criteria": {
+        "what": "Resolve a concrete software architecture or scope decision before implementation, or produce a technical plan when planning is explicitly requested.",
+        "not_for": "Visual layout, typography or UI design direction; ordinary feature or application implementation merely because no plan, source code or file paths are supplied. Do not invent an architecture blocker or insert a mandatory advisor step.",
+        "examples": [
+          "Decide which subsystem should own retry policy",
+          "Compare two competing state-ownership designs before coding",
+          "Plan a migration across subsystems and identify acceptance criteria"
+        ]
+      }
     },
     {
       "id": "review",
       "label": "Code review",
       "default_owner": "astra",
-      "instructions": "Review the final diff and evidence; return actionable findings with file references. Re-review only changed findings or new risks. Never call review of your own changes independent; request a distinct enabled owner when independence is needed."
+      "routable": true,
+      "stakes": "elevated",
+      "instructions": "Review the final diff and evidence; return actionable findings with file references. Re-review only changed findings or new risks. Never call review of your own changes independent; request a distinct enabled owner when independence is needed.",
+      "criteria": {
+        "what": "Review an existing code change for correctness, maintainability or technical risks, using the diff and relevant evidence.",
+        "not_for": "Judging visual appearance or designing a layout; writing the change, investigating an unknown failure, or running the tests yourself as the next step.",
+        "examples": [
+          "Review the retry diff in src/store.rs",
+          "Check the final patch for remaining risks"
+        ]
+      }
     },
     {
       "id": "browser",
       "label": "Browser use",
-      "default_owner": null,
-      "instructions": "Operate the browser for the assigned task. Reserve shared browser tools and return relevant evidence."
+      "default_owner": "astra",
+      "routable": true,
+      "stakes": "elevated",
+      "instructions": "Operate the browser for the assigned task. Reserve shared browser tools and return relevant evidence.",
+      "criteria": {
+        "what": "Carry out a standalone browser interaction objective: navigate a web page, click controls, fill fields or reproduce a UI interaction.",
+        "not_for": "HTTP requests, API/MCP data lookups, source changes or native desktop interfaces. Browser use that supports implementation, testing or a visual design/review objective stays with that objective; opening a page alone does not require a handoff.",
+        "examples": [
+          "Click through the checkout in the browser",
+          "Reproduce the form bug in the running site"
+        ]
+      }
     },
     {
       "id": "computer",
       "label": "Computer use",
-      "default_owner": null,
-      "instructions": "Operate desktop applications for the assigned task. Reserve shared desktop tools and return relevant evidence."
+      "default_owner": "astra",
+      "routable": true,
+      "stakes": "elevated",
+      "instructions": "Operate desktop applications for the assigned task. Reserve shared desktop tools and return relevant evidence.",
+      "criteria": {
+        "what": "Carry out a standalone native desktop interaction objective: inspect an application's UI, click controls, type into fields or navigate windows.",
+        "not_for": "Executing shell commands, terminal file searches, filesystem/API operations, browser UI work or inspecting an already supplied screenshot. Incidental tool use stays with the current work objective. The word terminal does not imply GUI interaction.",
+        "examples": [
+          "Click through the native application preferences window",
+          "Use the desktop file manager UI to confirm an export"
+        ]
+      }
     },
     {
       "id": "visual",
-      "label": "Visual verification",
-      "default_owner": null,
-      "instructions": "Inspect rendered results against acceptance criteria and report visual evidence and concrete findings."
+      "label": "Visual design & review",
+      "default_owner": "astra",
+      "routable": true,
+      "stakes": "elevated",
+      "instructions": "Define the requested visual direction, layout, hierarchy, typography and UI states as a concise design brief for the implementation owner. Review rendered results against the brief or supplied reference and return visual evidence and concrete corrections. Use shared browser or desktop tools as needed, coordinating access. Product code changes belong to the implementation owner.",
+      "criteria": {
+        "what": "Define UI/UX visual direction or evaluate visual quality: layout, hierarchy, typography, spacing, colors and UI states. This includes reviewing a live rendered page or a supplied screenshot against a design brief or reference.",
+        "not_for": "Implementing application code or CSS, deciding software architecture, reviewing code correctness, or a standalone browser/desktop operation without a design or visual-review objective. An ordinary app implementation does not require a separate design step.",
+        "examples": [
+          "Define the layout and visual style for a finance SaaS dashboard before implementation",
+          "Compare the screenshot with the layout criteria",
+          "Inspect the live dashboard and report visual corrections",
+          "Report what is visually wrong in the captured page"
+        ]
+      }
     },
     {
       "id": "spatial",
       "label": "Spatial & 3D modeling",
       "default_owner": null,
-      "instructions": "Own explicitly scoped scene assets and spatial or 3D modeling work. Load relevant modeling skills only for this step."
+      "routable": true,
+      "stakes": "elevated",
+      "instructions": "Own explicitly scoped scene assets and spatial or 3D modeling work. Load relevant modeling skills only for this step.",
+      "criteria": {
+        "what": "Scoped scene, spatial, or 3D modeling work.",
+        "not_for": "Ordinary application code, planning that does not touch a scene, or visual review of a 2D page.",
+        "examples": [
+          "Adjust the scoped scene asset",
+          "Fix the 3D model called out in the task"
+        ]
+      }
     }
   ]
 }

@@ -114,3 +114,7 @@ core.*
 **/private/blind-mapping.json
 **/verification/store-verification.json
 **/verification/tamper-results.json
+
+# Generated TanStack router
+/.tanstack/
+/website/src/routeTree.gen.ts

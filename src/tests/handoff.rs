@@ -4,12 +4,12 @@ use serde_json::json;
 
 fn request(capability: &str) -> HandoffRequest {
     serde_json::from_value(json!({
-        "request": {"task": "Resolve the race before implementation", "context": "Relevant code: src/store.rs", "capability": capability, "jev": true},
+        "request": {"task": "Resolve the race before implementation", "context": "Relevant code: src/store.rs", "routing": {"mode": "assigned", "capability": capability}},
         "caller": {"thread_id": "controller", "host_id": "local"},
         "threads": {
             "sol": {"thread_id": "worker-task", "host_id": "local", "model": "gpt-5.6-sol", "effort": "medium", "capabilities": ["implementation"]},
             "astra": {"thread_id": "advisor-task", "host_id": "local", "model": "gpt-6-astra", "effort": "high", "capabilities": ["planning"]},
-            "luna": {"thread_id": "coordinator-task", "host_id": "local", "model": "gpt-5.6-luna", "effort": "max", "capabilities": ["coordination"]}
+            "luna": {"thread_id": "coordinator-task", "host_id": "local", "model": "gpt-5.6-luna", "effort": "max", "capabilities": ["coordination", "mechanical"]}
         }
     })).unwrap()
 }
@@ -19,7 +19,7 @@ fn handoff_binds_the_selected_capability_to_an_existing_task_and_complete_messag
     for (capability, owner) in [
         ("implementation", "sol"),
         ("planning", "astra"),
-        ("coordination", "luna"),
+        ("mechanical", "luna"),
     ] {
         let input = request(capability);
         let result = prepare_handoff(&input).unwrap();
@@ -83,6 +83,9 @@ fn abstention_has_no_dispatch_payload() {
         probabilities: BTreeMap::new(),
         judge_model: Some("jev-test".into()),
         usage: None,
+        act_threshold: None,
+        context_missing: None,
+        owner_probability: None,
     };
     let result = bind_decision(&request("implementation"), decision).unwrap();
     assert!(result.dispatch.is_none());
@@ -119,7 +122,7 @@ fn caller_continues_locally_and_missing_owners_or_duplicate_targets_fail() {
 fn invalid_target_ids_fail_before_jev_is_called() {
     for id in ["", " ", "task\nother", &"x".repeat(257)] {
         let mut input = request("implementation");
-        input.request.capability = None;
+        input.request.routing = crate::decision::Routing::Jev;
         input.caller.thread_id = id.into();
         let error = prepare_handoff(&input).unwrap_err().to_string();
         assert!(error.contains("IDs"));

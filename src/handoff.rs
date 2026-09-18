@@ -57,6 +57,7 @@ pub struct Handoff {
 pub enum HandoffAction {
     Dispatch,
     ContinueHere,
+    Suggest,
     Clarify,
 }
 
@@ -100,6 +101,13 @@ fn validate_targets(input: &HandoffRequest) -> Result<()> {
 }
 
 fn bind_decision(input: &HandoffRequest, decision: RouteDecision) -> Result<Handoff> {
+    if matches!(decision.reason, crate::decision::DecisionReason::Suggested) {
+        return Ok(Handoff {
+            decision,
+            action: HandoffAction::Suggest,
+            dispatch: None,
+        });
+    }
     let dispatch = if let Some(assignment) = &decision.assignment {
         let target = input.threads.get(&assignment.owner).ok_or_else(|| {
             product_error!("selected owner has no task; supply its existing task ID")
@@ -116,7 +124,7 @@ fn bind_decision(input: &HandoffRequest, decision: RouteDecision) -> Result<Hand
             "hostId": input.caller.host_id,
         });
         let prompt = format!(
-            "Assignment:\n{}\n\nCapability:\n{}\n\nRelevant context and ownership:\n{}\n\nReturn target: {}\n\nOn completion, a blocker, or a decision needed to proceed, use send_message_to_thread to send one substantive result to the return target. Start it with 'Result for:' and the assignment objective; identify your thread as {} on host {}. Include the diff or relevant files, evidence, remaining limitations and requested next action. Preserve the recipient's model settings. Then end your turn. Do not poll, wait, send acknowledgments or progress-only messages. A result is a continuation of this assignment, not a new assignment to echo back. Create no additional tasks or subagents for this step.",
+            "Assignment:\n{}\n\nCapability:\n{}\n\nRelevant context and ownership:\n{}\n\nReturn target: {}\n\nOn completion, a blocker, or a decision needed to proceed, use send_message_to_thread to send one substantive result to the return target. Start it with 'Result for:' and the assignment objective; identify your thread as {} on host {}. Include the diff or relevant files, evidence, remaining limitations and requested next action. Preserve the recipient's model settings. Then end your turn. Do not poll, wait, send acknowledgments or progress-only messages. A result is a continuation of this assignment, not a new assignment to echo back. Create no replacement tasks. Subagents must follow the workflow's same-model and capability-ownership rules.",
             input.request.task,
             assignment.instructions,
             input.request.context,

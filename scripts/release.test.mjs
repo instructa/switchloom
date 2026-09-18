@@ -11,6 +11,10 @@ async function sandbox(t) {
   await mkdir(path.join(root, "scripts"));
   await mkdir(path.join(root, "bin"));
   await copyFile("scripts/release.sh", path.join(root, "scripts/release.sh"));
+  for (const file of ["Cargo.toml", "Cargo.lock", "xtask/Cargo.toml", "package.json", "website/data/catalog.json"]) {
+    await mkdir(path.dirname(path.join(root, file)), { recursive: true });
+    await copyFile(file, path.join(root, file));
+  }
   await writeFile(path.join(root, "bin/git"), `#!/bin/sh
 printf 'git %s\\n' "$*" >> "$RELEASE_TEST_TRACE"
 case "$*" in
@@ -18,6 +22,13 @@ case "$*" in
   fetch*) ;;
   'rev-parse HEAD'|'rev-parse origin/main') echo candidate ;;
   'rev-parse v1.2.3') exit 1 ;;
+  add*)
+    shift
+    for file in "$@"; do
+      [ "$file" = '--' ] || test -f "$file" || exit 98
+    done ;;
+  'diff --cached --quiet') exit 0 ;;
+  tag*|push*) ;;
   *) exit 99 ;;
 esac
 `, { mode: 0o755 });
@@ -59,4 +70,14 @@ test("release stops on failed preparation", async (t) => {
   const result = fixture.run({ RELEASE_TEST_CARGO_EXIT: "17" });
   assert.equal(result.status, 17);
   assert.doesNotMatch(await fixture.trace(), /release verify|release package|git push/);
+});
+
+test("release stages existing source files and pushes the verified version", async (t) => {
+  const fixture = await sandbox(t);
+  const result = fixture.run({ RELEASE_DRY_RUN: "0" });
+  assert.equal(result.status, 0, result.stderr);
+  const trace = await fixture.trace();
+  assert.match(trace, /release verify[\s\S]*release package[\s\S]*git add/);
+  assert.match(trace, /git tag -a v1\.2\.3/);
+  assert.match(trace, /git push origin HEAD v1\.2\.3/);
 });

@@ -1,13 +1,12 @@
 {
-  "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "website/src/**/*", "astro.config.ts"],
-  "exclude": ["dist", "target", "node_modules"],
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./website/src/*"]
-    },
-    "jsx": "react-jsx",
-    "jsxImportSource": "react"
-  }
+    "target": "ES2022", "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext", "moduleResolution": "Bundler", "jsx": "react-jsx",
+    "strict": true, "skipLibCheck": true, "resolveJsonModule": true,
+    "allowImportingTsExtensions": true, "noEmit": true,
+    "types": ["vite/client", "node", "@cloudflare/workers-types"],
+    "paths": { "@/*": ["./website/src/*"] }
+  },
+  "include": ["website/**/*.ts", "website/**/*.tsx", "vite.config.ts"],
+  "exclude": ["dist", "node_modules", "target"]
 }
