@@ -16,5 +16,6 @@ export function quotaPlan(session: string, ip: string, now: number, current: Map
     if (count >= b.max) retryAfter = Math.max(retryAfter, Math.ceil((b.reset - now) / 1000));
     updates[b.key] = { count: count + 1, reset: b.reset };
   }
-  return { allowed: retryAfter === 0, retryAfter, remaining: retryAfter ? 0 : LIMITS.session - updates[`s:${session}`].count, updates };
+  const sessionCount = updates[`s:${session}`].count - (retryAfter ? 1 : 0);
+  return { allowed: retryAfter === 0, retryAfter, remaining: Math.max(0, LIMITS.session - sessionCount), updates };
 }

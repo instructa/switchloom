@@ -183,8 +183,12 @@ The Cloudflare runtime test used a mocked provider:
 15 concurrent requests allowed exactly 10, blocked 5, and local endpoints returned
 404. These are integration checks, not a Pokedex quality benchmark.
 
-The full Pokedex comparison, confidence calibration, public deployment and Codex
-Desktop cross-task resume test remain open in [TASKS.md](../TASKS.md).
+Two Pokedex pilots are published in the [benchmark archive](https://switchloom.ai/benchmarks).
+On 18 September, Alchemy deployed the public application to `switchloom.ai`.
+Live checks covered Jev routing, direct assignment, the atomic IP burst limit,
+input limits, secure session cookies and disabled local endpoints.
+Confidence calibration and the Codex Desktop cross-task resume test remain open
+in [TASKS.md](../TASKS.md).
 
 ## Ownership
 

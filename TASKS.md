@@ -1,6 +1,6 @@
 # Switchloom — Taskliste
 
-Stand: 18. September 2026. Die 1.0-Vorbereitung ist noch nicht veröffentlicht.
+Stand: 18. September 2026. Die Website ist veröffentlicht; das 1.0-Paket noch nicht.
 Haken bedeuten im genannten Umfang geprüft.
 
 **Aktuell:** Version 1.0.0 ist lokal vorbereitet, noch nicht releasefähig.
@@ -13,7 +13,7 @@ implementiert. Der im Pilot beobachtete Jev-Abbruch zwischen Fähigkeiten dessel
 Ziel-Tasks ist im Code korrigiert und im zweiten Pilot live überwunden. Beide
 persistenten Teams erreichten dort das Zeitlimit vor der finalen Abnahme;
 ein Qualitäts- oder Kostenvorteil durch Jev ist nicht belegt. Desktop-Abnahme,
-belastbare Wiederholungen und Deployment bleiben offen.
+belastbare Wiederholungen und der native Paket-Release bleiben offen.
 
 ## Routing-Review
 
@@ -141,7 +141,7 @@ den früheren Advanced-/Rollen-Ansatz.
 - [x] V06a: Cargo, npm, xtask und Changelog auf 1.0.0 vorbereiten; README, Website und Routing-Dokumentation kennzeichnen den Stand als unveröffentlichte Vorschau.
 - [x] V06b: Vorhandenen `pnpm security:check` ausführen. `time` im nicht aktivierten Cookie-Abhängigkeitspfad auf die gepatchte Version 0.3.47 aktualisieren. Rust 1.85 baut und testet den aktiven Graph weiterhin; erneuter Scan ohne Befund.
 - [ ] V06: Gesamten Release-Diff abschließend reviewen, nach erfolgreicher Live-Prüfung Vorschauhinweise entfernen und Release-Datum setzen.
-- [ ] V07: Native Release-Artefakte aller vier Plattformen und Provenance aus dem finalen Commit erzeugen, Release-Gates ausführen und Paket/Website koordiniert veröffentlichen. Noch kein Release-Tag oder Deployment ausgeführt.
+- [ ] V07: Native Release-Artefakte aller vier Plattformen und Provenance aus dem finalen Commit erzeugen, Release-Gates ausführen und Paket veröffentlichen. Noch kein Release-Tag gesetzt; Website separat veröffentlicht.
 - [x] V08: Branch vor dem Push geprüft. BetterLeaks für Git-Historie und vollständigen Commit-Kandidaten ohne Befund; Trivy inklusive Entwicklungsabhängigkeiten ohne Befund; bestehende Datei-/Inhalt-Hooks und Workflow-Scan bestanden. Lokale Laufwerkspfade entfernt, Paket-Dokumentation korrigiert und veraltete Release-Pfade gelöscht. Cargo enthält 27 Dateien (40,2 KiB komprimiert), keine Website oder Benchmark-Bilder. 39 Rust-, 11 Node- und 24 Website-Tests sowie Clippy, Build und Typecheck bestanden; alle 33 Produkt-Tests zusätzlich aus dem entpackten Cargo-Paket bestanden. Öffentliche Bundles enthalten keine lokalen Executor-/Login-Implementierungen; Benchmark-PNGs enthalten keine Text-/EXIF-Metadaten.
 
 React Doctor wurde diesmal auch auf ungetrackte Dateien angewendet. Die zwölf
@@ -154,11 +154,13 @@ Render-Optimierung; dies ist kein pauschaler 100/100-Nachweis.
 
 **Nächster Schritt:** Vor der Veröffentlichung die native Release-Matrix
 und den Desktop-Test abschließen.
-Release-Abnahme und Deployment sind noch offen. Der Desktop-Test J10/V03
+Die Paket-Abnahme bleibt offen. Der Desktop-Test J10/V03
 bleibt zusätzlich offen; der App Server ersetzt diesen Nachweis nicht.
 Der TypeSafe-Zugang ist geprüft.
 Routing-Optimierung ist erst nach Messungen belegt. Tool-Routing bleibt außerhalb
 des aktuellen Builds.
+
+- [x] V09: `develop-jev-rewrite` nach `main` übernommen und gepusht. Website per Alchemy auf `switchloom.ai` veröffentlicht. Bestehenden Worker aktualisiert, TypeSafe als Secret und atomare Durable-Object-Quoten gebunden; Alchemy-Zustand lokal verschlüsselt. Startseite, Copy-Button, Playground, Benchmark-Archiv, Jev- und direkte Zuweisung live geprüft. CLI-Dateisuche → Mechanical/Luna. Parallele Requests erreichen das IP-Minutenlimit und erhalten HTTP 429; abgewiesene Requests verbrauchen keine zusätzliche Session-Quota. Restanzeige bei Burst-Limit korrigiert. Fremde Origins, überlange Prompts und übergroße Bodies abgewiesen; lokale Ausführungs-/Login-Endpunkte und private Konfigurationspfade liefern 404. Native Paket-Veröffentlichung und Desktop-Abnahme sind davon getrennt.
 
 ## Review-Fixes
 
